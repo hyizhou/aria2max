@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, watch, onBeforeUnmount } from 'vue'
+import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import { useTaskStore } from '@/store'
 import { fileApi } from '@/services'
 import TaskItem from '@/components/TaskItem.vue'
@@ -27,6 +27,20 @@ watch(() => route.query.status, (newStatus) => {
   }
 }, { immediate: true })
 
+const startAutoRefresh = () => {
+  // 先清理之前的定时器
+  stopAutoRefresh()
+  // 启动新的定时器，每2秒刷新一次（减少频率）
+  refreshInterval.value = window.setInterval(loadTasks, 2000)
+}
+
+const stopAutoRefresh = () => {
+  if (refreshInterval.value) {
+    clearInterval(refreshInterval.value)
+    refreshInterval.value = null
+  }
+}
+
 onMounted(async () => {
   // 检查是否有状态参数
   if (route.query.status) {
@@ -34,15 +48,24 @@ onMounted(async () => {
   }
   
   await loadTasks()
-  // Start auto-refresh every 1 second
-  refreshInterval.value = window.setInterval(loadTasks, 1000)
+  // 启动自动刷新
+  startAutoRefresh()
 })
 
 onUnmounted(() => {
-  // Clean up the interval when component is destroyed
-  if (refreshInterval.value) {
-    clearInterval(refreshInterval.value)
-  }
+  // 页面销毁时清理定时器
+  stopAutoRefresh()
+})
+
+// 页面路由切换离开时停止刷新
+onBeforeRouteLeave((to, from, next) => {
+  stopAutoRefresh()
+  next()
+})
+
+// 组件卸载前清理
+onBeforeUnmount(() => {
+  stopAutoRefresh()
 })
 
 const loadTasks = async () => {

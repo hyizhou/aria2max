@@ -8,6 +8,7 @@ export const useConfigStore = defineStore('config', {
     rpcSecret: '' as string,
     downloadDir: '' as string,
     autoDeleteMetadata: false as boolean,
+    autoDeleteAria2Files: false as boolean,
     loading: false
   }),
   
@@ -16,10 +17,11 @@ export const useConfigStore = defineStore('config', {
       this.loading = true
       try {
         const response = await systemApi.getConfig()
-        this.aria2RpcUrl = response.ARIA2_RPC_URL
-        this.rpcSecret = response.ARIA2_RPC_SECRET || ''
-        this.downloadDir = response.DOWNLOAD_DIR
-        this.autoDeleteMetadata = response.AUTO_DELETE_METADATA || false
+        this.aria2RpcUrl = response.aria2RpcUrl || ''
+        this.rpcSecret = response.aria2RpcSecret || ''
+        this.downloadDir = response.downloadDir || ''
+        this.autoDeleteMetadata = response.autoDeleteMetadata || false
+        this.autoDeleteAria2Files = response.autoDeleteAria2Files || false
       } catch (error) {
         console.error('Failed to fetch config:', error)
       } finally {
@@ -27,13 +29,14 @@ export const useConfigStore = defineStore('config', {
       }
     },
     
-    async saveConfig(config: { aria2RpcUrl: string; rpcSecret: string; downloadDir: string; autoDeleteMetadata?: boolean }) {
+    async saveConfig(config: { aria2RpcUrl: string; rpcSecret: string; downloadDir: string; autoDeleteMetadata?: boolean; autoDeleteAria2Files?: boolean }) {
       try {
         const response = await systemApi.saveConfig({
-          ARIA2_RPC_URL: config.aria2RpcUrl,
-          ARIA2_RPC_SECRET: config.rpcSecret,
-          DOWNLOAD_DIR: config.downloadDir,
-          AUTO_DELETE_METADATA: config.autoDeleteMetadata || false
+          aria2RpcUrl: config.aria2RpcUrl,
+          aria2RpcSecret: config.rpcSecret,
+          downloadDir: config.downloadDir,
+          autoDeleteMetadata: config.autoDeleteMetadata || false,
+          autoDeleteAria2Files: config.autoDeleteAria2Files || false
         })
         
         // 检查后端响应
@@ -46,6 +49,7 @@ export const useConfigStore = defineStore('config', {
         this.rpcSecret = config.rpcSecret
         this.downloadDir = config.downloadDir
         this.autoDeleteMetadata = config.autoDeleteMetadata || false
+        this.autoDeleteAria2Files = config.autoDeleteAria2Files || false
         
         return response
       } catch (error) {

@@ -8,7 +8,8 @@ const defaultConfig = {
   ARIA2_RPC_URL: 'http://localhost:6800/jsonrpc',
   ARIA2_RPC_SECRET: '',
   DOWNLOAD_DIR: '/downloads',
-  AUTO_DELETE_METADATA: false
+  AUTO_DELETE_METADATA: false,
+  AUTO_DELETE_ARIA2_FILES: false
 }
 
 // 配置文件路径
@@ -39,7 +40,10 @@ function getFinalConfig() {
     DOWNLOAD_DIR: process.env.DOWNLOAD_DIR || configFile.DOWNLOAD_DIR || defaultConfig.DOWNLOAD_DIR,
     AUTO_DELETE_METADATA: process.env.AUTO_DELETE_METADATA !== undefined ? 
       process.env.AUTO_DELETE_METADATA === 'true' : 
-      (configFile.AUTO_DELETE_METADATA !== undefined ? configFile.AUTO_DELETE_METADATA : defaultConfig.AUTO_DELETE_METADATA)
+      (configFile.AUTO_DELETE_METADATA !== undefined ? configFile.AUTO_DELETE_METADATA : defaultConfig.AUTO_DELETE_METADATA),
+    AUTO_DELETE_ARIA2_FILES: process.env.AUTO_DELETE_ARIA2_FILES !== undefined ? 
+      process.env.AUTO_DELETE_ARIA2_FILES === 'true' : 
+      (configFile.AUTO_DELETE_ARIA2_FILES !== undefined ? configFile.AUTO_DELETE_ARIA2_FILES : defaultConfig.AUTO_DELETE_ARIA2_FILES)
   }
 }
 
@@ -155,7 +159,7 @@ class Aria2Client {
     }
   }
 
-  // 获取下载任务列表
+  // 获取下载任务列表（优化版本，只返回前端需要的字段）
   async getTasks() {
     try {
       // 获取活跃任务
@@ -165,12 +169,47 @@ class Aria2Client {
       // 获取已停止任务
       const stoppedResponse = await this.sendRequest('aria2.tellStopped', [0, 1000])
       
-      // 合并所有任务
+      // 合并所有任务，并进行数据精简，只返回前端需要的字段
       const tasks = [
         ...(activeResponse.result || []),
         ...(waitingResponse.result || []),
         ...(stoppedResponse.result || [])
-      ]
+      ].map(task => {
+        // 只提取前端需要的字段
+        const minimalTask = {
+          gid: task.gid,
+          status: task.status,
+          totalLength: task.totalLength || '0',
+          completedLength: task.completedLength || '0',
+          downloadSpeed: task.downloadSpeed || '0',
+          uploadSpeed: task.uploadSpeed || '0',
+          dir: task.dir || ''
+        };
+        
+        // 如果有bittorrent信息，简化BT任务名称
+        if (task.bittorrent && task.bittorrent.info && task.bittorrent.info.name) {
+          minimalTask.bittorrent = {
+            info: {
+              name: task.bittorrent.info.name
+            }
+          };
+        }
+        
+        // 如果文件信息存在，只保留必要的文件信息
+        if (task.files && task.files.length > 0) {
+          minimalTask.files = task.files.slice(0, 1).map(file => ({
+            index: file.index,
+            path: file.path || '',
+            length: file.length || '0',
+            completedLength: file.completedLength || '0',
+            selected: file.selected || file.selected === undefined ? 'true' : 'false'
+          }));
+        } else {
+          minimalTask.files = [];
+        }
+        
+        return minimalTask;
+      });
       
       return tasks
     } catch (error) {
@@ -203,6 +242,9 @@ class Aria2Client {
           const peersResponse = await this.sendRequest('aria2.getPeers', [gid])
           // 检查返回中的peers数据并过滤掉空元素和无效元素
           if (peersResponse.result && Array.isArray(peersResponse.result)) {
+            // Aria2返回的peerId已经是百分比编码格式，直接使用无需处理
+            // 根据Aria2官方文档：peerId是"百分比编码的对等方 ID"
+            
             // 过滤掉空的peer元素和只有空字段的peer元素
             task.peers = peersResponse.result.filter(peer => {
               // 首先检查peer对象是否存在且不为空
@@ -362,13 +404,13 @@ class Aria2Client {
 
   // 删除任务 - 同步执行所有删除步骤，确保任务被彻底删除
   async removeTask(gid) {
+    let taskDetails = null;
     try {
-      // First check if the task exists and get its status
-      let status = null;
+      // First check if the task exists and get its status and details
       try {
         const taskStatus = await this.sendRequest('aria2.tellStatus', [gid])
-        status = taskStatus.result.status
-        console.log(`[Aria2 Remove] Task ${gid} status: ${status}`);
+        taskDetails = taskStatus.result
+        console.log(`[Aria2 Remove] Task ${gid} status: ${taskDetails.status}`);
       } catch (statusError) {
         // If we can't get task status, the task might not exist or already be removed
         console.log(`[Aria2 Remove] Cannot get task status for ${gid}, assuming it doesn't exist or already removed`)
@@ -381,6 +423,8 @@ class Aria2Client {
         }
         return true // Task doesn't exist, consider deletion successful
       }
+      
+      const status = taskDetails.status;
       
       // 根据任务状态采用正确的删除方法
       if (status === 'active') {
@@ -442,6 +486,11 @@ class Aria2Client {
       
       // Wait a bit to ensure the task is fully processed
       await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // 删除对应的.aria2文件（如果启用）
+      if (taskDetails) {
+        await this.deleteTaskAria2File(taskDetails);
+      }
       
       return true
     } catch (error) {
@@ -746,6 +795,138 @@ class Aria2Client {
       }
     } catch (error) {
       console.error('Error in autoDeleteMetadata:', error.message)
+    }
+  }
+
+  // 删除任务对应的.aria2文件
+  async deleteTaskAria2File(taskDetails) {
+    try {
+      // 检查是否启用了自动删除.aria2文件
+      const autoDeleteEnabled = process.env.AUTO_DELETE_ARIA2_FILES === 'true'
+      if (!autoDeleteEnabled) {
+        return
+      }
+      
+      if (!taskDetails || !taskDetails.gid) {
+        return
+      }
+      
+      // 获取任务的文件列表来确定.aria2文件的位置
+      const files = taskDetails.files || []
+      if (files.length === 0) {
+        return
+      }
+      
+      // 获取第一个文件的路径来确定.aria2文件的位置
+      const firstFile = files[0]
+      const filePath = firstFile.path
+      
+      if (!filePath) {
+        return
+      }
+      
+      // 获取文件所在目录
+      const pathModule = require('path')
+      const fileDir = pathModule.dirname(filePath)
+      const fileName = pathModule.basename(filePath, pathModule.extname(filePath))
+      
+      // 构建对应的.aria2文件路径
+      const aria2FilePath = pathModule.join(fileDir, `${fileName}.aria2`)
+      
+      const fs = require('fs').promises
+      
+      try {
+        // 检查.aria2文件是否存在
+        await fs.access(aria2FilePath)
+        
+        // 删除.aria2文件
+        await fs.unlink(aria2FilePath)
+        console.log(`Deleted .aria2 file for task ${taskDetails.gid}: ${aria2FilePath}`)
+      } catch (accessError) {
+        if (accessError.code === 'ENOENT') {
+          // 文件不存在，无需删除
+          console.log(`No .aria2 file found for task ${taskDetails.gid}: ${aria2FilePath}`)
+        } else {
+          console.error(`Failed to delete .aria2 file ${aria2FilePath}:`, accessError.message)
+        }
+      }
+    } catch (error) {
+      console.error('Error in deleteTaskAria2File:', error.message)
+    }
+  }
+
+  // 清理无任务对应的.aria2文件
+  async cleanupOrphanedAria2Files() {
+    try {
+      // 检查是否启用了自动删除.aria2文件
+      const autoDeleteEnabled = process.env.AUTO_DELETE_ARIA2_FILES === 'true'
+      if (!autoDeleteEnabled) {
+        return
+      }
+      
+      const fs = require('fs').promises
+      const pathModule = require('path')
+      
+      console.log('[Aria2] Starting cleanup of orphaned .aria2 files...')
+      
+      // 获取所有活跃任务的文件路径
+      const tasks = await this.getTasks()
+      const taskFilePaths = new Set()
+      
+      // 收集所有任务的文件路径
+      for (const task of tasks) {
+        if (task.files && Array.isArray(task.files)) {
+          for (const file of task.files) {
+            if (file.path) {
+              // 获取文件名（不含扩展名）
+              const fileName = pathModule.basename(file.path, pathModule.extname(file.path))
+              const fileDir = pathModule.dirname(file.path)
+              // 将文件路径转换为对应的.aria2文件路径
+              const aria2FilePath = pathModule.join(fileDir, `${fileName}.aria2`)
+              taskFilePaths.add(aria2FilePath)
+            }
+          }
+        }
+      }
+      
+      // 扫描下载目录中的所有.aria2文件
+      const downloadDir = this.downloadDir
+      await this.scanAndDeleteOrphanedAria2Files(downloadDir, taskFilePaths)
+      
+      console.log(`[Aria2] Cleanup completed. Found ${taskFilePaths.size} task-related .aria2 files.`)
+    } catch (error) {
+      console.error('Error in cleanupOrphanedAria2Files:', error.message)
+    }
+  }
+
+  // 递归扫描目录并删除无任务对应的.aria2文件
+  async scanAndDeleteOrphanedAria2Files(dirPath, taskFilePaths) {
+    const fs = require('fs').promises
+    const pathModule = require('path')
+    
+    try {
+      const items = await fs.readdir(dirPath, { withFileTypes: true })
+      
+      for (const item of items) {
+        const fullPath = pathModule.join(dirPath, item.name)
+        
+        if (item.isDirectory()) {
+          // 递归扫描子目录
+          await this.scanAndDeleteOrphanedAria2Files(fullPath, taskFilePaths)
+        } else if (item.isFile() && item.name.endsWith('.aria2')) {
+          // 检查是否是孤立的.aria2文件
+          if (!taskFilePaths.has(fullPath)) {
+            try {
+              await fs.unlink(fullPath)
+              console.log(`Deleted orphaned .aria2 file: ${fullPath}`)
+            } catch (unlinkError) {
+              console.error(`Failed to delete orphaned .aria2 file ${fullPath}:`, unlinkError.message)
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`Failed to scan directory ${dirPath}:`, error.message)
     }
   }
   // 重新加载配置（用于通知配置更改）

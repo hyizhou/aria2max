@@ -114,13 +114,22 @@ const fetchNetworkSpeed = async () => {
   }
 }
 
-// 格式化字节数
-const formatBytes = (bytes: number): string => {
+// 格式化字节数（固定两位小数，用0补齐）
+const formatBytesTwoDecimal = (bytes: number): string => {
   if (bytes === 0) return '0.00 B'
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i]
+}
+
+// 格式化字节数
+const formatBytes = (bytes: number): string => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
 // 解析字节数
@@ -244,15 +253,6 @@ const checkIsMobile = () => {
   isMobile.value = window.innerWidth <= 768
 }
 
-
-// 格式化字节数（固定两位小数，用0补齐）
-const formatBytesTwoDecimal = (bytes: number): string => {
-  if (bytes === 0) return '0.00 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i]
-}
 
 // 切换图表显示
 const toggleChart = () => {

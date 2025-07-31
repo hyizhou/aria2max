@@ -13,7 +13,8 @@ const config = ref({
   aria2RpcUrl: '',
   rpcSecret: '',
   downloadDir: '',
-  autoDeleteMetadata: false
+  autoDeleteMetadata: false,
+  autoDeleteAria2Files: false
 })
 
 const activeTab = ref('system')
@@ -26,10 +27,12 @@ const loadConfig = async () => {
   loading.value = true
   try {
     await configStore.fetchConfig()
+    
     config.value.aria2RpcUrl = configStore.aria2RpcUrl
     config.value.rpcSecret = configStore.rpcSecret
     config.value.downloadDir = configStore.downloadDir
     config.value.autoDeleteMetadata = configStore.autoDeleteMetadata
+    config.value.autoDeleteAria2Files = configStore.autoDeleteAria2Files
   } catch (error) {
     console.error('Failed to load config:', error)
     testResult.value = {
@@ -48,7 +51,8 @@ const saveConfig = async () => {
       aria2RpcUrl: config.value.aria2RpcUrl,
       rpcSecret: config.value.rpcSecret,
       downloadDir: config.value.downloadDir,
-      autoDeleteMetadata: config.value.autoDeleteMetadata
+      autoDeleteMetadata: config.value.autoDeleteMetadata,
+      autoDeleteAria2Files: config.value.autoDeleteAria2Files
     })
     
     // 显示保存成功提示
@@ -200,6 +204,22 @@ const testConnection = async () => {
                         class="form-checkbox"
                       />
                       启用自动删除元数据文件(.torrent, .metalink等)
+                    </label>
+                  </div>
+                </div>
+                
+                <div class="setting-item">
+                  <div class="setting-row">
+                    <div class="setting-info">
+                      <label class="setting-label">自动删除.aria2文件</label>
+                    </div>
+                    <label class="form-checkbox-label">
+                      <input
+                        v-model="config.autoDeleteAria2Files"
+                        type="checkbox"
+                        class="form-checkbox"
+                      />
+                      启用自动删除.aria2文件（删除任务时自动删除，每30分钟清理无任务关联的文件）
                     </label>
                   </div>
                 </div>

@@ -39,7 +39,8 @@ class SystemController {
         aria2RpcUrl: configFile.aria2RpcUrl || process.env.ARIA2_RPC_URL || 'http://localhost:6800/jsonrpc',
         aria2RpcSecret: configFile.aria2RpcSecret || process.env.ARIA2_RPC_SECRET || '',
         downloadDir: configFile.downloadDir || process.env.DOWNLOAD_DIR || '/tmp',
-        autoDeleteMetadata: configFile.autoDeleteMetadata !== undefined ? configFile.autoDeleteMetadata : (process.env.AUTO_DELETE_METADATA === 'true')
+        autoDeleteMetadata: configFile.autoDeleteMetadata !== undefined ? configFile.autoDeleteMetadata : (process.env.AUTO_DELETE_METADATA === 'true'),
+        autoDeleteAria2Files: configFile.autoDeleteAria2Files !== undefined ? configFile.autoDeleteAria2Files : (process.env.AUTO_DELETE_ARIA2_FILES === 'true')
       })
     } catch (error) {
       console.error('Failed to get config:', error)
@@ -55,7 +56,7 @@ class SystemController {
   // 保存配置信息
   async saveConfig(req, res) {
     try {
-      const { aria2RpcUrl, aria2RpcSecret, downloadDir, autoDeleteMetadata } = req.body
+      const { aria2RpcUrl, aria2RpcSecret, downloadDir, autoDeleteMetadata, autoDeleteAria2Files } = req.body
 
       // 更新运行时配置
       if (aria2RpcUrl) {
@@ -69,6 +70,9 @@ class SystemController {
       }
       if (autoDeleteMetadata !== undefined) {
         process.env.AUTO_DELETE_METADATA = autoDeleteMetadata.toString()
+      }
+      if (autoDeleteAria2Files !== undefined) {
+        process.env.AUTO_DELETE_ARIA2_FILES = autoDeleteAria2Files.toString()
       }
 
       // 更新 aria2 客户端配置

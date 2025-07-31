@@ -10,30 +10,58 @@ const loading = ref(false)
 const gid = ref<string>(route.params.gid as string)
 const refreshInterval = ref<number | null>(null)
 
-onMounted(async () => {
-  await loadTaskDetail()
-  
-  // 设置低频定时刷新，仅活跃任务需要连接更新
+const startAutoRefresh = () => {
+  // 先清理之前的定时器
+  stopAutoRefresh()
+  // 设置低频定时刷新，仅活跃任务需要更新
   refreshInterval.value = window.setInterval(() => {
     const currentTask = taskStore.currentTask
     if (currentTask && currentTask.status === 'active') {
-      // 所有活跃任务都需要更新连接信息，包括BT任务
+      // 只有活跃任务才需要定期更新
       taskStore.fetchTaskDetail(gid.value)
+    } else if (refreshInterval.value) {
+      // 如果任务不是活跃状态，停止自动刷新
+      clearInterval(refreshInterval.value)
+      refreshInterval.value = null
     }
-  }, 5000)  // 5秒一次，减少网络负担
-})
+  }, 5000)  // 5秒一次
+}
 
-// 将unmounted移到onMounted外部
-onUnmounted(() => {
+const stopAutoRefresh = () => {
   if (refreshInterval.value) {
     clearInterval(refreshInterval.value)
+    refreshInterval.value = null
   }
+}
+
+onMounted(async () => {
+  await loadTaskDetail()
+  
+  // 只在任务是下载中状态时启动自动刷新
+  const initialTask = taskStore.currentTask
+  if (initialTask && initialTask.status === 'active') {
+    startAutoRefresh()
+  }
+})
+
+onUnmounted(() => {
+  // 页面销毁时清理定时器
+  stopAutoRefresh()
 })
 
 const loadTaskDetail = async () => {
   loading.value = true
   try {
     await taskStore.fetchTaskDetail(gid.value)
+    
+    // 任务加载完成后，检查任务状态决定是否需要启动自动刷新
+    const currentTask = taskStore.currentTask
+    if (currentTask && currentTask.status === 'active' && !refreshInterval.value) {
+      startAutoRefresh()
+    } else if (currentTask && currentTask.status !== 'active' && refreshInterval.value) {
+      // 如果任务状态变化为非活跃，停止自动刷新
+      stopAutoRefresh()
+    }
   } finally {
     loading.value = false
   }
@@ -95,6 +123,24 @@ const getTaskSpeed = (task: any) => {
     upload: parseInt(task.uploadSpeed || task.uploadLength || '0', 10) || 0,
     download: parseInt(task.downloadSpeed || task.downloadLength || '0', 10) || 0
   }
+}
+
+const getTaskName = (): string => {
+  const task = taskStore.currentTask
+  if (!task) return '未知任务'
+  
+  // 对于BT任务，使用BT任务名称
+  if (task.bittorrent && task.bittorrent.info && task.bittorrent.info.name) {
+    return task.bittorrent.info.name
+  }
+  
+  // 对于普通任务，使用文件名
+  if (task.files && task.files.length > 0) {
+    const path = task.files[0].path
+    return path.split('/').pop() || path
+  }
+  
+  return '未知文件'
 }
 
 // 采样函数：从区块数组中采样指定数量的区块用于显示
@@ -271,23 +317,164 @@ const getPeers = computed(() => {
       calculatedProgress = Math.min(100, Math.max(0, Math.round(parseFloat(conn.progress || '0') * 100)));
     }
     
-    // 解码 peerId（处理 URL 编码）
+    // 处理 peerId - 先URL解码，再解析客户端
     let decodedPeerId = '未知ID';
-    if (conn.peerId) {
-      try {
-        decodedPeerId = decodeURIComponent(conn.peerId);
-      } catch (e) {
-        // 如果解码失败，使用原始值
-        decodedPeerId = conn.peerId;
+    const originalPeerId = conn.peerId || conn.id || '';
+    
+    if (originalPeerId) {
+      // 特殊测试
+      if (originalPeerId === '%2DXL0019%2Da%1A%3A%D6%86%60%F2%EE%AB4%04%98') {
+        console.log('Special test peerId found!');
       }
-    } else if (conn.id) {
-      decodedPeerId = conn.id;
+      // console.log('Processing peerId:', originalPeerId, 'conn.peerId:', conn.peerId, 'conn.id:', conn.id);
+      
+      // 强行解码，即使格式不完美
+    if (originalPeerId && originalPeerId.startsWith('%')) {
+      try {
+        decodedPeerId = decodeURIComponent(originalPeerId);
+      } catch (e) {
+        // 强行解码：逐个字符解码，失败的保持原样
+        let result = '';
+        for (let i = 0; i < originalPeerId.length; i++) {
+          if (originalPeerId[i] === '%' && i + 2 < originalPeerId.length) {
+            const nextChar = originalPeerId[i + 1];
+            const nextNextChar = originalPeerId[i + 2];
+            // 检查是否是有效的十六进制字符
+            if (/[0-9A-Fa-f]/.test(nextChar) && /[0-9A-Fa-f]/.test(nextNextChar)) {
+              try {
+                const hex = originalPeerId.substring(i, i + 3);
+                result += decodeURIComponent(hex);
+                i += 2; // 跳过已处理的两个字符
+              } catch (subE) {
+                // 解码失败，保持原样
+                result += originalPeerId[i];
+              }
+            } else {
+              // 不是有效的十六进制，保持原样
+              result += originalPeerId[i];
+            }
+          } else {
+            result += originalPeerId[i];
+          }
+        }
+        decodedPeerId = result;
+      }
+    } else {
+      decodedPeerId = originalPeerId;
+    }
     }
     
-    // 提取客户端名称
-    let clientName = decodedPeerId;
-    if (decodedPeerId.startsWith('aria2/')) {
+    // 提取客户端名称 - 简化映射关系
+    let clientName = '未知客户端';
+    
+    // 首先尝试解码后的值
+    if (decodedPeerId && decodedPeerId.startsWith('-')) {
+      const prefix = decodedPeerId.substring(0, 4); // 前4个字符（包括-）
+      
+      switch (prefix) {
+        case '-XL0':
+          clientName = '迅雷 (Xunlei)';
+          break;
+        case '-XF9':
+        case '-XF1':
+        case '-XF':
+          clientName = 'Xfplay';
+          break;
+        case '-BC0':
+        case '-BC1':
+        case '-BC2':
+        case '-BC':
+          clientName = 'BitComet';
+          break;
+        case '-FD':
+          clientName = 'Free Download Manager';
+          break;
+        case '-BT':
+          clientName = 'BitTorrent';
+          break;
+        case '-UT3':
+        case '-UT2':
+        case '-UT':
+          clientName = 'uTorrent';
+          break;
+        case '-TR':
+          clientName = 'Transmission';
+          break;
+        case '-QT':
+          clientName = 'qBittorrent';
+          break;
+        case '-AZ':
+          clientName = 'Vuze';
+          break;
+        case '-DE':
+          clientName = 'Deluge';
+          break;
+        case '-LT':
+          clientName = 'libTorrent';
+          break;
+        case '-XL':
+          clientName = '迅雷 (Xunlei)';
+          break;
+      }
+    }
+    // 如果解码失败，尝试原始值
+    else if (originalPeerId && originalPeerId.startsWith('%2D')) {
+      const prefix = originalPeerId.substring(0, 6); // 前6个字符（包括%2D）
+      switch (prefix) {
+        case '%2DXL0':
+          clientName = '迅雷 (Xunlei)';
+          break;
+        case '%2DXF9':
+        case '%2DXF1':
+        case '%2DXF':
+          clientName = 'Xfplay';
+          break;
+        case '%2DBC0':
+        case '%2DBC1':
+        case '%2DBC2':
+        case '%2DBC':
+          clientName = 'BitComet';
+          break;
+        case '%2DFD':
+          clientName = 'Free Download Manager';
+          break;
+        case '%2DBT':
+          clientName = 'BitTorrent';
+          break;
+        case '%2DUT3':
+        case '%2DUT2':
+        case '%2DUT':
+          clientName = 'uTorrent';
+          break;
+        case '%2DTR':
+          clientName = 'Transmission';
+          break;
+        case '%2DQT':
+          clientName = 'qBittorrent';
+          break;
+        case '%2DAZ':
+          clientName = 'Vuze';
+          break;
+        case '%2DDE':
+          clientName = 'Deluge';
+          break;
+        case '%2DLT':
+          clientName = 'libTorrent';
+          break;
+        case '%2DXL':
+          clientName = '迅雷 (Xunlei)';
+          break;
+      }
+    }
+    // 其他简单匹配
+    else if (decodedPeerId.startsWith('aria2/')) {
       clientName = 'Aria2';
+    } else if (decodedPeerId.startsWith('BT/')) {
+      clientName = '迅雷在线 (Xunlei)';
+    } else if (decodedPeerId.startsWith('Xunlei/')) {
+      clientName = '迅雷 (Xunlei)';
+    } else if (decodedPeerId.startsWith('XL/')) {
+      clientName = '迅雷 (Xunlei)';
     } else if (decodedPeerId.includes('BitTorrent')) {
       clientName = 'BitTorrent';
     } else if (decodedPeerId.includes('uTorrent')) {
@@ -308,13 +495,17 @@ const getPeers = computed(() => {
       clientName = 'Free Download Manager';
     }
     
+    // 显示解码后的peerId（如果有的话）
+    let displayPeerId = decodedPeerId !== '未知ID' ? decodedPeerId : (conn.peerId || conn.id || '未知ID');
+    
     return {
       ip: String(conn.ip || conn.address || conn.host || '未知IP'),
       client: String(clientName || decodedPeerId || conn.client || conn.user_agent || '未知客户端').substring(0, 50), // 限制长度
       progress: calculatedProgress, // 使用基于 bitfield 计算的进度
       uploadSpeed: Math.max(0, parseInt(String(conn.uploadSpeed || conn.upload_speed || '0'), 10)),
       downloadSpeed: Math.max(0, parseInt(String(conn.downloadSpeed || conn.download_speed || '0'), 10)),
-      peerId: decodedPeerId, // 添加设备ID
+      peerId: displayPeerId, // 显示解码后的peerId
+      _originalPeerId: conn.peerId || conn.id, // 调试用：原始peerId
       pieces: pieces, // 添加区块信息
       bitfield: conn.bitfield || '', // 保留原始bitfield
       amChoking: conn.amChoking === 'true', // 我方是否限制对方
@@ -446,13 +637,13 @@ const handleAction = async (action: string) => {
     <div v-else-if="taskStore.currentTask" class="task-detail-content">
       <div class="task-summary">
         <div class="task-header">
-          <h3>{{ taskStore.currentTask.files?.[0]?.path?.split('/').pop() || '未知文件' }}</h3>
-                  </div>
+          <h3>{{ getTaskName() }}</h3>
+        </div>
         
         <div class="task-info-grid">
           <div class="info-item">
             <label>任务名称:</label>
-            <span>{{ taskStore.currentTask.files?.[0]?.path?.split('/').pop() || '未知文件' }}</span>
+            <span>{{ getTaskName() }}</span>
           </div>
           
           <div class="info-item">
@@ -542,11 +733,16 @@ const handleAction = async (action: string) => {
             <div class="peer-info">
               <div class="peer-ip">{{ peer.ip }}:{{ peer.port }}</div>
               <div class="peer-client">{{ peer.client }}</div>
-              <div class="peer-id">{{ peer.peerId }}</div>
+              <div class="peer-id" v-if="peer.peerId && peer.peerId !== '未知ID'">{{ peer.peerId }}</div>
+              <!-- 调试信息：显示原始peerId -->
+              <div class="peer-debug" v-if="peer._originalPeerId && peer._originalPeerId !== peer.peerId" style="font-size: 0.7em; color: #999;">
+                原始: {{ peer._originalPeerId }}<br>
+                显示: {{ peer.peerId }}
+              </div>
               <div class="peer-status-tags">
-                <span v-if="peer.seeder" class="status-tag seeder">Seeder</span>
-                <span v-if="peer.amChoking" class="status-tag choking">AmChoking</span>
-                <span v-if="peer.peerChoking" class="status-tag choked">PeerChoking</span>
+                <span v-if="peer.seeder" class="status-tag seeder" title="种子：已完整拥有所有文件数据的对等方">Seeder</span>
+                <span v-if="peer.amChoking" class="status-tag choking" title="我方限制：我方暂时不向此对等方上传数据">AmChoking</span>
+                <span v-if="peer.peerChoking" class="status-tag choked" title="对方限制：对方暂时不向我方上传数据">PeerChoking</span>
               </div>
             </div>
             <div class="peer-pieces" v-if="peer.pieces && peer.pieces.length > 0">
@@ -570,8 +766,8 @@ const handleAction = async (action: string) => {
             </div>
             <!-- 移除了单独的进度显示，因为在区块信息中已经显示了 -->
             <div class="peer-speed">
-              <span class="upload-speed">↑ {{ formatSpeed(peer.uploadSpeed) }}</span>
-              <span class="download-speed">↓ {{ formatSpeed(peer.downloadSpeed) }}</span>
+              <span class="upload-speed">↓ {{ formatSpeed(peer.uploadSpeed) }}</span>
+              <span class="download-speed">↑ {{ formatSpeed(peer.downloadSpeed) }}</span>
             </div>
           </div>
         </div>
