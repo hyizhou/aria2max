@@ -1,0 +1,92 @@
+/* Mobile-First Reset Styles */
+
+/* 确保所有元素默认不溢出 */
+* {
+  box-sizing: border-box;
+}
+
+/* 全局溢出控制 */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* 防止文本溢出 */
+.text-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.text-break {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* 移动端通用溢出控制 */
+@media (max-width: 768px) {
+  * {
+    max-width: 100%;
+  }
+  
+  body {
+    font-size: 14px;
+  }
+  
+  /* 防止表格溢出 */
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  
+  /* 防止图片溢出 */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  /* 防止iframe溢出 */
+  iframe {
+    max-width: 100%;
+  }
+  
+  /* 防止代码块溢出 */
+  pre {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+  
+  code {
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+}
+
+/* 超小屏幕额外控制 */
+@media (max-width: 480px) {
+  body {
+    font-size: 13px;
+  }
+  
+  /* 更严格的文本控制 */
+  h1, h2, h3, h4, h5, h6 {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+  
+  /* 防止长单词溢出 */
+  p, span, div {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+}
+
+/* 平板端控制 */
+@media (max-width: 1024px) {
+  body {
+    font-size: 15px;
+  }
+}
