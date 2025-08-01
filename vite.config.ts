@@ -21,13 +21,20 @@ export default defineConfig({
         theme_color: '#42b883',
         background_color: '#ffffff',
         display: 'standalone',
-        icon: 'src/assets/logo.png'
+        icons: [
+          {
+            src: 'src/client/assets/logo.png',
+            sizes: '192x192',
+            type: 'image/png'
+          }
+        ]
       }
     })
   ],
+  root: '.',
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src')
+      '@': resolve(__dirname, 'src/client')
     }
   },
   server: {
@@ -35,13 +42,14 @@ export default defineConfig({
     host: '0.0.0.0',
     proxy: {
       '/api': {
-        target: 'http://localhost:3333',
+        target: 'http://localhost:2999',
         changeOrigin: true
       }
     }
   },
   build: {
     outDir: 'dist',
-    assetsDir: 'assets'
+    assetsDir: 'assets',
+    sourcemap: false
   }
 })

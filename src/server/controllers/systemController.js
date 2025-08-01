@@ -66,6 +66,7 @@ class SystemController {
         // 不返回aria2RpcSecret，这是敏感信息
         aria2RpcSecret: '', // 总是返回空字符串
         downloadDir: configFile.downloadDir,
+        aria2ConfigPath: configFile.aria2ConfigPath || '',
         autoDeleteMetadata: configFile.autoDeleteMetadata,
         autoDeleteAria2FilesOnRemove: configFile.autoDeleteAria2FilesOnRemove,
         autoDeleteAria2FilesOnSchedule: configFile.autoDeleteAria2FilesOnSchedule
