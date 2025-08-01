@@ -76,6 +76,13 @@ const goToAddTask = () => {
   background-color: #f5f5f5;
 }
 
+.app-logo {
+  height: 32px;
+  width: 32px;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
 .app-title {
   margin: 0;
   font-size: 1.5rem;
@@ -131,6 +138,12 @@ const goToAddTask = () => {
     padding: 0.4rem;
   }
   
+  .app-logo {
+    height: 28px;
+    width: 28px;
+    margin-right: 0.4rem;
+  }
+  
   .app-title {
     font-size: 1.25rem;
   }
@@ -157,6 +170,12 @@ const goToAddTask = () => {
   
   .menu-toggle {
     margin-right: 0.4rem;
+  }
+  
+  .app-logo {
+    height: 24px;
+    width: 24px;
+    margin-right: 0.3rem;
   }
   
   .app-title {

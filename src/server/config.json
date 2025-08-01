@@ -5,5 +5,5 @@
   "aria2ConfigPath": "/home/hyizhou/",
   "autoDeleteMetadata": false,
   "autoDeleteAria2FilesOnRemove": false,
-  "autoDeleteAria2FilesOnSchedule": false
+  "autoDeleteAria2FilesOnSchedule": true
 }

@@ -149,15 +149,9 @@ class Aria2Client {
       if (this.rpcSecret) {
         const authToken = `token:${this.rpcSecret}`
         params.unshift(authToken)
-        console.log(`[Aria2 RPC] Using RPC secret: ${this.rpcSecret.substring(0, 2)}***`) // 只显示前两个字符
-      } else {
-        console.log(`[Aria2 RPC] No RPC secret configured`)
       }
       
-      // 记录发送的请求（包含调试信息）
-      console.log(`[Aria2 RPC] Sending request: ${method}`)
-      console.log(`[Aria2 RPC] RPC URL: ${this.rpcUrl}`)
-      console.log(`[Aria2 RPC] Params (first item hidden if secret exists):`, params.slice(this.rpcSecret ? 1 : 0));
+      // 静默处理，不打印日志
       
       // 每次都创建新的axios实例，确保使用最新的配置
       const response = await axios.post(this.rpcUrl, {
@@ -172,8 +166,6 @@ class Aria2Client {
         timeout: 10000 // 10秒超时
       })
       
-      // 记录响应
-      console.log(`[Aria2 RPC] Response for ${method}:`, response.data);
       
       return response.data
     } catch (error) {

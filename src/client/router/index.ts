@@ -6,7 +6,7 @@ import FileManager from '@/views/FileManager.vue'
 import Settings from '@/views/Settings.vue'
 import SystemStatus from '@/views/SystemStatus.vue'
 import AddTask from '@/views/AddTask.vue'
-import Test from '@/views/Test.vue'
+
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -49,11 +49,7 @@ const routes: Array<RouteRecordRaw> = [
     name: 'AddTask',
     component: AddTask
   },
-  {
-    path: '/test',
-    name: 'Test',
-    component: Test
-  }
+
 ]
 
 const router = createRouter({

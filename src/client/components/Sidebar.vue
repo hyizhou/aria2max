@@ -17,8 +17,7 @@ const menus = ref([
   { name: '下载任务', path: '/tasks', icon: 'fas fa-tasks' },
   { name: '文件管理', path: '/files', icon: 'fas fa-folder' },
   { name: '系统状态', path: '/system-status', icon: 'fas fa-chart-line' },
-  { name: '系统设置', path: '/settings', icon: 'fas fa-cog' },
-  { name: '测试页面', path: '/test', icon: 'fas fa-flask' }
+  { name: '系统设置', path: '/settings', icon: 'fas fa-cog' }
 ])
 
 const isActive = (path: string) => {
