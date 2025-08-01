@@ -108,6 +108,18 @@ export const useTaskStore = defineStore('task', {
         // Re-throw the error so it can be handled by the calling function
         throw error
       }
+    },
+
+    async cleanMetadataTasks() {
+      try {
+        const response = await taskApi.cleanMetadataTasks()
+        // 清理成功后刷新任务列表
+        await this.fetchTasks()
+        return response
+      } catch (error) {
+        console.error('Failed to clean metadata tasks:', error)
+        throw error
+      }
     }
   }
 })

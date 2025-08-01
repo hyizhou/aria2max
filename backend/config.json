@@ -1,6 +1,0 @@
-{
-  "ARIA2_RPC_URL": "http://localhost:6800/jsonrpc",
-  "ARIA2_RPC_SECRET": "",
-  "DOWNLOAD_DIR": "/downloads",
-  "AUTO_DELETE_METADATA": false
-}

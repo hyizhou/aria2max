@@ -4,11 +4,13 @@ import { systemApi } from '@/services/api'
 // Config store
 export const useConfigStore = defineStore('config', {
   state: () => ({
-    aria2RpcUrl: '' as string,
-    rpcSecret: '' as string,
-    downloadDir: '' as string,
-    autoDeleteMetadata: false as boolean,
-    autoDeleteAria2Files: false as boolean,
+    aria2RpcUrl: 'http://localhost:6800/jsonrpc',
+    aria2RpcSecret: '',
+    downloadDir: '/tmp',
+    aria2ConfigPath: '',
+    autoDeleteMetadata: false,
+    autoDeleteAria2FilesOnRemove: false,
+    autoDeleteAria2FilesOnSchedule: false,
     loading: false
   }),
   
@@ -17,26 +19,39 @@ export const useConfigStore = defineStore('config', {
       this.loading = true
       try {
         const response = await systemApi.getConfig()
-        this.aria2RpcUrl = response.aria2RpcUrl || ''
-        this.rpcSecret = response.aria2RpcSecret || ''
-        this.downloadDir = response.downloadDir || ''
+        this.aria2RpcUrl = response.aria2RpcUrl || 'http://localhost:6800/jsonrpc'
+        this.aria2RpcSecret = response.aria2RpcSecret || ''
+        this.downloadDir = response.downloadDir || '/tmp'
+        this.aria2ConfigPath = response.aria2ConfigPath || ''
         this.autoDeleteMetadata = response.autoDeleteMetadata || false
-        this.autoDeleteAria2Files = response.autoDeleteAria2Files || false
+        this.autoDeleteAria2FilesOnRemove = response.autoDeleteAria2FilesOnRemove || false
+        this.autoDeleteAria2FilesOnSchedule = response.autoDeleteAria2FilesOnSchedule || false
       } catch (error) {
         console.error('Failed to fetch config:', error)
+        throw error
       } finally {
         this.loading = false
       }
     },
     
-    async saveConfig(config: { aria2RpcUrl: string; rpcSecret: string; downloadDir: string; autoDeleteMetadata?: boolean; autoDeleteAria2Files?: boolean }) {
+    async saveConfig(config: { 
+      aria2RpcUrl: string; 
+      aria2RpcSecret: string; 
+      downloadDir: string; 
+      aria2ConfigPath?: string;
+      autoDeleteMetadata?: boolean; 
+      autoDeleteAria2FilesOnRemove?: boolean;
+      autoDeleteAria2FilesOnSchedule?: boolean;
+    }) {
       try {
         const response = await systemApi.saveConfig({
           aria2RpcUrl: config.aria2RpcUrl,
-          aria2RpcSecret: config.rpcSecret,
+          aria2RpcSecret: config.aria2RpcSecret,
           downloadDir: config.downloadDir,
+          aria2ConfigPath: config.aria2ConfigPath || '',
           autoDeleteMetadata: config.autoDeleteMetadata || false,
-          autoDeleteAria2Files: config.autoDeleteAria2Files || false
+          autoDeleteAria2FilesOnRemove: config.autoDeleteAria2FilesOnRemove || false,
+          autoDeleteAria2FilesOnSchedule: config.autoDeleteAria2FilesOnSchedule || false
         })
         
         // 检查后端响应
@@ -44,12 +59,8 @@ export const useConfigStore = defineStore('config', {
           throw new Error(response?.error?.message || 'Failed to save config')
         }
         
-        // 更新本地状态
-        this.aria2RpcUrl = config.aria2RpcUrl
-        this.rpcSecret = config.rpcSecret
-        this.downloadDir = config.downloadDir
-        this.autoDeleteMetadata = config.autoDeleteMetadata || false
-        this.autoDeleteAria2Files = config.autoDeleteAria2Files || false
+        // 保存成功后，立即从后端重新加载最新配置
+        await this.fetchConfig()
         
         return response
       } catch (error) {

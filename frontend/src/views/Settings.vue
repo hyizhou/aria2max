@@ -11,10 +11,12 @@ const testResult = ref<{ success: boolean; message: string } | null>(null)
 
 const config = ref({
   aria2RpcUrl: '',
-  rpcSecret: '',
+  aria2RpcSecret: '',
   downloadDir: '',
+  aria2ConfigPath: '',
   autoDeleteMetadata: false,
-  autoDeleteAria2Files: false
+  autoDeleteAria2FilesOnRemove: false,
+  autoDeleteAria2FilesOnSchedule: false
 })
 
 const activeTab = ref('system')
@@ -29,10 +31,12 @@ const loadConfig = async () => {
     await configStore.fetchConfig()
     
     config.value.aria2RpcUrl = configStore.aria2RpcUrl
-    config.value.rpcSecret = configStore.rpcSecret
+    config.value.aria2RpcSecret = configStore.aria2RpcSecret
     config.value.downloadDir = configStore.downloadDir
+    config.value.aria2ConfigPath = configStore.aria2ConfigPath || ''
     config.value.autoDeleteMetadata = configStore.autoDeleteMetadata
-    config.value.autoDeleteAria2Files = configStore.autoDeleteAria2Files
+    config.value.autoDeleteAria2FilesOnRemove = configStore.autoDeleteAria2FilesOnRemove
+    config.value.autoDeleteAria2FilesOnSchedule = configStore.autoDeleteAria2FilesOnSchedule
   } catch (error) {
     console.error('Failed to load config:', error)
     testResult.value = {
@@ -45,24 +49,35 @@ const loadConfig = async () => {
 }
 
 const saveConfig = async () => {
+  // 只有在系统设置标签页才允许保存
+  if (activeTab.value === 'aria2') {
+    testResult.value = {
+      success: false,
+      message: 'Aria2 设置功能暂不可用'
+    }
+    return
+  }
+
   saving.value = true
   try {
-    await configStore.saveConfig({
-      aria2RpcUrl: config.value.aria2RpcUrl,
-      rpcSecret: config.value.rpcSecret,
-      downloadDir: config.value.downloadDir,
-      autoDeleteMetadata: config.value.autoDeleteMetadata,
-      autoDeleteAria2Files: config.value.autoDeleteAria2Files
-    })
+    // 构建要保存的配置对象，包含所有字段
+        const configToSave = {
+          aria2RpcUrl: config.value.aria2RpcUrl,
+          aria2RpcSecret: config.value.aria2RpcSecret || '',
+          downloadDir: config.value.downloadDir,
+          aria2ConfigPath: config.value.aria2ConfigPath || '',
+          autoDeleteMetadata: config.value.autoDeleteMetadata,
+          autoDeleteAria2FilesOnRemove: config.value.autoDeleteAria2FilesOnRemove,
+          autoDeleteAria2FilesOnSchedule: config.value.autoDeleteAria2FilesOnSchedule
+        }
+
+    await configStore.saveConfig(configToSave)
     
     // 显示保存成功提示
     testResult.value = {
       success: true,
-      message: '配置保存成功'
+      message: '配置保存成功，已立即生效'
     }
-    
-    // 重新加载配置以显示最新的值
-    await loadConfig()
     
     // 3秒后清除提示
     setTimeout(() => {
@@ -80,6 +95,15 @@ const saveConfig = async () => {
 }
 
 const testConnection = async () => {
+  // 只有在系统设置标签页才允许测试连接
+  if (activeTab.value === 'aria2') {
+    testResult.value = {
+      success: false,
+      message: 'Aria2 设置功能暂不可用'
+    }
+    return
+  }
+
   testing.value = true
   testResult.value = null
   
@@ -165,14 +189,19 @@ const testConnection = async () => {
                 <div class="setting-item">
                   <div class="setting-row">
                     <div class="setting-info">
-                      <label for="rpcSecret" class="setting-label">RPC 密钥</label>
+                      <label for="aria2RpcSecret" class="setting-label">RPC 密钥</label>
+                      <button 
+                        type="button" 
+                        class="help-button" 
+                        title="留空表示不修改现有RPC密钥。只有在此字段输入新值时，才会更新RPC密钥配置。"
+                      >?</button>
                     </div>
                     <input
-                      id="rpcSecret"
-                      v-model="config.rpcSecret"
+                      id="aria2RpcSecret"
+                      v-model="config.aria2RpcSecret"
                       type="password"
                       class="form-control setting-input"
-                      placeholder="输入 RPC 密钥（可选）"
+                      placeholder="留空表示不修改现有密钥"
                     />
                   </div>
                 </div>
@@ -195,32 +224,90 @@ const testConnection = async () => {
                 <div class="setting-item">
                   <div class="setting-row">
                     <div class="setting-info">
-                      <label class="setting-label">自动删除元数据</label>
+                      <label for="aria2ConfigPath" class="setting-label">Aria2配置文件路径</label>
+                      <button 
+                        type="button" 
+                        class="help-button" 
+                        data-tooltip="指定aria2配置文件路径。配置后所有修改将持久化保存至该文件，aria2重启后配置保持不变。留空时配置仅保存在内存中，重启后恢复初始状态"
+                        title=""
+                      >?</button>
                     </div>
-                    <label class="form-checkbox-label">
-                      <input
-                        v-model="config.autoDeleteMetadata"
-                        type="checkbox"
-                        class="form-checkbox"
-                      />
-                      启用自动删除元数据文件(.torrent, .metalink等)
-                    </label>
+                    <input
+                      id="aria2ConfigPath"
+                      v-model="config.aria2ConfigPath"
+                      type="text"
+                      class="form-control setting-input"
+                      placeholder="/path/to/aria2.conf"
+                    />
                   </div>
                 </div>
                 
                 <div class="setting-item">
                   <div class="setting-row">
                     <div class="setting-info">
-                      <label class="setting-label">自动删除.aria2文件</label>
+                      <label class="setting-label">自动删除元数据</label>
+                      <button 
+                        type="button" 
+                        class="help-button" 
+                        data-tooltip="启用自动删除元数据文件(.torrent, .metalink等)，下载完成后自动清理这些元数据文件，节省磁盘空间"
+                        title=""
+                      >?</button>
                     </div>
-                    <label class="form-checkbox-label">
-                      <input
-                        v-model="config.autoDeleteAria2Files"
-                        type="checkbox"
-                        class="form-checkbox"
-                      />
-                      启用自动删除.aria2文件（删除任务时自动删除，每30分钟清理无任务关联的文件）
-                    </label>
+                    <div class="toggle-button-group">
+                      <label class="toggle-switch">
+                        <input
+                          v-model="config.autoDeleteMetadata"
+                          type="checkbox"
+                        />
+                        <span class="toggle-slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="setting-item">
+                  <div class="setting-row">
+                    <div class="setting-info">
+                      <label class="setting-label">删除任务时自动删除.aria2文件</label>
+                      <button 
+                        type="button" 
+                        class="help-button" 
+                        data-tooltip="删除下载任务时自动删除对应的.aria2文件，避免产生残留文件"
+                        title=""
+                      >?</button>
+                    </div>
+                    <div class="toggle-button-group">
+                      <label class="toggle-switch">
+                        <input
+                          v-model="config.autoDeleteAria2FilesOnRemove"
+                          type="checkbox"
+                        />
+                        <span class="toggle-slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="setting-item">
+                  <div class="setting-row">
+                    <div class="setting-info">
+                      <label class="setting-label">定时清理无任务关联的.aria2文件</label>
+                      <button 
+                        type="button" 
+                        class="help-button" 
+                        data-tooltip="每30分钟自动清理一次无任务关联的.aria2文件，系统会扫描并删除没有对应下载任务的.aria2控制文件"
+                        title=""
+                      >?</button>
+                    </div>
+                    <div class="toggle-button-group">
+                      <label class="toggle-switch">
+                        <input
+                          v-model="config.autoDeleteAria2FilesOnSchedule"
+                          type="checkbox"
+                        />
+                        <span class="toggle-slider"></span>
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -245,8 +332,9 @@ const testConnection = async () => {
         <!-- Aria2 设置 -->
         <div v-if="activeTab === 'aria2'" class="tab-panel">
           <div class="settings-form">
-            <div class="aria2-settings-intro">
-              <p>Aria2 设置包含多个配置选项，按功能分类如下：</p>
+            <div class="aria2-settings-intro coming-soon">
+              <p><i class="fas fa-tools"></i> Aria2 设置功能正在开发中，敬请期待...</p>
+              <p class="sub-text">此页面将提供完整的 Aria2 配置选项管理功能</p>
             </div>
             
             <div class="aria2-categories">
@@ -489,8 +577,9 @@ const testConnection = async () => {
 
 .checkbox-group {
   display: flex;
-  align-items: center;
-  margin: 0.5rem 0;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
 }
 
 .checkbox-label {
@@ -586,6 +675,31 @@ const testConnection = async () => {
   border-left: 4px solid #1976d2;
 }
 
+.aria2-settings-intro.coming-soon {
+  text-align: center;
+  background-color: #fff3cd;
+  border-left: 4px solid #ffc107;
+  padding: 2rem;
+}
+
+.aria2-settings-intro.coming-soon p {
+  margin: 0.5rem 0;
+  font-size: 1.1rem;
+  color: #856404;
+}
+
+.aria2-settings-intro.coming-soon .sub-text {
+  font-size: 0.9rem;
+  color: #856404;
+  opacity: 0.8;
+}
+
+.aria2-settings-intro.coming-soon i {
+  font-size: 1.5rem;
+  margin-right: 0.5rem;
+  color: #ffc107;
+}
+
 .aria2-categories {
   display: flex;
   flex-direction: column;
@@ -633,13 +747,79 @@ const testConnection = async () => {
   display: flex;
   align-items: center;
   gap: 1rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .setting-info {
   min-width: 150px;
   max-width: 220px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.help-button {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  border: none;
+  color: #666666;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: help;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.help-button:hover {
+  background-color: #1976d2;
+  color: white;
+}
+
+/* 悬停提示样式 */
+.help-button[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  background-color: #333;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  z-index: 1000;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 350px;
+  white-space: normal;
+  line-height: 1.5;
+  min-width: 300px;
+}
+
+/* 添加小三角形指向图标 */
+.help-button[data-tooltip]:hover::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: -4px;
+  border-width: 4px;
+  border-style: solid;
+  border-color: #333 transparent transparent transparent;
+  z-index: 1001;
+}
+
+.toggle-button-group {
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .setting-label {
@@ -685,6 +865,53 @@ const testConnection = async () => {
   height: 16px;
   cursor: pointer;
 }
+
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 26px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 26px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background-color: #1976d2;
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(24px);
+}
+
 
 .setting-items {
   padding: 1.5rem;

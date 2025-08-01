@@ -119,6 +119,37 @@
         </div>
       </div>
       
+      <!-- Swap内存使用率卡片 -->
+      <div v-if="systemInfo.swap && systemInfo.swap.total > 0" class="status-card">
+        <div class="card-header">
+          <i class="fas fa-exchange-alt"></i>
+          <h3>Swap使用率</h3>
+        </div>
+        <div class="card-content">
+          <div class="progress-bar-container">
+            <div class="progress-info">
+              <span class="label">使用率</span>
+              <span class="value">{{ systemInfo.swap?.percentage || 0 }}%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-bar-fill" :style="{ width: (systemInfo.swap?.percentage || 0) + '%' }"></div>
+            </div>
+          </div>
+          <div class="info-item">
+            <span class="label">总Swap:</span>
+            <span class="value">{{ formatBytes(systemInfo.swap?.total || 0) }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">已用:</span>
+            <span class="value">{{ formatBytes(systemInfo.swap?.used || 0) }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">可用:</span>
+            <span class="value">{{ formatBytes(systemInfo.swap?.free || 0) }}</span>
+          </div>
+        </div>
+      </div>
+      
       <!-- 磁盘使用率卡片 -->
       <div class="status-card">
         <div class="card-header">
@@ -219,6 +250,7 @@ const fetchSystemInfo = async () => {
       uptimeFormatted: '未知',
       cpu: { usage: 0, cores: 0, model: '未知' },
       memory: { total: 0, used: 0, free: 0, percentage: 0 },
+      swap: null,
       disk: { path: '未知', total: 0, used: 0, free: 0, percentage: 0, error: '无法获取磁盘信息' },
       network: {}
     }

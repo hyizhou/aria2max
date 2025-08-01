@@ -5,11 +5,13 @@ const path = require('path')
 
 // 默认配置值
 const defaultConfig = {
-  ARIA2_RPC_URL: 'http://localhost:6800/jsonrpc',
-  ARIA2_RPC_SECRET: '',
-  DOWNLOAD_DIR: '/downloads',
-  AUTO_DELETE_METADATA: false,
-  AUTO_DELETE_ARIA2_FILES: false
+  aria2RpcUrl: 'http://localhost:6800/jsonrpc',
+  aria2RpcSecret: '',
+  downloadDir: '/downloads',
+  aria2ConfigPath: '',
+  autoDeleteMetadata: false,
+  autoDeleteAria2FilesOnRemove: false,
+  autoDeleteAria2FilesOnSchedule: false
 }
 
 // 配置文件路径
@@ -29,21 +31,21 @@ function loadConfigFile() {
 }
 
 // 配置优先级逻辑：
-// 1. 环境变量（最高优先级）
-// 2. config.json文件
-// 3. 默认配置值（最低优先级）
+// 只从config.json文件读取配置，不使用环境变量
 function getFinalConfig() {
   const configFile = loadConfigFile()
   return {
-    ARIA2_RPC_URL: process.env.ARIA2_RPC_URL || configFile.ARIA2_RPC_URL || defaultConfig.ARIA2_RPC_URL,
-    ARIA2_RPC_SECRET: process.env.ARIA2_RPC_SECRET || configFile.ARIA2_RPC_SECRET || defaultConfig.ARIA2_RPC_SECRET,
-    DOWNLOAD_DIR: process.env.DOWNLOAD_DIR || configFile.DOWNLOAD_DIR || defaultConfig.DOWNLOAD_DIR,
-    AUTO_DELETE_METADATA: process.env.AUTO_DELETE_METADATA !== undefined ? 
-      process.env.AUTO_DELETE_METADATA === 'true' : 
-      (configFile.AUTO_DELETE_METADATA !== undefined ? configFile.AUTO_DELETE_METADATA : defaultConfig.AUTO_DELETE_METADATA),
-    AUTO_DELETE_ARIA2_FILES: process.env.AUTO_DELETE_ARIA2_FILES !== undefined ? 
-      process.env.AUTO_DELETE_ARIA2_FILES === 'true' : 
-      (configFile.AUTO_DELETE_ARIA2_FILES !== undefined ? configFile.AUTO_DELETE_ARIA2_FILES : defaultConfig.AUTO_DELETE_ARIA2_FILES)
+    aria2RpcUrl: configFile.aria2RpcUrl || defaultConfig.aria2RpcUrl,
+    aria2RpcSecret: configFile.aria2RpcSecret || defaultConfig.aria2RpcSecret,
+    downloadDir: configFile.downloadDir || defaultConfig.downloadDir,
+    aria2ConfigPath: configFile.aria2ConfigPath !== undefined ? 
+      configFile.aria2ConfigPath : defaultConfig.aria2ConfigPath,
+    autoDeleteMetadata: configFile.autoDeleteMetadata !== undefined ? 
+      configFile.autoDeleteMetadata : defaultConfig.autoDeleteMetadata,
+    autoDeleteAria2FilesOnRemove: configFile.autoDeleteAria2FilesOnRemove !== undefined ? 
+      configFile.autoDeleteAria2FilesOnRemove : defaultConfig.autoDeleteAria2FilesOnRemove,
+    autoDeleteAria2FilesOnSchedule: configFile.autoDeleteAria2FilesOnSchedule !== undefined ? 
+      configFile.autoDeleteAria2FilesOnSchedule : defaultConfig.autoDeleteAria2FilesOnSchedule
   }
 }
 
@@ -64,24 +66,76 @@ class Aria2Client {
   
   // 使用getter方法动态获取配置值
   get rpcUrl() {
-    return getFinalConfig().ARIA2_RPC_URL
+    return getFinalConfig().aria2RpcUrl
   }
   
   get rpcSecret() {
-    return getFinalConfig().ARIA2_RPC_SECRET
+    return getFinalConfig().aria2RpcSecret
   }
   
   get downloadDir() {
-    return getFinalConfig().DOWNLOAD_DIR
+    return getFinalConfig().downloadDir
   }
 
   // 检查Aria2连接状态
   async checkConnection() {
     try {
-      await this.sendRequest('aria2.getVersion')
+      console.log('[Aria2] Testing connection to Aria2...')
+      const result = await this.sendRequest('aria2.getVersion')
+      console.log('[Aria2] Connection test successful:', result)
       return { connected: true, message: 'Aria2连接正常' }
     } catch (error) {
+      console.error('[Aria2] Connection test failed:', error.message)
       return { connected: false, message: `Aria2连接失败: ${error.message}` }
+    }
+  }
+
+  // 测试连接方法（用于系统设置中的测试连接功能）
+  async testConnection() {
+    try {
+      console.log('[Aria2] Testing Aria2 RPC connection...')
+      
+      // 首先测试基本连接
+      const versionResult = await this.sendRequest('aria2.getVersion')
+      console.log('[Aria2] Version check successful:', versionResult.result)
+      
+      // 然后测试全局选项
+      const globalOptions = await this.getGlobalOptions()
+      console.log('[Aria2] Global options retrieved successfully')
+      
+      return {
+        success: true,
+        message: 'Aria2 连接测试成功',
+        details: {
+          version: versionResult.result.version,
+          rpcUrl: this.rpcUrl,
+          hasSecret: !!this.rpcSecret,
+          globalOptions: globalOptions
+        }
+      }
+    } catch (error) {
+      console.error('[Aria2] Connection test failed:', error)
+      
+      // 提供更详细的错误信息
+      let errorDetails = error.message
+      if (error.message.includes('Unauthorized')) {
+        errorDetails = 'RPC密钥认证失败，请检查RPC密钥是否正确'
+      } else if (error.message.includes('ECONNREFUSED')) {
+        errorDetails = '无法连接到Aria2服务，请确保Aria2正在运行'
+      } else if (error.message.includes('ENOTFOUND')) {
+        errorDetails = '无法解析Aria2服务地址，请检查RPC URL配置'
+      }
+      
+      return {
+        success: false,
+        message: errorDetails,
+        details: {
+          error: error.message,
+          rpcUrl: this.rpcUrl,
+          hasSecret: !!this.rpcSecret,
+          secretLength: this.rpcSecret ? this.rpcSecret.length : 0
+        }
+      }
     }
   }
 
@@ -93,13 +147,17 @@ class Aria2Client {
     try {
       // 如果设置了访问码，将其添加到参数中
       if (this.rpcSecret) {
-        params.unshift(`token:${this.rpcSecret}`)
+        const authToken = `token:${this.rpcSecret}`
+        params.unshift(authToken)
+        console.log(`[Aria2 RPC] Using RPC secret: ${this.rpcSecret.substring(0, 2)}***`) // 只显示前两个字符
+      } else {
+        console.log(`[Aria2 RPC] No RPC secret configured`)
       }
       
-      // 记录发送的请求（除了获取任务列表的请求）
-      if (!method.startsWith('aria2.tell')) {
-        console.log(`[Aria2 RPC] Sending request: ${method}`, params.slice(this.rpcSecret ? 1 : 0));
-      }
+      // 记录发送的请求（包含调试信息）
+      console.log(`[Aria2 RPC] Sending request: ${method}`)
+      console.log(`[Aria2 RPC] RPC URL: ${this.rpcUrl}`)
+      console.log(`[Aria2 RPC] Params (first item hidden if secret exists):`, params.slice(this.rpcSecret ? 1 : 0));
       
       // 每次都创建新的axios实例，确保使用最新的配置
       const response = await axios.post(this.rpcUrl, {
@@ -114,10 +172,8 @@ class Aria2Client {
         timeout: 10000 // 10秒超时
       })
       
-      // 记录响应（除了获取任务列表的响应）
-      if (!method.startsWith('aria2.tell')) {
-        console.log(`[Aria2 RPC] Response for ${method}:`, response.data);
-      }
+      // 记录响应
+      console.log(`[Aria2 RPC] Response for ${method}:`, response.data);
       
       return response.data
     } catch (error) {
@@ -126,10 +182,19 @@ class Aria2Client {
         const errorMessage = error.response.data && error.response.data.error ? 
           error.response.data.error.message : error.message
         console.error(`[Aria2 RPC] Request failed (${error.response.status}): ${errorMessage}`);
+        console.error(`[Aria2 RPC] Error response data:`, error.response.data);
+        
+        // 添加更多调试信息
+        if (this.rpcSecret) {
+          console.error(`[Aria2 RPC] Configured RPC secret length: ${this.rpcSecret.length}`)
+          console.error(`[Aria2 RPC] Token format: token:${this.rpcSecret.substring(0, 2)}***`)
+        }
+        
         throw new Error(`Aria2 RPC request failed (${error.response.status}): ${errorMessage}`)
       } else if (error.request) {
         // Handle network errors
         console.error(`[Aria2 RPC] Network error: ${error.message}`);
+        console.error(`[Aria2 RPC] Make sure Aria2 is running at: ${this.rpcUrl}`);
         
         // 对于网络错误，进行重试
         if (retryCount < maxRetries) {
@@ -801,8 +866,8 @@ class Aria2Client {
   // 删除任务对应的.aria2文件
   async deleteTaskAria2File(taskDetails) {
     try {
-      // 检查是否启用了自动删除.aria2文件
-      const autoDeleteEnabled = process.env.AUTO_DELETE_ARIA2_FILES === 'true'
+      // 检查是否启用了删除任务时自动删除.aria2文件
+      const autoDeleteEnabled = process.env.AUTO_DELETE_ARIA2_FILES_ON_REMOVE === 'true'
       if (!autoDeleteEnabled) {
         return
       }
@@ -858,8 +923,8 @@ class Aria2Client {
   // 清理无任务对应的.aria2文件
   async cleanupOrphanedAria2Files() {
     try {
-      // 检查是否启用了自动删除.aria2文件
-      const autoDeleteEnabled = process.env.AUTO_DELETE_ARIA2_FILES === 'true'
+      // 检查是否启用了定时清理.aria2文件
+      const autoDeleteEnabled = process.env.AUTO_DELETE_ARIA2_FILES_ON_SCHEDULE === 'true'
       if (!autoDeleteEnabled) {
         return
       }

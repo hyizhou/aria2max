@@ -1,6 +1,9 @@
 {
-  "ARIA2_RPC_URL": "http://localhost:6800/jsonrpc",
-  "ARIA2_RPC_SECRET": "jj788788",
-  "DOWNLOAD_DIR": "/home/hyizhou/downloads/sda1/download",
-  "AUTO_DELETE_METADATA": false
+  "aria2RpcUrl": "http://localhost:6800/jsonrpc",
+  "aria2RpcSecret": "jj788788",
+  "downloadDir": "/home/hyizhou/downloads/sda1/download",
+  "aria2ConfigPath": "",
+  "autoDeleteMetadata": false,
+  "autoDeleteAria2FilesOnRemove": false,
+  "autoDeleteAria2FilesOnSchedule": false
 }

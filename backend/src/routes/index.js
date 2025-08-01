@@ -17,6 +17,7 @@ router.put('/tasks/:gid/pause', taskController.pauseTask)
 router.put('/tasks/:gid/resume', taskController.resumeTask)
 router.delete('/tasks/:gid', taskController.deleteTask)
 router.post('/tasks/auto-delete-metadata', taskController.autoDeleteMetadata)
+router.post('/tasks/clean-metadata', taskController.cleanMetadataTasks)
 
 // 文件管理路由
 router.get('/files', fileController.getFiles)
@@ -33,5 +34,6 @@ router.get('/system/config', systemController.getConfig)
 router.put('/system/config', systemController.saveConfig)
 router.post('/system/test-connection', systemController.testConnection)
 router.get('/system/realtime-speed', systemController.getRealtimeSpeed)
+router.get('/system/device-network-speed', systemController.getDeviceNetworkSpeed)
 
 module.exports = router

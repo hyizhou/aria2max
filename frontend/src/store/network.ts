@@ -11,12 +11,21 @@ const formatBytesTwoDecimal = (bytes: number): string => {
 }
 
 // 解析网络速度数据
-const parseNetworkSpeed = (network: any): { download: number, upload: number } => {
+const parseNetworkSpeed = (networkData: any): { download: number, upload: number } => {
+  // 新接口直接返回下载和上传速度
+  if (networkData.downloadSpeed !== undefined && networkData.uploadSpeed !== undefined) {
+    return { 
+      download: networkData.downloadSpeed || 0, 
+      upload: networkData.uploadSpeed || 0 
+    }
+  }
+  
+  // 兼容旧的系统信息接口
   let totalDownload = 0
   let totalUpload = 0
   
-  Object.keys(network).forEach(interfaceName => {
-    const interfaceData = network[interfaceName]
+  Object.keys(networkData).forEach(interfaceName => {
+    const interfaceData = networkData[interfaceName]
     totalDownload += interfaceData.rxSpeed || 0
     totalUpload += interfaceData.txSpeed || 0
   })
@@ -80,11 +89,19 @@ export const useNetworkStore = defineStore('network', {
     // 获取网络速度数据
     async fetchNetworkSpeed() {
       try {
-        const response = await systemApi.getSystemInfo()
-        const network = response.network || {}
-        this.updateNetworkSpeed(network)
+        // 使用新的设备网速接口
+        const response = await systemApi.getDeviceNetworkSpeed()
+        this.updateNetworkSpeed(response)
       } catch (error) {
-        console.error('Failed to fetch network speed:', error)
+        console.error('Failed to fetch device network speed:', error)
+        // 如果新接口失败，回退到旧的系统信息接口
+        try {
+          const response = await systemApi.getSystemInfo()
+          const network = response.network || {}
+          this.updateNetworkSpeed(network)
+        } catch (fallbackError) {
+          console.error('Failed to fetch network speed from fallback:', fallbackError)
+        }
       }
     },
     

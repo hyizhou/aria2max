@@ -27,20 +27,48 @@ class SystemController {
     try {
       // 读取配置文件
       const configPath = path.join(__dirname, '../config.json')
-      let configFile = {}
-
-      if (fs.existsSync(configPath)) {
-        const configData = fs.readFileSync(configPath, 'utf8')
-        configFile = JSON.parse(configData)
+      let configFile = {
+        aria2RpcUrl: 'http://localhost:6800/jsonrpc',
+        aria2RpcSecret: '',
+        downloadDir: '/tmp',
+        aria2ConfigPath: '',
+        autoDeleteMetadata: false,
+        autoDeleteAria2FilesOnRemove: false,
+        autoDeleteAria2FilesOnSchedule: false
       }
 
-      // 返回配置信息
+      // 如果配置文件存在，读取文件内容
+      if (fs.existsSync(configPath)) {
+        const configData = fs.readFileSync(configPath, 'utf8')
+        const fileConfig = JSON.parse(configData)
+        
+        // 合并文件配置，保持字段名的大写格式
+        configFile = {
+          ...configFile,
+          ...fileConfig
+        }
+      }
+
+      // 同时更新运行时环境变量，确保配置立即生效
+      process.env.ARIA2_RPC_URL = configFile.aria2RpcUrl
+      process.env.ARIA2_RPC_SECRET = configFile.aria2RpcSecret
+      process.env.DOWNLOAD_DIR = configFile.downloadDir
+      process.env.AUTO_DELETE_METADATA = configFile.autoDeleteMetadata.toString()
+      process.env.AUTO_DELETE_ARIA2_FILES_ON_REMOVE = configFile.autoDeleteAria2FilesOnRemove.toString()
+      process.env.AUTO_DELETE_ARIA2_FILES_ON_SCHEDULE = configFile.autoDeleteAria2FilesOnSchedule.toString()
+
+      // aria2客户端使用getter方法动态获取配置，无需手动更新
+      // 配置更改会自动生效，因为Aria2Client的getter方法每次都会重新读取配置
+
+      // 返回配置信息，过滤掉敏感信息，字段名改为驼峰格式
       res.json({
-        aria2RpcUrl: configFile.aria2RpcUrl || process.env.ARIA2_RPC_URL || 'http://localhost:6800/jsonrpc',
-        aria2RpcSecret: configFile.aria2RpcSecret || process.env.ARIA2_RPC_SECRET || '',
-        downloadDir: configFile.downloadDir || process.env.DOWNLOAD_DIR || '/tmp',
-        autoDeleteMetadata: configFile.autoDeleteMetadata !== undefined ? configFile.autoDeleteMetadata : (process.env.AUTO_DELETE_METADATA === 'true'),
-        autoDeleteAria2Files: configFile.autoDeleteAria2Files !== undefined ? configFile.autoDeleteAria2Files : (process.env.AUTO_DELETE_ARIA2_FILES === 'true')
+        aria2RpcUrl: configFile.aria2RpcUrl,
+        // 不返回aria2RpcSecret，这是敏感信息
+        aria2RpcSecret: '', // 总是返回空字符串
+        downloadDir: configFile.downloadDir,
+        autoDeleteMetadata: configFile.autoDeleteMetadata,
+        autoDeleteAria2FilesOnRemove: configFile.autoDeleteAria2FilesOnRemove,
+        autoDeleteAria2FilesOnSchedule: configFile.autoDeleteAria2FilesOnSchedule
       })
     } catch (error) {
       console.error('Failed to get config:', error)
@@ -56,33 +84,44 @@ class SystemController {
   // 保存配置信息
   async saveConfig(req, res) {
     try {
-      const { aria2RpcUrl, aria2RpcSecret, downloadDir, autoDeleteMetadata, autoDeleteAria2Files } = req.body
+      const { aria2RpcUrl, aria2RpcSecret, downloadDir, aria2ConfigPath, autoDeleteMetadata, autoDeleteAria2FilesOnRemove, autoDeleteAria2FilesOnSchedule } = req.body
 
-      // 更新运行时配置
-      if (aria2RpcUrl) {
-        process.env.ARIA2_RPC_URL = aria2RpcUrl
-      }
-      if (aria2RpcSecret !== undefined) {
-        process.env.ARIA2_RPC_SECRET = aria2RpcSecret
-      }
-      if (downloadDir) {
-        process.env.DOWNLOAD_DIR = downloadDir
-      }
-      if (autoDeleteMetadata !== undefined) {
-        process.env.AUTO_DELETE_METADATA = autoDeleteMetadata.toString()
-      }
-      if (autoDeleteAria2Files !== undefined) {
-        process.env.AUTO_DELETE_ARIA2_FILES = autoDeleteAria2Files.toString()
+      // 读取现有配置文件
+      const configPath = path.join(__dirname, '../config.json')
+      let existingConfig = {
+        aria2RpcUrl: 'http://localhost:6800/jsonrpc',
+        aria2RpcSecret: '',
+        downloadDir: '/tmp',
+        aria2ConfigPath: '',
+        autoDeleteMetadata: false,
+        autoDeleteAria2FilesOnRemove: false,
+        autoDeleteAria2FilesOnSchedule: false
       }
 
-      // 更新 aria2 客户端配置
-      if (aria2Client.updateConfig) {
-        aria2Client.updateConfig({
-          url: aria2RpcUrl || process.env.ARIA2_RPC_URL,
-          secret: aria2RpcSecret !== undefined ? aria2RpcSecret : process.env.ARIA2_RPC_SECRET,
-          downloadDir: downloadDir || process.env.DOWNLOAD_DIR
-        })
+      if (fs.existsSync(configPath)) {
+        const configData = fs.readFileSync(configPath, 'utf8')
+        existingConfig = JSON.parse(configData)
       }
+
+      // 构建要保存的配置，对于未提供的字段保持原值
+      const configFile = {
+        aria2RpcUrl: aria2RpcUrl !== undefined ? aria2RpcUrl : existingConfig.aria2RpcUrl,
+        aria2RpcSecret: aria2RpcSecret !== undefined && aria2RpcSecret !== '' ? aria2RpcSecret : existingConfig.aria2RpcSecret,
+        downloadDir: downloadDir !== undefined ? downloadDir : existingConfig.downloadDir,
+        aria2ConfigPath: aria2ConfigPath !== undefined ? aria2ConfigPath : existingConfig.aria2ConfigPath,
+        autoDeleteMetadata: autoDeleteMetadata !== undefined ? autoDeleteMetadata : existingConfig.autoDeleteMetadata,
+        autoDeleteAria2FilesOnRemove: autoDeleteAria2FilesOnRemove !== undefined ? autoDeleteAria2FilesOnRemove : existingConfig.autoDeleteAria2FilesOnRemove,
+        autoDeleteAria2FilesOnSchedule: autoDeleteAria2FilesOnSchedule !== undefined ? autoDeleteAria2FilesOnSchedule : existingConfig.autoDeleteAria2FilesOnSchedule
+      }
+
+      // 确保目录存在
+      const configDir = path.dirname(configPath)
+      if (!fs.existsSync(configDir)) {
+        fs.mkdirSync(configDir, { recursive: true })
+      }
+
+      // 写入配置文件
+      fs.writeFileSync(configPath, JSON.stringify(configFile, null, 2))
 
       res.json({ success: true })
     } catch (error) {
@@ -99,8 +138,21 @@ class SystemController {
   // 测试连接
   async testConnection(req, res) {
     try {
-      await aria2Client.testConnection()
-      res.json({ success: true })
+      const result = await aria2Client.testConnection()
+      
+      if (result.success) {
+        res.json({ 
+          success: true, 
+          message: result.message,
+          details: result.details
+        })
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          message: result.message,
+          details: result.details
+        })
+      }
     } catch (error) {
       console.error('Connection test failed:', error)
       res.status(500).json({ 
@@ -125,7 +177,7 @@ class SystemController {
       const cpuUsage = await getCpuUsage()
       const cpuCoresUsage = await getCpuCoresUsage()
       
-      // 获取内存使用情况
+      // 获取内存使用情况（包括swap）
       const totalMemory = os.totalmem()
       const freeMemory = os.freemem()
       const usedMemory = totalMemory - freeMemory
@@ -134,6 +186,17 @@ class SystemController {
         used: usedMemory,
         free: freeMemory,
         percentage: Math.round((usedMemory / totalMemory) * 100)
+      }
+      
+      // 获取swap内存信息
+      let swapUsage = null
+      try {
+        const swapInfo = await getSwapInfo()
+        if (swapInfo.total > 0) {
+          swapUsage = swapInfo
+        }
+      } catch (swapError) {
+        console.warn('Failed to get swap info:', swapError.message)
       }
       
       // 获取磁盘使用情况（下载目录）
@@ -213,6 +276,7 @@ class SystemController {
           coresUsage: cpuCoresUsage
         },
         memory: memoryUsage,
+        swap: swapUsage,
         disk: diskUsage,
         network: networkStats,
         timestamp: Date.now()
@@ -260,6 +324,47 @@ class SystemController {
         error: { 
           code: 500, 
           message: 'Failed to get realtime speed' 
+        } 
+      })
+    }
+  }
+
+  // 获取设备网速（专门用于网速显示）
+  async getDeviceNetworkSpeed(req, res) {
+    try {
+      const networkInterfaces = os.networkInterfaces()
+      
+      // 过滤掉虚拟网络接口，只获取物理网卡
+      const filteredInterfaces = Object.keys(networkInterfaces).filter(interfaceName => {
+        return !interfaceName.includes('docker') && 
+               !interfaceName.includes('br-') && 
+               !interfaceName.includes('veth') && 
+               !interfaceName.includes('lo') &&
+               !interfaceName.includes('virbr') &&
+               !interfaceName.includes('vmnet') &&
+               !interfaceName.startsWith('docker')
+      })
+      
+      let totalRxSpeed = 0
+      let totalTxSpeed = 0
+      
+      filteredInterfaces.forEach(interfaceName => {
+        const networkSpeed = getNetworkSpeedDelta(interfaceName)
+        totalRxSpeed += networkSpeed.rxSpeed
+        totalTxSpeed += networkSpeed.txSpeed
+      })
+      
+      res.json({
+        downloadSpeed: Math.round(totalRxSpeed),
+        uploadSpeed: Math.round(totalTxSpeed),
+        timestamp: new Date().toISOString()
+      })
+    } catch (error) {
+      console.error('Failed to get device network speed:', error)
+      res.status(500).json({ 
+        error: { 
+          code: 500, 
+          message: 'Failed to get device network speed' 
         } 
       })
     }
@@ -347,6 +452,78 @@ function getDiskUsage(path) {
         resolve(info)
       }
     })
+  })
+}
+
+// 辅助函数：获取swap信息
+function getSwapInfo() {
+  return new Promise((resolve, reject) => {
+    try {
+      // 尝试读取/proc/meminfo获取swap信息
+      const meminfo = fs.readFileSync('/proc/meminfo', 'utf8')
+      const lines = meminfo.split('\n')
+      
+      let swapTotal = 0
+      let swapFree = 0
+      
+      lines.forEach(line => {
+        if (line.startsWith('SwapTotal:')) {
+          swapTotal = parseInt(line.split(':')[1].trim()) * 1024 // 转换为字节
+        } else if (line.startsWith('SwapFree:')) {
+          swapFree = parseInt(line.split(':')[1].trim()) * 1024 // 转换为字节
+        }
+      })
+      
+      const swapUsed = swapTotal - swapFree
+      const swapPercentage = swapTotal > 0 ? Math.round((swapUsed / swapTotal) * 100) : 0
+      
+      resolve({
+        total: swapTotal,
+        used: swapUsed,
+        free: swapFree,
+        percentage: swapPercentage
+      })
+    } catch (error) {
+      // 如果读取失败，尝试使用其他方法
+      try {
+        // 在某些系统上可能有/proc/swaps文件
+        const swaps = fs.readFileSync('/proc/swaps', 'utf8')
+        const lines = swaps.split('\n')
+        
+        let swapTotal = 0
+        
+        // 跳过标题行，处理每一行swap信息
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim()
+          if (line && !line.startsWith('Filename')) {
+            const parts = line.split(/\s+/)
+            if (parts.length >= 3) {
+              swapTotal += parseInt(parts[2]) * 1024 // 转换为字节
+            }
+          }
+        }
+        
+        if (swapTotal > 0) {
+          // 如果有swap，但无法获取详细信息，则返回基本数据
+          resolve({
+            total: swapTotal,
+            used: 0,
+            free: swapTotal,
+            percentage: 0
+          })
+        } else {
+          // 没有swap
+          resolve({
+            total: 0,
+            used: 0,
+            free: 0,
+            percentage: 0
+          })
+        }
+      } catch (innerError) {
+        reject(error)
+      }
+    }
   })
 }
 

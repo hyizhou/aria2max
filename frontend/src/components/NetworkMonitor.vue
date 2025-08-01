@@ -66,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useNetworkStore } from '@/store'
 
 const networkMonitor = ref(null)
@@ -87,7 +87,6 @@ const networkHistory = ref({
 })
 
 
-let updateInterval = null
 let hideTimeout = null
 const MAX_HISTORY_POINTS = 60 // 显示最近60个数据点（5分钟）
 
@@ -95,22 +94,26 @@ const MAX_HISTORY_POINTS = 60 // 显示最近60个数据点（5分钟）
 const fetchNetworkSpeed = async () => {
   try {
     await networkStore.fetchNetworkSpeed()
-    
-    // 更新当前速度显示
-    downloadSpeed.value = networkStore.downloadSpeedFormatted
-    uploadSpeed.value = networkStore.uploadSpeedFormatted
-    maxDownloadSpeed.value = networkStore.maxDownloadSpeedFormatted
-    maxUploadSpeed.value = networkStore.maxUploadSpeedFormatted
-    
-    // 更新历史数据用于图表绘制
-    networkHistory.value = { ...networkStore.networkHistory }
-    
-    // 更新图表
-    if (showChart.value) {
-      drawChart()
-    }
+    updateNetworkDisplay()
   } catch (error) {
     console.error('Failed to fetch network speed:', error)
+  }
+}
+
+// 更新网络速度显示
+const updateNetworkDisplay = () => {
+  // 更新当前速度显示
+  downloadSpeed.value = networkStore.downloadSpeedFormatted
+  uploadSpeed.value = networkStore.uploadSpeedFormatted
+  maxDownloadSpeed.value = networkStore.maxDownloadSpeedFormatted
+  maxUploadSpeed.value = networkStore.maxUploadSpeedFormatted
+  
+  // 更新历史数据用于图表绘制
+  networkHistory.value = { ...networkStore.networkHistory }
+  
+  // 更新图表
+  if (showChart.value) {
+    drawChart()
   }
 }
 
@@ -383,6 +386,10 @@ const doUpdatePopupPosition = (rect) => {
   }
 }
 
+// 监听store数据变化
+watch(() => networkStore.downloadSpeed, updateNetworkDisplay)
+watch(() => networkStore.uploadSpeed, updateNetworkDisplay)
+
 // 组件挂载时开始监控
 onMounted(() => {
   // 检测是否为移动端
@@ -393,8 +400,10 @@ onMounted(() => {
     // 立即获取一次数据
     fetchNetworkSpeed()
     
-    // 每2秒更新一次数据
-    updateInterval = setInterval(fetchNetworkSpeed, 2000)
+    // 启动store的网络监控（如果还没有启动的话）
+    if (!networkStore.isMonitoring) {
+      networkStore.startMonitoring()
+    }
     
     // 监听窗口大小变化
     window.addEventListener('resize', () => {
@@ -409,9 +418,6 @@ onMounted(() => {
 
 // 组件卸载时清理
 onUnmounted(() => {
-  if (updateInterval) {
-    clearInterval(updateInterval)
-  }
   if (hideTimeout) {
     clearTimeout(hideTimeout)
   }

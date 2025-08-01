@@ -377,6 +377,59 @@ class TaskController {
       })
     }
   }
+
+  // 清理元数据任务
+  async cleanMetadataTasks(req, res) {
+    try {
+      const tasks = await aria2Client.getTasks()
+      const metadataTasks = []
+      
+      if (tasks && tasks.length > 0) {
+        // 查找名称以[METADATA]开头且状态为已完成的任务
+        for (const task of tasks) {
+          let taskName = ''
+          
+          // 获取任务名称
+          if (task.bittorrent && task.bittorrent.info && task.bittorrent.info.name) {
+            taskName = task.bittorrent.info.name
+          } else if (task.files && task.files.length > 0) {
+            const path = task.files[0].path
+            taskName = path.split('/').pop() || path
+          }
+          
+          // 检查是否为元数据任务且状态为已完成
+          if (taskName.startsWith('[METADATA]') && task.status === 'complete') {
+            metadataTasks.push({
+              gid: task.gid,
+              name: taskName,
+              status: task.status
+            })
+            
+            try {
+                // 删除元数据任务，不删除文件
+                await aria2Client.removeTask(task.gid)
+              } catch (deleteError) {
+                console.error(`Failed to delete metadata task ${task.gid}:`, deleteError.message)
+              }
+          }
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `已清理 ${metadataTasks.length} 个已完成的元数据任务`,
+        deletedTasks: metadataTasks
+      })
+    } catch (error) {
+      console.error('Failed to clean metadata tasks:', error)
+      res.status(500).json({ 
+        error: { 
+          code: 500, 
+          message: 'Failed to clean metadata tasks'
+        } 
+      })
+    }
+  }
 }
 
 module.exports = new TaskController()

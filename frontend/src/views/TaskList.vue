@@ -294,6 +294,27 @@ const cancelBatchDeleteTask = () => {
   confirmBatchDelete.value = false
 }
 
+// 清理元数据记录
+const handleCleanMetadata = async () => {
+  try {
+    const response = await taskStore.cleanMetadataTasks()
+    if (response && response.success) {
+      alert(response.message || `已清理 ${response.deletedTasks?.length || 0} 个元数据任务`)
+    } else {
+      alert('清理元数据任务失败')
+    }
+  } catch (error) {
+    console.error('Clean metadata tasks failed:', error)
+    let errorMessage = '清理元数据任务失败'
+    if (error && error.error && error.error.message) {
+      errorMessage = error.error.message
+    } else if (error && error.message) {
+      errorMessage = error.message
+    }
+    alert(`清理失败: ${errorMessage}`)
+  }
+}
+
 const handleSelectTask = (gid: string) => {
   const index = selectedTasks.value.indexOf(gid)
   if (index === -1) {
@@ -369,9 +390,12 @@ const filteredTasks = computed(() => {
         </label>
       </div>
       <div class="task-actions-right">
-        <button class="btn btn-info">
+        <button 
+          class="btn btn-info"
+          @click="handleCleanMetadata"
+        >
           <i class="fas fa-broom"></i>
-          自动清理
+          清理元数据记录
         </button>
         <button 
           class="btn btn-secondary"

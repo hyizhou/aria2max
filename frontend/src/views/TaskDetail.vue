@@ -642,11 +642,6 @@ const handleAction = async (action: string) => {
         
         <div class="task-info-grid">
           <div class="info-item">
-            <label>任务名称:</label>
-            <span>{{ getTaskName() }}</span>
-          </div>
-          
-          <div class="info-item">
             <label>任务大小:</label>
             <span>{{ formatBytes(taskStore.currentTask.totalLength) }}</span>
           </div>

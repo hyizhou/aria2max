@@ -109,6 +109,11 @@ export const taskApi = {
   async deleteTask(gid, deleteFile = false) {
     const params = deleteFile ? { deleteFile: 'true' } : {}
     return await apiClient.delete(`/tasks/${gid}`, { params })
+  },
+
+  // 清理元数据任务
+  async cleanMetadataTasks() {
+    return await apiClient.post('/tasks/clean-metadata')
   }
 }
 
@@ -189,6 +194,11 @@ export const systemApi = {
   // 获取实时网速（轻量级接口）
   async getRealtimeSpeed() {
     return await apiClient.get('/system/realtime-speed')
+  },
+
+  // 获取设备网速（专门用于网速显示）
+  async getDeviceNetworkSpeed() {
+    return await apiClient.get('/system/device-network-speed')
   }
 }
 
