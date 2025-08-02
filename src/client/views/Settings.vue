@@ -1016,4 +1016,242 @@ input:checked + .toggle-slider:before {
     width: 100%;
   }
 }
+
+/* 暗色主题样式 */
+.dark-theme .settings {
+  background-color: #1a1a1a;
+}
+
+.dark-theme .page-header h2 {
+  color: #e0e0e0;
+}
+
+.dark-theme .settings-tabs {
+  background-color: #2d2d2d;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.dark-theme .tab-buttons {
+  background-color: #252525;
+  border-bottom-color: #404040;
+}
+
+.dark-theme .tab-button {
+  color: #b0b0b0;
+}
+
+.dark-theme .tab-button:hover {
+  background-color: #3d3d3d;
+  color: #e0e0e0;
+}
+
+.dark-theme .tab-button.active {
+  color: #64b5f6;
+  border-bottom-color: #64b5f6;
+  background-color: #2d2d2d;
+}
+
+.dark-theme .tab-panel {
+  background-color: #2d2d2d;
+}
+
+.dark-theme .form-group label {
+  color: #e0e0e0;
+}
+
+.dark-theme .form-control {
+  background-color: #3d3d3d;
+  border-color: #555555;
+  color: #e0e0e0;
+}
+
+.dark-theme .form-control:focus {
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.3);
+}
+
+.dark-theme .form-help {
+  color: #b0b0b0;
+}
+
+.dark-theme .checkbox-text {
+  color: #e0e0e0;
+}
+
+.dark-theme .category-section {
+  border-color: #404040;
+}
+
+.dark-theme .category-title {
+  background-color: #252525;
+  color: #e0e0e0;
+  border-bottom-color: #404040;
+}
+
+.dark-theme .setting-label {
+  color: #e0e0e0;
+}
+
+.dark-theme .setting-item label {
+  color: #e0e0e0;
+}
+
+.dark-theme .toggle-slider {
+  background-color: #555555;
+}
+
+.dark-theme .toggle-slider:before {
+  background-color: #e0e0e0;
+}
+
+.dark-theme input:checked + .toggle-slider {
+  background-color: #1976d2;
+}
+
+.dark-theme .btn-secondary {
+  background-color: #3d3d3d;
+  border-color: #555555;
+  color: #e0e0e0;
+}
+
+.dark-theme .btn-secondary:hover {
+  background-color: #4d4d4d;
+  border-color: #666666;
+}
+
+.dark-theme .btn-primary {
+  background-color: #1976d2;
+  border-color: #1976d2;
+  color: #ffffff;
+}
+
+.dark-theme .btn-primary:hover {
+  background-color: #1565c0;
+  border-color: #1565c0;
+}
+
+/* 遗漏的暗色主题样式 */
+
+.dark-theme .page-header {
+  border-bottom-color: #404040;
+}
+
+.dark-theme .loading {
+  color: #b0b0b0;
+}
+
+.dark-theme .test-result {
+  background-color: #2d2d2d;
+  border-color: #404040;
+  color: #e0e0e0;
+}
+
+.dark-theme .test-result.success {
+  background-color: #1b5e20;
+  color: #81c784;
+  border-color: #2e7d32;
+}
+
+.dark-theme .test-result.error {
+  background-color: #b71c1c;
+  color: #ef9a9a;
+  border-color: #c62828;
+}
+
+.dark-theme .settings-list {
+  background-color: #2d2d2d;
+}
+
+.dark-theme .setting-item {
+  border-bottom-color: #404040;
+}
+
+.dark-theme .setting-item:last-child {
+  border-bottom-color: transparent;
+}
+
+.dark-theme .input-group {
+  border-color: #404040;
+}
+
+.dark-theme .help-button {
+  background-color: #555555;
+  color: #e0e0e0;
+}
+
+.dark-theme .help-button:hover {
+  background-color: #1976d2;
+  color: white;
+}
+
+.dark-theme .help-button[data-tooltip]:hover::after {
+  background-color: #333;
+  color: white;
+}
+
+.dark-theme .help-button[data-tooltip]:hover::before {
+  border-color: #333 transparent transparent transparent;
+}
+
+.dark-theme .coming-soon {
+  background-color: #2d2d2d;
+  border-color: #404040;
+}
+
+.dark-theme .coming-soon p {
+  color: #e0e0e0;
+}
+
+.dark-theme .coming-soon .sub-text {
+  color: #b0b0b0;
+}
+
+.dark-theme .coming-soon i {
+  color: #64b5f6;
+}
+
+.dark-theme .form-checkbox-label {
+  color: #e0e0e0;
+}
+
+.dark-theme .form-checkbox {
+  background-color: #3d3d3d;
+  border-color: #555555;
+}
+
+/* 下拉选择框暗色主题样式 */
+.dark-theme select.form-control {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23e0e0e0' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 2.5rem;
+  appearance: none;
+}
+
+.dark-theme select.form-control option {
+  background-color: #3d3d3d;
+  color: #e0e0e0;
+}
+
+.dark-theme select.form-control option:hover {
+  background-color: #4d4d4d;
+}
+
+.dark-theme select.form-control option:checked {
+  background-color: #1976d2;
+  color: #ffffff;
+}
+
+/* 完善 aria2-settings-intro 暗色主题样式 */
+.dark-theme .aria2-settings-intro {
+  background-color: #2d2d2d;
+  border-left: 4px solid #64b5f6;
+}
+
+.dark-theme .aria2-settings-intro.coming-soon {
+  background-color: #2d2d2d;
+  border-left: 4px solid #64b5f6;
+  border-radius: 4px;
+}
 </style>

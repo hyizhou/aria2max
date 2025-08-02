@@ -586,4 +586,203 @@ onUnmounted(() => {
     text-align: left;
   }
 }
+
+/* 暗色主题样式 */
+.dark-theme .system-status {
+  background-color: #1a1a1a;
+}
+
+.dark-theme .page-header {
+  border-bottom-color: #404040;
+}
+
+.dark-theme .page-header h2 {
+  color: #e0e0e0;
+}
+
+.dark-theme .status-cards {
+  gap: 1rem;
+}
+
+.dark-theme .cpu-toggle {
+  background-color: transparent;
+}
+
+.dark-theme .status-card {
+  background: #2d2d2d;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.dark-theme .card-header {
+  background-color: #252525;
+  border-bottom-color: #404040;
+}
+
+.dark-theme .card-header h3 {
+  color: #e0e0e0;
+}
+
+.dark-theme .card-content {
+  background-color: #2d2d2d;
+}
+
+.dark-theme .toggle-slider {
+  background-color: #555555;
+}
+
+.dark-theme .toggle-switch input:checked + .toggle-slider {
+  background-color: #1976d2;
+}
+
+.dark-theme .toggle-slider:hover {
+  background-color: #666666;
+}
+
+.dark-theme .toggle-switch input:checked + .toggle-slider:hover {
+  background-color: #1565c0;
+}
+
+.dark-theme .progress-bar {
+  background-color: #404040;
+}
+
+.dark-theme .progress-bar-fill {
+  background: linear-gradient(90deg, #64b5f6, #90caf9);
+}
+
+.dark-theme .info-item {
+  border-color: #404040;
+}
+
+.dark-theme .info-item .label {
+  color: #b0b0b0;
+}
+
+.dark-theme .info-item .value {
+  color: #e0e0e0;
+}
+
+.dark-theme .info-item .value.error {
+  color: #ff6b6b;
+}
+
+.dark-theme .info-item .value.success {
+  color: #66bb6a;
+}
+
+.dark-theme .info-item .value.warning {
+  color: #ffa726;
+}
+
+.dark-theme .network-status {
+  background-color: #2d2d2d;
+  border-color: #404040;
+}
+
+.dark-theme .network-status .status-info {
+  color: #e0e0e0;
+}
+
+.dark-theme .network-status .status-info.error {
+  color: #ff6b6b;
+}
+
+.dark-theme .network-status .status-info.success {
+  color: #66bb6a;
+}
+
+.dark-theme .network-item {
+  background-color: #3d3d3d;
+  border-color: #555555;
+}
+
+.dark-theme .network-item:hover {
+  background-color: #4d4d4d;
+}
+
+.dark-theme .network-item .network-info {
+  color: #e0e0e0;
+}
+
+.dark-theme .network-item .network-info .label {
+  color: #b0b0b0;
+}
+
+.dark-theme .network-item .network-info .value {
+  color: #e0e0e0;
+}
+
+.dark-theme .network-item .network-info .value.error {
+  color: #ff6b6b;
+}
+
+.dark-theme .network-item .network-info .value.success {
+  color: #66bb6a;
+}
+
+.dark-theme .system-info {
+  background-color: #2d2d2d;
+  border-color: #404040;
+}
+
+.dark-theme .system-info .info-grid .info-item {
+  border-color: #404040;
+}
+
+.dark-theme .system-info .info-grid .info-item .label {
+  color: #b0b0b0;
+}
+
+.dark-theme .system-info .info-grid .info-item .value {
+  color: #e0e0e0;
+}
+
+.dark-theme .error-message {
+  background-color: #4d1a1a;
+  border-color: #d32f2f;
+  color: #ff6b6b;
+}
+
+.dark-theme .empty-state {
+  background-color: #2d2d2d;
+  border-color: #404040;
+}
+
+.dark-theme .empty-state p {
+  color: #b0b0b0;
+}
+
+/* 遗漏的暗色主题样式 */
+
+.dark-theme .card-header i {
+  color: #64b5f6;
+}
+
+.dark-theme .toggle-slider:before {
+  background-color: #e0e0e0;
+}
+
+.dark-theme .toggle-label {
+  color: #b0b0b0;
+}
+
+.dark-theme .progress-info .label {
+  color: #b0b0b0;
+}
+
+.dark-theme .progress-info .value {
+  color: #e0e0e0;
+}
+
+.dark-theme .network-name {
+  color: #e0e0e0;
+}
+
+.dark-theme .no-data {
+  color: #b0b0b0;
+}
+
+.dark-theme input:checked + .toggle-slider:before {
+  background-color: #e0e0e0;
+}
 </style>

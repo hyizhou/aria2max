@@ -775,4 +775,62 @@ onUnmounted(() => {
     font-size: 0.7rem;
   }
 }
+
+/* 暗色主题样式 */
+.dark-theme .chart-overlay {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.dark-theme .network-chart-popup {
+  background: #2d2d2d;
+  border-color: #404040;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.dark-theme .chart-header {
+  background-color: #252525;
+  border-bottom-color: #404040;
+}
+
+.dark-theme .chart-header h3 {
+  color: #e0e0e0;
+}
+
+.dark-theme .chart-container {
+  background-color: #2d2d2d;
+}
+
+.dark-theme .chart-info {
+  background-color: #252525;
+  border-top-color: #404040;
+}
+
+.dark-theme .info-item .label {
+  color: #b0b0b0;
+}
+
+.dark-theme .info-item .value {
+  color: #e0e0e0;
+}
+
+.dark-theme .info-item .value.download {
+  color: #64b5f6;
+}
+
+.dark-theme .info-item .value.upload {
+  color: #66bb6a;
+}
+
+.dark-theme .close-btn {
+  color: #b0b0b0;
+}
+
+.dark-theme .close-btn:hover {
+  background-color: #3d3d3d;
+  color: #e0e0e0;
+}
+
+.dark-theme .network-speed-display:hover {
+  background-color: rgba(100, 181, 246, 0.15);
+}
 </style>

@@ -72,6 +72,26 @@
   
   <!-- File Preview Component -->
   <FilePreview ref="filePreviewRef" @close="handlePreviewClose" />
+  
+  <!-- 删除确认弹窗 -->
+  <ConfirmDialog
+    v-if="confirmDelete && confirmDelete.show"
+    title="确认删除"
+    message="确定要删除这个文件或目录吗？此操作不可恢复。"
+    confirm-text="确定删除"
+    @confirm="confirmDeleteFile"
+    @cancel="cancelDeleteFile"
+  />
+  
+  <!-- 批量删除确认弹窗 -->
+  <ConfirmDialog
+    v-if="confirmBatchDelete"
+    title="确认批量删除"
+    :message="`确定要删除选中的 ${selectedFiles.length} 个文件或目录吗？此操作不可恢复。`"
+    confirm-text="确定删除"
+    @confirm="confirmBatchDeleteFiles"
+    @cancel="cancelBatchDeleteFile"
+  />
 </template>
 
 <script setup lang="ts">
@@ -82,6 +102,7 @@ import FileBreadcrumb from '@/components/FileBreadcrumb.vue'
 import FileUpload from '@/components/FileUpload.vue'
 import FileRename from '@/components/FileRename.vue'
 import FilePreview from '@/components/FilePreview.vue'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 
 const fileStore = useFileStore()
 const loading = ref(false)
@@ -89,6 +110,10 @@ const selectedFiles = ref<string[]>([])
 const fileUploadRef = ref<typeof FileUpload | null>(null)
 const fileRenameRef = ref<typeof FileRename | null>(null)
 const filePreviewRef = ref<typeof FilePreview | null>(null)
+
+// 删除确认状态管理
+const confirmDelete = ref<{path: string, show: boolean} | null>(null)
+const confirmBatchDelete = ref<boolean>(false)
 
 onMounted(async () => {
   await loadFiles()
@@ -109,6 +134,12 @@ const handleNavigate = async (path: string) => {
 }
 
 const handleFileAction = async (action: string, path: string) => {
+  // 添加确认删除对话框
+  if (action === 'delete') {
+    confirmDelete.value = { path, show: true }
+    return
+  }
+  
   try {
     switch (action) {
       case 'delete':
@@ -148,15 +179,52 @@ const handleSelectAll = () => {
 }
 
 const handleBatchDelete = async () => {
+  if (selectedFiles.value.length === 0) return
+  confirmBatchDelete.value = true
+}
+
+// 确认删除单个文件/目录
+const confirmDeleteFile = async () => {
+  if (!confirmDelete.value) return
+  
+  const path = confirmDelete.value.path
+  if (!path) return
+  
+  try {
+    await fileStore.deleteFile(path)
+    await loadFiles()
+    confirmDelete.value = null
+  } catch (error) {
+    console.error('Delete file failed:', error)
+    confirmDelete.value = null
+    alert(`删除失败: ${error instanceof Error ? error.message : '未知错误'}`)
+  }
+}
+
+// 确认批量删除文件/目录
+const confirmBatchDeleteFiles = async () => {
   try {
     for (const path of selectedFiles.value) {
       await fileStore.deleteFile(path)
     }
     selectedFiles.value = []
     await loadFiles()
+    confirmBatchDelete.value = false
   } catch (error) {
     console.error('Batch delete failed:', error)
+    confirmBatchDelete.value = false
+    alert(`批量删除失败: ${error instanceof Error ? error.message : '未知错误'}`)
   }
+}
+
+// 取消删除操作
+const cancelDeleteFile = () => {
+  confirmDelete.value = null
+}
+
+// 取消批量删除操作
+const cancelBatchDeleteFile = () => {
+  confirmBatchDelete.value = false
 }
 
 const handleCreateDirectory = async () => {
@@ -362,5 +430,67 @@ const handlePreviewClose = () => {
     padding: 0.5rem 0.875rem;
     font-size: 0.8125rem;
   }
+}
+
+/* 暗色主题样式 */
+.dark-theme .file-manager {
+  background-color: #1a1a1a;
+}
+
+.dark-theme .page-header {
+  border-bottom-color: #404040;
+}
+
+.dark-theme .page-header h2 {
+  color: #e0e0e0;
+}
+
+.dark-theme .file-actions {
+  background-color: #2d2d2d;
+  border-bottom-color: #404040;
+}
+
+.dark-theme .file-list-container {
+  background-color: #1a1a1a;
+}
+
+.dark-theme .btn-secondary {
+  background-color: #3d3d3d;
+  border-color: #555555;
+  color: #e0e0e0;
+}
+
+.dark-theme .btn-secondary:hover:not(:disabled) {
+  background-color: #4d4d4d;
+  border-color: #666666;
+}
+
+.dark-theme .btn-danger {
+  background-color: #d32f2f;
+  border-color: #d32f2f;
+  color: #ffffff;
+}
+
+.dark-theme .btn-danger:hover:not(:disabled) {
+  background-color: #c62828;
+  border-color: #c62828;
+}
+
+.dark-theme .btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dark-theme .empty-state {
+  background-color: #2d2d2d;
+  border-color: #404040;
+}
+
+.dark-theme .empty-state h3 {
+  color: #e0e0e0;
+}
+
+.dark-theme .empty-state p {
+  color: #b0b0b0;
 }
 </style>

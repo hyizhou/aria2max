@@ -40,80 +40,118 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div id="app">
-    <Header />
-    <div class="app-container">
-      <Sidebar />
-      <main class="main-content">
-        <router-view />
-      </main>
-    </div>
+  <Header />
+  <div class="app-container">
+    <Sidebar />
+    <main class="main-content" :class="{ 'sidebar-hidden': !uiStore.sidebarVisible }">
+      <router-view />
+    </main>
   </div>
 </template>
 
 <style>
-/* Global styles */
+/* Global styles - 这些样式会应用到 index.html 中的 #app 元素 */
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: #2c3e50;
-  min-height: 100vh;
-  overflow-x: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
   width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .app-container {
   display: flex;
   margin-top: 60px;
+  flex: 1;
   width: 100%;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .main-content {
   flex: 1;
-  margin-left: 250px;
-  transition: margin-left 0.3s ease;
+  margin-left: 0px;
+  transition: margin-left 0.3s ease, width 0.3s ease;
   padding: 0;
-  min-height: calc(100vh - 60px);
   overflow-x: hidden;
+  overflow-y: auto;
   width: calc(100% - 250px);
   box-sizing: border-box;
+}
+
+.main-content.sidebar-hidden {
+  margin-left: 0;
+  width: 100%;
+}
+
+/* 桌面端适配 (> 1024px) */
+@media (min-width: 1025px) {
+  .main-content {
+    margin-left: 0px;
+    width: calc(100% - 250px);
+  }
+  
+  .main-content.sidebar-hidden {
+    margin-left: 0;
+    width: 100%;
+  }
 }
 
 /* 移动端适配 */
 @media (max-width: 768px) {
   .app-container {
-    margin-top: 56px;
+    margin-top: 0; /* 移动端不需要margin-top，因为Header是fixed的 */
   }
   
   .main-content {
     margin-left: 0;
     padding: 0;
     width: 100%;
-    min-height: calc(100vh - 56px);
+    overflow-y: auto;
+  }
+  
+  /* 在移动端，无论侧边栏是否隐藏，主内容都占满宽度 */
+  .main-content.sidebar-hidden {
+    margin-left: 0;
+    width: 100%;
   }
 }
 
-/* 平板端适配 */
-@media (max-width: 1024px) {
+/* 平板端适配 (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
   .main-content {
-    margin-left: 200px;
+    margin-left: 0px;
     width: calc(100% - 200px);
+  }
+  
+  .main-content.sidebar-hidden {
+    margin-left: 0;
+    width: 100%;
   }
 }
 
 /* 超小屏幕适配 */
 @media (max-width: 480px) {
   .app-container {
-    margin-top: 56px;
+    margin-top: 0; /* 超小屏幕不需要margin-top，因为Header是fixed的 */
   }
   
   .main-content {
     margin-left: 0;
     padding: 0;
     width: 100%;
-    min-height: calc(100vh - 56px);
+    overflow-y: auto;
+  }
+  
+  /* 在超小屏幕，无论侧边栏是否隐藏，主内容都占满宽度 */
+  .main-content.sidebar-hidden {
+    margin-left: 0;
+    width: 100%;
   }
 }
 

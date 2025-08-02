@@ -131,4 +131,28 @@ const handleNavigate = (path: string) => {
     font-size: 0.75rem;
   }
 }
+
+/* 暗色主题样式 */
+.dark-theme .file-breadcrumb {
+  background-color: #2d2d2d;
+  border-color: #404040;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.dark-theme .breadcrumb-link {
+  color: #b0b0b0;
+}
+
+.dark-theme .breadcrumb-link:hover {
+  background-color: #3d3d3d;
+  color: #e0e0e0;
+}
+
+.dark-theme .breadcrumb-link.active {
+  color: #64b5f6;
+}
+
+.dark-theme .separator {
+  color: #666666;
+}
 </style>

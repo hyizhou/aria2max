@@ -73,20 +73,25 @@ const handleOverlayClick = () => {
 <style scoped>
 .sidebar {
   width: 250px;
-  height: calc(100vh - 60px);
+  min-height: calc(100vh - 60px);
+  height: 100%;
   background-color: #ffffff;
   border-right: 1px solid #e0e0e0;
-  transition: transform 0.3s ease, width 0.3s ease;
-  position: fixed;
-  top: 60px;
+  transition: width 0.3s ease, opacity 0.3s ease, visibility 0.3s ease;
+  position: relative;
+  top: 0;
   left: 0;
   overflow-y: auto;
-  z-index: 2001;
+  z-index: 900;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
 }
 
 .sidebar-hidden {
-  transform: translateX(-100%);
+  width: 0;
+  opacity: 0;
+  visibility: hidden;
+  border-right: none;
 }
 
 .menu-list {
@@ -134,8 +139,17 @@ const handleOverlayClick = () => {
   .sidebar {
     width: 240px;
     height: calc(100vh - 56px);
+    position: fixed;
     top: 56px;
-    z-index: 2001;
+    left: 0;
+    z-index: 900;
+    transition: transform 0.3s ease;
+    transform: translateX(0);
+    overflow-y: auto;
+  }
+  
+  .sidebar-hidden {
+    transform: translateX(-100%);
   }
   
   .menu-link {
@@ -157,8 +171,16 @@ const handleOverlayClick = () => {
   .sidebar {
     width: 260px;
     height: calc(100vh - 56px);
+    position: fixed;
     top: 56px;
-    z-index: 2001;
+    left: 0;
+    z-index: 900;
+    transition: transform 0.3s ease;
+    overflow-y: auto;
+  }
+  
+  .sidebar-hidden {
+    transform: translateX(-100%);
   }
   
   .menu-link {
@@ -181,6 +203,12 @@ const handleOverlayClick = () => {
     width: 200px;
   }
   
+  .sidebar-hidden {
+    width: 0;
+    opacity: 0;
+    visibility: hidden;
+  }
+  
   .menu-link {
     padding: 0.875rem 1rem;
   }
@@ -199,7 +227,7 @@ const handleOverlayClick = () => {
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
-  z-index: 2000;
+  z-index: 950;
   opacity: 0;
   transition: opacity 0.3s ease;
   pointer-events: none;
@@ -210,4 +238,33 @@ const handleOverlayClick = () => {
   pointer-events: auto;
 }
 
+/* 暗色主题样式 */
+.dark-theme .sidebar {
+  background-color: #252525;
+  border-right-color: #404040;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+}
+
+.dark-theme .menu-item {
+  border-bottom-color: #404040;
+}
+
+.dark-theme .menu-link {
+  color: #b0b0b0;
+}
+
+.dark-theme .menu-link:hover {
+  background-color: #3d3d3d;
+  color: #e0e0e0;
+}
+
+.dark-theme .menu-link.active {
+  background-color: #2d2d2d;
+  color: #64b5f6;
+  border-left-color: #64b5f6;
+}
+
+.dark-theme .sidebar-overlay {
+  background-color: rgba(0, 0, 0, 0.7);
+}
 </style>

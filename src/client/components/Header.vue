@@ -18,6 +18,11 @@ const toggleSidebar = () => {
 const goToAddTask = () => {
   router.push('/add-task')
 }
+
+// 切换主题
+const toggleTheme = () => {
+  uiStore.toggleTheme()
+}
 </script>
 
 <template>
@@ -32,6 +37,9 @@ const goToAddTask = () => {
       <NetworkMonitor />
     </div>
     <div class="header-right">
+      <button class="action-button" @click="toggleTheme" :title="uiStore.theme === 'light' ? '切换到暗色主题' : '切换到亮色主题'">
+        <i :class="uiStore.theme === 'light' ? 'fas fa-moon' : 'fas fa-sun'"></i>
+      </button>
       <button class="action-button" @click="goToAddTask" title="添加下载任务">
         <i class="fas fa-plus"></i>
       </button>
@@ -181,5 +189,27 @@ const goToAddTask = () => {
   .app-title {
     font-size: 1.125rem;
   }
+}
+
+/* 暗色主题样式 */
+.dark-theme .header {
+  background-color: #252525;
+  border-bottom-color: #404040;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.dark-theme .menu-toggle,
+.dark-theme .action-button {
+  color: #b0b0b0;
+}
+
+.dark-theme .menu-toggle:hover,
+.dark-theme .action-button:hover {
+  background-color: #3d3d3d;
+  color: #e0e0e0;
+}
+
+.dark-theme .app-title {
+  color: #e0e0e0;
 }
 </style>

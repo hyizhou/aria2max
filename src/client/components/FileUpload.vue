@@ -141,4 +141,21 @@ defineExpose({
   color: #666666;
   font-size: 0.875rem;
 }
+
+/* 暗色主题样式 */
+.dark-theme .progress-bar {
+  background-color: #404040;
+}
+
+.dark-theme .progress-fill {
+  background-color: #64b5f6;
+}
+
+.dark-theme .progress-text {
+  color: #e0e0e0;
+}
+
+.dark-theme .upload-stats {
+  color: #b0b0b0;
+}
 </style>

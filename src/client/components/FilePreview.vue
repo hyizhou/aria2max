@@ -228,4 +228,18 @@ watch(visible, (newVal) => {
   padding: 2rem;
   color: #666666;
 }
+
+/* 暗色主题样式 */
+.dark-theme .file-name {
+  color: #b0b0b0;
+}
+
+.dark-theme .text-preview pre {
+  background-color: #3d3d3d;
+  color: #e0e0e0;
+}
+
+.dark-theme .unknown-file {
+  color: #b0b0b0;
+}
 </style>

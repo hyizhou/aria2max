@@ -226,4 +226,57 @@ const confirm = () => {
     font-size: 0.75rem;
   }
 }
+
+/* 暗色主题样式 */
+.dark-theme .modal-overlay {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.dark-theme .modal-container {
+  background-color: #2d2d2d;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.dark-theme .modal-header {
+  border-bottom-color: #404040;
+}
+
+.dark-theme .modal-title {
+  color: #e0e0e0;
+}
+
+.dark-theme .modal-close {
+  color: #b0b0b0;
+}
+
+.dark-theme .modal-close:hover {
+  background-color: #3d3d3d;
+  color: #e0e0e0;
+}
+
+.dark-theme .modal-footer {
+  border-top-color: #404040;
+}
+
+.dark-theme .btn-primary {
+  background-color: #1976d2;
+  border-color: #1976d2;
+  color: #ffffff;
+}
+
+.dark-theme .btn-primary:hover {
+  background-color: #1565c0;
+  border-color: #1565c0;
+}
+
+.dark-theme .btn-secondary {
+  background-color: #3d3d3d;
+  border-color: #555555;
+  color: #e0e0e0;
+}
+
+.dark-theme .btn-secondary:hover {
+  background-color: #4d4d4d;
+  border-color: #666666;
+}
 </style>

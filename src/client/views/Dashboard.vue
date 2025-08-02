@@ -580,4 +580,78 @@ const handleTaskClick = (gid: string) => {
     font-size: 1.375rem;
   }
 }
+
+/* 暗色主题样式 */
+.dark-theme .dashboard {
+  background-color: #1a1a1a;
+}
+
+.dark-theme .page-header h2 {
+  color: #e0e0e0;
+}
+
+.dark-theme .stat-card {
+  background-color: #2d2d2d;
+  border-color: #404040;
+}
+
+.dark-theme .stat-card:hover {
+  background-color: #3d3d3d;
+}
+
+.dark-theme .stat-info h3 {
+  color: #e0e0e0;
+}
+
+.dark-theme .stat-info p {
+  color: #b0b0b0;
+}
+
+.dark-theme .section {
+  background-color: #2d2d2d;
+  border-color: #404040;
+}
+
+.dark-theme .section h3 {
+  color: #e0e0e0;
+}
+
+.dark-theme .empty-state {
+  color: #b0b0b0;
+}
+
+.dark-theme .task-item {
+  background-color: #2d2d2d;
+  border-color: #404040;
+}
+
+.dark-theme .task-item:hover {
+  background-color: #3d3d3d;
+  border-color: #555555;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.dark-theme .task-name {
+  color: #e0e0e0;
+}
+
+.dark-theme .progress-bar {
+  background-color: #404040;
+}
+
+.dark-theme .progress-fill {
+  background-color: #66bb6a;
+}
+
+.dark-theme .progress-text {
+  color: #b0b0b0;
+}
+
+.dark-theme .task-speed {
+  color: #b0b0b0;
+}
+
+.dark-theme .page-header {
+  border-bottom-color: #404040;
+}
 </style>

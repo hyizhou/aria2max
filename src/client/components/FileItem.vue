@@ -425,4 +425,48 @@ const handleNavigate = () => {
     text-overflow: ellipsis; /* 文字过长时显示省略号 */
   }
 }
+
+/* 暗色主题样式 */
+.dark-theme .file-item {
+  border-bottom-color: #404040;
+}
+
+.dark-theme .file-item:hover {
+  background-color: #3d3d3d;
+}
+
+.dark-theme .file-item.selected {
+  background-color: #1a365d;
+}
+
+.dark-theme .file-icon {
+  color: #b0b0b0;
+}
+
+.dark-theme .file-name {
+  color: #e0e0e0;
+}
+
+.dark-theme .file-meta {
+  color: #b0b0b0;
+}
+
+.dark-theme .btn-action {
+  background-color: #3d3d3d;
+  border-color: #555555;
+  color: #e0e0e0;
+}
+
+.dark-theme .btn-action:hover {
+  background-color: #4d4d4d;
+}
+
+.dark-theme .btn-danger {
+  color: #ff6b6b;
+  border-color: #ff6b6b;
+}
+
+.dark-theme .btn-danger:hover {
+  background-color: #4d1a1a;
+}
 </style>

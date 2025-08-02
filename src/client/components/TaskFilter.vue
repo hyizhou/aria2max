@@ -162,4 +162,36 @@ const clearKeyword = () => {
     width: 100%;
   }
 }
+
+/* 暗色主题样式 */
+.dark-theme .task-filter {
+  background-color: #2d2d2d;
+  border-color: #404040;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.dark-theme .filter-item label {
+  color: #e0e0e0;
+}
+
+.dark-theme .filter-item select,
+.dark-theme .filter-item input {
+  background-color: #3d3d3d;
+  border-color: #555555;
+  color: #e0e0e0;
+}
+
+.dark-theme .filter-item select:focus,
+.dark-theme .filter-item input:focus {
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.3);
+}
+
+.dark-theme .clear-button {
+  color: #b0b0b0;
+}
+
+.dark-theme .clear-button:hover {
+  color: #e0e0e0;
+}
 </style>

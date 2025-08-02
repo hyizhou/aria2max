@@ -204,4 +204,64 @@ const onCheckboxChange = () => {
     margin: 0 1rem;
   }
 }
+
+/* 暗色主题样式 */
+.dark-theme .confirm-overlay {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.dark-theme .confirm-dialog {
+  background-color: #2d2d2d;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.dark-theme .confirm-header h3 {
+  color: #e0e0e0;
+}
+
+.dark-theme .confirm-body p {
+  color: #b0b0b0;
+}
+
+.dark-theme .checkbox-label {
+  color: #e0e0e0;
+}
+
+.dark-theme .checkbox-label input[type="checkbox"] {
+  background-color: #3d3d3d;
+  border-color: #555555;
+}
+
+.dark-theme .btn-secondary {
+  background-color: #3d3d3d;
+  border-color: #555555;
+  color: #e0e0e0;
+}
+
+.dark-theme .btn-secondary:hover:not(:disabled) {
+  background-color: #4d4d4d;
+  border-color: #666666;
+}
+
+.dark-theme .btn-danger {
+  background-color: #d32f2f;
+  border-color: #d32f2f;
+  color: #ffffff;
+}
+
+.dark-theme .btn-danger:hover:not(:disabled) {
+  background-color: #c62828;
+  border-color: #c62828;
+}
+
+.dark-theme .btn-primary {
+  background-color: #1976d2;
+  border-color: #1976d2;
+  color: #ffffff;
+}
+
+.dark-theme .btn-primary:hover:not(:disabled) {
+  background-color: #1565c0;
+  border-color: #1565c0;
+}
 </style>

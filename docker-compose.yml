@@ -1,0 +1,20 @@
+services:
+  # aria-max 应用服务
+  aria-max:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: aria-max
+    restart: unless-stopped
+    ports:
+      - "2999:2999"
+    environment:
+      - PORT=2999
+      - NODE_ENV=production
+      - ARIA2_RPC_URL=http://host.docker.internal:6800/jsonrpc
+      - ARIA2_RPC_SECRET=your_aria2_secret
+      - DOWNLOAD_DIR=/app/downloads
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m

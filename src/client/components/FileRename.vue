@@ -142,4 +142,42 @@ watch(visible, (newVal) => {
   background-color: #e0e0e0;
   border-color: #bdbdbd;
 }
+
+/* 暗色主题样式 */
+.dark-theme .rename-form p {
+  color: #e0e0e0;
+}
+
+.dark-theme .form-input {
+  background-color: #3d3d3d;
+  border-color: #555555;
+  color: #e0e0e0;
+}
+
+.dark-theme .form-input:focus {
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.3);
+}
+
+.dark-theme .btn-secondary {
+  background-color: #3d3d3d;
+  border-color: #555555;
+  color: #e0e0e0;
+}
+
+.dark-theme .btn-secondary:hover {
+  background-color: #4d4d4d;
+  border-color: #666666;
+}
+
+.dark-theme .btn-primary {
+  background-color: #1976d2;
+  border-color: #1976d2;
+  color: #ffffff;
+}
+
+.dark-theme .btn-primary:hover {
+  background-color: #1565c0;
+  border-color: #1565c0;
+}
 </style>

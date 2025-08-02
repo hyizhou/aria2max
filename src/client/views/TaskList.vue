@@ -1,11 +1,34 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
-import { useTaskStore } from '@/store'
-import { fileApi } from '@/services'
+import { useTaskStore } from '@/store/task.js'
 import TaskItem from '@/components/TaskItem.vue'
 import TaskFilter from '@/components/TaskFilter.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+
+interface Task {
+  gid: string
+  status: string
+  bittorrent?: {
+    info?: {
+      name?: string
+    }
+  }
+  files?: Array<{
+    path: string
+  }>
+  completedLength: number
+  totalLength: number
+  downloadSpeed: string | number
+  uploadSpeed: string | number
+}
+
+interface ApiError {
+  error?: {
+    message?: string
+  }
+  message?: string
+}
 
 const taskStore = useTaskStore()
 const router = useRouter()
@@ -23,7 +46,6 @@ const refreshInterval = ref<number | null>(null)
 watch(() => route.query.status, (newStatus) => {
   if (newStatus && typeof newStatus === 'string') {
     filter.value.status = newStatus
-    // 通知 TaskFilter 组件更新
   }
 }, { immediate: true })
 
@@ -69,8 +91,6 @@ onBeforeUnmount(() => {
 })
 
 const loadTasks = async () => {
-  // During auto-refresh, don't show loading state to prevent flashing
-  // Only show loading state for manual refreshes
   try {
     await taskStore.fetchTasks()
   } catch (error) {
@@ -80,7 +100,7 @@ const loadTasks = async () => {
 
 const getFileName = (task: any): string => {
   // 对于BT任务，使用BT任务名称
-  if (task.bittorrent && task.bittorrent.info && task.bittorrent.info.name) {
+  if (task.bittorrent?.info?.name) {
     return task.bittorrent.info.name
   }
   
@@ -124,12 +144,11 @@ const handleTaskAction = async (action: string, gid: string) => {
     console.error('Task action failed:', error)
     // Display error message to user
     let errorMessage = '操作失败'
-    if (error && error.error && error.error.message) {
+    if (error?.error?.message) {
       errorMessage = error.error.message
-    } else if (error && error.message) {
+    } else if (error?.message) {
       errorMessage = error.message
     }
-    // In a real application, you would use a proper notification system
     alert(`任务操作失败: ${errorMessage}`)
   }
 }
@@ -149,9 +168,9 @@ const confirmDeleteTask = async (gid: string) => {
     confirmDelete.value = null
     // Display error message to user
     let errorMessage = '操作失败'
-    if (error && error.error && error.error.message) {
+    if (error?.error?.message) {
       errorMessage = error.error.message
-    } else if (error && error.message) {
+    } else if (error?.message) {
       errorMessage = error.message
     }
     alert(`删除任务失败: ${errorMessage}`)
@@ -172,16 +191,17 @@ const confirmDeleteTaskWithFile = async (deleteFile: boolean) => {
     await loadTasks()
     // 关闭确认弹窗
     confirmDelete.value = null
-  } catch (error: any) {
+  } catch (error) {
     console.error('Delete task failed:', error)
     // 关闭确认弹窗
     confirmDelete.value = null
     // Display error message to user
     let errorMessage = '操作失败'
-    if (error && error.error && error.error.message) {
-      errorMessage = error.error.message
-    } else if (error && error.message) {
-      errorMessage = error.message
+    const apiError = error as ApiError
+    if (apiError?.error?.message) {
+      errorMessage = apiError.error.message
+    } else if (apiError?.message) {
+      errorMessage = apiError.message
     }
     alert(`删除任务失败: ${errorMessage}`)
   }
@@ -250,9 +270,9 @@ const confirmBatchDeleteTask = async () => {
     confirmBatchDelete.value = false
     // Display error message to user
     let errorMessage = '操作失败'
-    if (error && error.error && error.error.message) {
+    if (error?.error?.message) {
       errorMessage = error.error.message
-    } else if (error && error.message) {
+    } else if (error?.message) {
       errorMessage = error.message
     }
     alert(`批量删除任务失败: ${errorMessage}`)
@@ -303,12 +323,12 @@ const handleCleanMetadata = async () => {
     } else {
       alert('清理元数据任务失败')
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Clean metadata tasks failed:', error)
     let errorMessage = '清理元数据任务失败'
-    if (error && error.error && error.error.message) {
+    if (error?.error?.message) {
       errorMessage = error.error.message
-    } else if (error && error.message) {
+    } else if (error?.message) {
       errorMessage = error.message
     }
     alert(`清理失败: ${errorMessage}`)
@@ -393,9 +413,10 @@ const filteredTasks = computed(() => {
         <button 
           class="btn btn-info"
           @click="handleCleanMetadata"
+          title="清理[xx]元数据"
         >
           <i class="fas fa-broom"></i>
-          清理元数据记录
+          清理元数据
         </button>
         <button 
           class="btn btn-secondary"
@@ -558,6 +579,22 @@ const filteredTasks = computed(() => {
   cursor: not-allowed;
 }
 
+.btn-info {
+  background-color: #009688;
+  color: #ffffff;
+  border-color: #009688;
+}
+
+.btn-info:hover:not(:disabled) {
+  background-color: #00796b;
+  border-color: #00796b;
+}
+
+.btn-info:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .task-list-container {
   background-color: #ffffff;
   border-radius: 8px;
@@ -660,5 +697,68 @@ const filteredTasks = computed(() => {
     padding: 0.5rem 0.875rem;
     font-size: 0.8125rem;
   }
+}
+
+/* 暗色主题样式 */
+.dark-theme .task-list {
+  background-color: #1a1a1a;
+}
+
+.dark-theme .page-header h2 {
+  color: #e0e0e0;
+}
+
+.dark-theme .task-actions {
+  background-color: #2d2d2d;
+  border-color: #404040;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.dark-theme .select-all {
+  color: #e0e0e0;
+}
+
+.dark-theme .btn-secondary {
+  background-color: #3d3d3d;
+  border-color: #555555;
+  color: #e0e0e0;
+}
+
+.dark-theme .btn-secondary:hover:not(:disabled) {
+  background-color: #4d4d4d;
+  border-color: #666666;
+}
+
+.dark-theme .btn-danger {
+  background-color: #d32f2f;
+  border-color: #d32f2f;
+  color: #ffffff;
+}
+
+.dark-theme .btn-danger:hover:not(:disabled) {
+  background-color: #c62828;
+  border-color: #c62828;
+}
+
+.dark-theme .btn-info {
+  background-color: #00796b;
+  border-color: #00796b;
+  color: #ffffff;
+}
+
+.dark-theme .btn-info:hover:not(:disabled) {
+  background-color: #00695c;
+  border-color: #00695c;
+}
+
+.dark-theme .task-list-container {
+  background-color: #2d2d2d;
+  border-color: #404040;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.dark-theme .loading,
+.dark-theme .empty-state {
+  color: #b0b0b0;
 }
 </style>

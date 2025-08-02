@@ -507,4 +507,100 @@ const getFileName = (): string => {
     font-size: 0.71875rem;
   }
 }
+
+/* 暗色主题样式 */
+.dark-theme .task-item {
+  border-bottom-color: #404040;
+  background-color: #2d2d2d;
+}
+
+.dark-theme .task-item:hover {
+  background-color: #3d3d3d;
+}
+
+.dark-theme .task-item.selected {
+  background-color: #1a365d;
+}
+
+.dark-theme .task-name {
+  color: #e0e0e0;
+}
+
+.dark-theme .progress-bar {
+  background-color: #404040;
+}
+
+.dark-theme .progress-text {
+  color: #b0b0b0;
+}
+
+.dark-theme .task-speed {
+  color: #b0b0b0;
+}
+
+.dark-theme .btn-action {
+  background-color: #3d3d3d;
+  border-color: #555555;
+  color: #e0e0e0;
+}
+
+.dark-theme .btn-action:hover {
+  background-color: #4d4d4d;
+}
+
+.dark-theme .btn-danger {
+  color: #ff6b6b;
+  border-color: #ff6b6b;
+}
+
+.dark-theme .btn-danger:hover {
+  background-color: #4d1a1a;
+}
+
+/* 任务状态徽章暗色主题 */
+.dark-theme .status-active {
+  background-color: #1a3a1a;
+  color: #66bb6a;
+}
+
+.dark-theme .status-waiting {
+  background-color: #1a2d4d;
+  color: #64b5f6;
+}
+
+.dark-theme .status-paused {
+  background-color: #4d3319;
+  color: #ffa726;
+}
+
+.dark-theme .status-error {
+  background-color: #4d1919;
+  color: #ef5350;
+}
+
+.dark-theme .status-complete {
+  background-color: #3d1a4d;
+  color: #ab47bc;
+}
+
+/* 进度条暗色主题 */
+.dark-theme .progress-fill.status-active {
+  background-color: #66bb6a;
+}
+
+.dark-theme .progress-fill.status-waiting {
+  background-color: #64b5f6;
+}
+
+.dark-theme .progress-fill.status-paused {
+  background-color: #ffa726;
+}
+
+.dark-theme .progress-fill.status-error {
+  background-color: #ef5350;
+}
+
+.dark-theme .progress-fill.status-complete {
+  background-color: #ab47bc;
+}
 </style>
