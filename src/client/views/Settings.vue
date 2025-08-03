@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useConfigStore } from '@/store'
+import SettingItem from '@/components/SettingItem.vue'
+import { aria2Settings, defaultAria2Config } from '@/config/aria2Config'
 
 const configStore = useConfigStore()
 
@@ -19,10 +21,22 @@ const config = ref({
   autoDeleteAria2FilesOnSchedule: false
 })
 
+const aria2Config = ref<Record<string, any>>(defaultAria2Config)
+
 const activeTab = ref('system')
 
 onMounted(async () => {
   await loadConfig()
+  // 加载保存的Aria2配置
+  const savedConfig = localStorage.getItem('aria2Config')
+  if (savedConfig) {
+    try {
+      const config = JSON.parse(savedConfig)
+      Object.assign(aria2Config.value, config)
+    } catch (error) {
+      console.error('加载配置失败:', error)
+    }
+  }
 })
 
 const loadConfig = async () => {
@@ -49,11 +63,23 @@ const loadConfig = async () => {
 }
 
 const saveConfig = async () => {
-  // 只有在系统设置标签页才允许保存
   if (activeTab.value === 'aria2') {
-    testResult.value = {
-      success: false,
-      message: 'Aria2 设置功能暂不可用'
+    try {
+      const config = { ...aria2Config.value }
+      localStorage.setItem('aria2Config', JSON.stringify(config))
+      console.log('配置已保存:', config)
+      testResult.value = {
+        success: true,
+        message: '配置保存成功！'
+      }
+    } catch (error: any) {
+      console.error('保存配置失败:', error)
+      testResult.value = {
+        success: false,
+        message: error?.message || '配置保存失败'
+      }
+    } finally {
+      saving.value = false
     }
     return
   }
@@ -61,15 +87,15 @@ const saveConfig = async () => {
   saving.value = true
   try {
     // 构建要保存的配置对象，包含所有字段
-        const configToSave = {
-          aria2RpcUrl: config.value.aria2RpcUrl,
-          aria2RpcSecret: config.value.aria2RpcSecret || '',
-          downloadDir: config.value.downloadDir,
-          aria2ConfigPath: config.value.aria2ConfigPath || '',
-          autoDeleteMetadata: config.value.autoDeleteMetadata,
-          autoDeleteAria2FilesOnRemove: config.value.autoDeleteAria2FilesOnRemove,
-          autoDeleteAria2FilesOnSchedule: config.value.autoDeleteAria2FilesOnSchedule
-        }
+    const configToSave = {
+      aria2RpcUrl: config.value.aria2RpcUrl,
+      aria2RpcSecret: config.value.aria2RpcSecret || '',
+      downloadDir: config.value.downloadDir,
+      aria2ConfigPath: config.value.aria2ConfigPath || '',
+      autoDeleteMetadata: config.value.autoDeleteMetadata,
+      autoDeleteAria2FilesOnRemove: config.value.autoDeleteAria2FilesOnRemove,
+      autoDeleteAria2FilesOnSchedule: config.value.autoDeleteAria2FilesOnSchedule
+    }
 
     await configStore.saveConfig(configToSave)
     
@@ -83,11 +109,11 @@ const saveConfig = async () => {
     setTimeout(() => {
       testResult.value = null
     }, 3000)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Save config failed:', error)
     testResult.value = {
       success: false,
-      message: error.message || '配置保存失败'
+      message: error?.message || '配置保存失败'
     }
   } finally {
     saving.value = false
@@ -95,15 +121,6 @@ const saveConfig = async () => {
 }
 
 const testConnection = async () => {
-  // 只有在系统设置标签页才允许测试连接
-  if (activeTab.value === 'aria2') {
-    testResult.value = {
-      success: false,
-      message: 'Aria2 设置功能暂不可用'
-    }
-    return
-  }
-
   testing.value = true
   testResult.value = null
   
@@ -113,11 +130,11 @@ const testConnection = async () => {
       success: true,
       message: '连接测试成功'
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Test connection failed:', error)
     testResult.value = {
       success: false,
-      message: '连接测试失败'
+      message: error?.message || '连接测试失败'
     }
   } finally {
     testing.value = false
@@ -149,6 +166,7 @@ const testConnection = async () => {
           <i class="fas fa-download"></i>
           Aria2 设置
         </button>
+
       </div>
 
       <div class="tab-content">
@@ -338,101 +356,20 @@ const testConnection = async () => {
             </div>
             
             <div class="aria2-categories">
-              <div class="category-section">
-                <h3 class="category-title">
-                  <i class="fas fa-tachometer-alt"></i>
-                  基本设置
-                </h3>
-                <div class="setting-items">
-                  <div class="setting-item">
-                    <label>最大同时下载数</label>
-                    <input type="number" class="form-control" placeholder="5" />
-                  </div>
-                  <div class="setting-item">
-                    <label>单文件最大连接数</label>
-                    <input type="number" class="form-control" placeholder="16" />
-                  </div>
-                  <div class="setting-item">
-                    <label>下载速度限制</label>
-                    <input type="text" class="form-control" placeholder="例如: 1M" />
-                  </div>
-                </div>
-              </div>
-
-              <div class="category-section">
-                <h3 class="category-title">
-                  <i class="fas fa-shield-alt"></i>
-                  安全设置
-                </h3>
-                <div class="setting-items">
-                  <div class="setting-item">
-                    <label>RPC 令牌</label>
-                    <input type="password" class="form-control" placeholder="输入 RPC 令牌" />
-                  </div>
-                  <div class="setting-item">
-                    <label>允许的 RPC 地址</label>
-                    <input type="text" class="form-control" placeholder="*" />
-                  </div>
-                </div>
-              </div>
-
-              <div class="category-section">
-                <h3 class="category-title">
-                  <i class="fas fa-hdd"></i>
-                  磁盘设置
-                </h3>
-                <div class="setting-items">
-                  <div class="setting-item">
-                    <label>磁盘缓存大小</label>
-                    <input type="text" class="form-control" placeholder="64M" />
-                  </div>
-                  <div class="setting-item">
-                    <label>预分配空间</label>
-                    <select class="form-control">
-                      <option>预分配</option>
-                      <option>falloc</option>
-                      <option>trunc</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div class="category-section">
-                <h3 class="category-title">
-                  <i class="fas fa-globe"></i>
-                  网络设置
-                </h3>
-                <div class="setting-items">
-                  <div class="setting-item">
-                    <label>用户代理</label>
-                    <input type="text" class="form-control" placeholder="aria2/$VERSION" />
-                  </div>
-                  <div class="setting-item">
-                    <label>连接超时时间</label>
-                    <input type="number" class="form-control" placeholder="60" />
-                  </div>
-                </div>
-              </div>
-
-              <div class="category-section">
-                <h3 class="category-title">
-                  <i class="fas fa-bolt"></i>
-                  BT 设置
-                </h3>
-                <div class="setting-items">
-                  <div class="setting-item">
-                    <label>最大连接数</label>
-                    <input type="number" class="form-control" placeholder="55" />
-                  </div>
-                  <div class="setting-item">
-                    <label>启用 DHT</label>
-                    <input type="checkbox" class="form-checkbox" checked />
-                  </div>
-                  <div class="setting-item">
-                    <label>启用 PEX</label>
-                    <input type="checkbox" class="form-checkbox" checked />
-                  </div>
-                </div>
+              <div class="settings-section">
+                <h3>Aria2 设置</h3>
+                <SettingItem
+                  v-for="setting in aria2Settings"
+                  :key="setting.key"
+                  v-model="aria2Config[setting.key]"
+                  :label="setting.label"
+                  :type="setting.type"
+                  :helpText="setting.helpText"
+                  :placeholder="setting.placeholder"
+                  :options="setting.options"
+                  :min="setting.min"
+                  :max="setting.max"
+                />
               </div>
 
               <div class="form-actions">
@@ -443,6 +380,8 @@ const testConnection = async () => {
           </div>
         </div>
       </div>
+
+
     </div>
   </div>
 </template>
@@ -942,6 +881,37 @@ input:checked + .toggle-slider:before {
   cursor: pointer;
 }
 
+
+/* DEMO 标签页样式 */
+.demo-intro {
+  margin-bottom: 1.5rem;
+  color: #666666;
+  font-size: 1rem;
+}
+
+.demo-result {
+  margin-top: 2rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0;
+}
+
+.demo-result h4 {
+  margin: 0 0 0.5rem 0;
+  color: #333333;
+}
+
+.demo-result pre {
+  margin: 0;
+  padding: 0.5rem;
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  color: #333333;
+  overflow-x: auto;
+}
 
 /* 响应式设计 */
 @media (max-width: 768px) {
