@@ -139,7 +139,7 @@ class SystemController {
   // 测试连接
   async testConnection(req, res) {
     try {
-      const result = await aria2Client.testConnection()
+      const result = await aria2Client.testConnection(req.body)
       
       if (result.success) {
         res.json({ 

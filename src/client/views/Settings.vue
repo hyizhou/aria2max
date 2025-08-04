@@ -1,25 +1,18 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useConfigStore } from '@/store'
+import { useConfigStore, useSystemConfigStore } from '@/store'
 import SettingItem from '@/components/SettingItem.vue'
 import { aria2Settings, defaultAria2Config } from '@/config/aria2Config'
 
 const configStore = useConfigStore()
+const systemConfigStore = useSystemConfigStore()
 
 const loading = ref(false)
 const saving = ref(false)
 const testing = ref(false)
 const testResult = ref<{ success: boolean; message: string } | null>(null)
 
-const config = ref({
-  aria2RpcUrl: '',
-  aria2RpcSecret: '',
-  downloadDir: '',
-  aria2ConfigPath: '',
-  autoDeleteMetadata: false,
-  autoDeleteAria2FilesOnRemove: false,
-  autoDeleteAria2FilesOnSchedule: false
-})
+const systemConfig = ref<Record<string, any>>(systemConfigStore.getDefaultSystemConfig())
 
 const aria2Config = ref<Record<string, any>>(defaultAria2Config)
 
@@ -44,13 +37,13 @@ const loadConfig = async () => {
   try {
     await configStore.fetchConfig()
     
-    config.value.aria2RpcUrl = configStore.aria2RpcUrl
-    config.value.aria2RpcSecret = configStore.aria2RpcSecret
-    config.value.downloadDir = configStore.downloadDir
-    config.value.aria2ConfigPath = configStore.aria2ConfigPath || ''
-    config.value.autoDeleteMetadata = configStore.autoDeleteMetadata
-    config.value.autoDeleteAria2FilesOnRemove = configStore.autoDeleteAria2FilesOnRemove
-    config.value.autoDeleteAria2FilesOnSchedule = configStore.autoDeleteAria2FilesOnSchedule
+    systemConfig.value.aria2RpcUrl = configStore.aria2RpcUrl
+    systemConfig.value.aria2RpcSecret = configStore.aria2RpcSecret
+    systemConfig.value.downloadDir = configStore.downloadDir
+    systemConfig.value.aria2ConfigPath = configStore.aria2ConfigPath || ''
+    systemConfig.value.autoDeleteMetadata = configStore.autoDeleteMetadata
+    systemConfig.value.autoDeleteAria2FilesOnRemove = configStore.autoDeleteAria2FilesOnRemove
+    systemConfig.value.autoDeleteAria2FilesOnSchedule = configStore.autoDeleteAria2FilesOnSchedule
   } catch (error) {
     console.error('Failed to load config:', error)
     testResult.value = {
@@ -88,13 +81,13 @@ const saveConfig = async () => {
   try {
     // 构建要保存的配置对象，包含所有字段
     const configToSave = {
-      aria2RpcUrl: config.value.aria2RpcUrl,
-      aria2RpcSecret: config.value.aria2RpcSecret || '',
-      downloadDir: config.value.downloadDir,
-      aria2ConfigPath: config.value.aria2ConfigPath || '',
-      autoDeleteMetadata: config.value.autoDeleteMetadata,
-      autoDeleteAria2FilesOnRemove: config.value.autoDeleteAria2FilesOnRemove,
-      autoDeleteAria2FilesOnSchedule: config.value.autoDeleteAria2FilesOnSchedule
+      aria2RpcUrl: systemConfig.value.aria2RpcUrl,
+      aria2RpcSecret: systemConfig.value.aria2RpcSecret || '',
+      downloadDir: systemConfig.value.downloadDir,
+      aria2ConfigPath: systemConfig.value.aria2ConfigPath || '',
+      autoDeleteMetadata: systemConfig.value.autoDeleteMetadata,
+      autoDeleteAria2FilesOnRemove: systemConfig.value.autoDeleteAria2FilesOnRemove,
+      autoDeleteAria2FilesOnSchedule: systemConfig.value.autoDeleteAria2FilesOnSchedule
     }
 
     await configStore.saveConfig(configToSave)
@@ -125,7 +118,12 @@ const testConnection = async () => {
   testResult.value = null
   
   try {
-    await configStore.testConnection()
+    // 创建一个临时的配置对象，包含RPC URL和密钥
+    const tempConfig = {
+      aria2RpcUrl: systemConfig.value.aria2RpcUrl,
+      aria2RpcSecret: systemConfig.value.aria2RpcSecret || ''
+    }
+    await configStore.testConnection(tempConfig)
     testResult.value = {
       success: true,
       message: '连接测试成功'
@@ -179,19 +177,23 @@ const testConnection = async () => {
             
             <form v-else @submit.prevent="saveConfig">
               <div class="settings-list">
+                <SettingItem
+                  v-for="setting in systemConfigStore.getSystemSettings()"
+                  :key="setting.key"
+                  v-model="systemConfig[setting.key]"
+                  :label="setting.label"
+                  :type="setting.type"
+                  :helpText="setting.helpText"
+                  :placeholder="setting.placeholder"
+                />
+                
+                <!-- 测试连接按钮单独处理 -->
                 <div class="setting-item">
                   <div class="setting-row">
                     <div class="setting-info">
-                      <label for="aria2RpcUrl" class="setting-label">Aria2 RPC 地址</label>
+                      <label class="setting-label">Aria2 RPC 连接测试</label>
                     </div>
                     <div class="input-group">
-                      <input
-                        id="aria2RpcUrl"
-                        v-model="config.aria2RpcUrl"
-                        type="text"
-                        class="form-control setting-input"
-                        placeholder="例如: http://localhost:6800/jsonrpc"
-                      />
                       <button
                         type="button"
                         class="btn btn-secondary"
@@ -200,131 +202,6 @@ const testConnection = async () => {
                       >
                         {{ testing ? '测试中...' : '测试连接' }}
                       </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="setting-item">
-                  <div class="setting-row">
-                    <div class="setting-info">
-                      <label for="aria2RpcSecret" class="setting-label">RPC 密钥</label>
-                      <button 
-                        type="button" 
-                        class="help-button" 
-                        title="留空表示不修改现有RPC密钥。只有在此字段输入新值时，才会更新RPC密钥配置。"
-                      >?</button>
-                    </div>
-                    <input
-                      id="aria2RpcSecret"
-                      v-model="config.aria2RpcSecret"
-                      type="password"
-                      class="form-control setting-input"
-                      placeholder="留空表示不修改现有密钥"
-                    />
-                  </div>
-                </div>
-                
-                <div class="setting-item">
-                  <div class="setting-row">
-                    <div class="setting-info">
-                      <label for="downloadDir" class="setting-label">下载目录</label>
-                    </div>
-                    <input
-                      id="downloadDir"
-                      v-model="config.downloadDir"
-                      type="text"
-                      class="form-control setting-input"
-                      placeholder="例如: /home/user/downloads"
-                    />
-                  </div>
-                </div>
-                
-                <div class="setting-item">
-                  <div class="setting-row">
-                    <div class="setting-info">
-                      <label for="aria2ConfigPath" class="setting-label">Aria2配置文件路径</label>
-                      <button 
-                        type="button" 
-                        class="help-button" 
-                        data-tooltip="指定aria2配置文件路径。配置后所有修改将持久化保存至该文件，aria2重启后配置保持不变。留空时配置仅保存在内存中，重启后恢复初始状态"
-                        title=""
-                      >?</button>
-                    </div>
-                    <input
-                      id="aria2ConfigPath"
-                      v-model="config.aria2ConfigPath"
-                      type="text"
-                      class="form-control setting-input"
-                      placeholder="/path/to/aria2.conf"
-                    />
-                  </div>
-                </div>
-                
-                <div class="setting-item">
-                  <div class="setting-row">
-                    <div class="setting-info">
-                      <label class="setting-label">自动删除元数据</label>
-                      <button 
-                        type="button" 
-                        class="help-button" 
-                        data-tooltip="启用自动删除元数据文件(.torrent, .metalink等)，下载完成后自动清理这些元数据文件，节省磁盘空间"
-                        title=""
-                      >?</button>
-                    </div>
-                    <div class="toggle-button-group">
-                      <label class="toggle-switch">
-                        <input
-                          v-model="config.autoDeleteMetadata"
-                          type="checkbox"
-                        />
-                        <span class="toggle-slider"></span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-                
-                <div class="setting-item">
-                  <div class="setting-row">
-                    <div class="setting-info">
-                      <label class="setting-label">删除任务时自动删除.aria2文件</label>
-                      <button 
-                        type="button" 
-                        class="help-button" 
-                        data-tooltip="删除下载任务时自动删除对应的.aria2文件，避免产生残留文件"
-                        title=""
-                      >?</button>
-                    </div>
-                    <div class="toggle-button-group">
-                      <label class="toggle-switch">
-                        <input
-                          v-model="config.autoDeleteAria2FilesOnRemove"
-                          type="checkbox"
-                        />
-                        <span class="toggle-slider"></span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-                
-                <div class="setting-item">
-                  <div class="setting-row">
-                    <div class="setting-info">
-                      <label class="setting-label">定时清理无任务关联的.aria2文件</label>
-                      <button 
-                        type="button" 
-                        class="help-button" 
-                        data-tooltip="每30分钟自动清理一次无任务关联的.aria2文件，系统会扫描并删除没有对应下载任务的.aria2控制文件"
-                        title=""
-                      >?</button>
-                    </div>
-                    <div class="toggle-button-group">
-                      <label class="toggle-switch">
-                        <input
-                          v-model="config.autoDeleteAria2FilesOnSchedule"
-                          type="checkbox"
-                        />
-                        <span class="toggle-slider"></span>
-                      </label>
                     </div>
                   </div>
                 </div>

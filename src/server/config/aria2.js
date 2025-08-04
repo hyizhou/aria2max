@@ -91,16 +91,20 @@ class Aria2Client {
   }
 
   // 测试连接方法（用于系统设置中的测试连接功能）
-  async testConnection() {
+  async testConnection(config) {
     try {
       console.log('[Aria2] Testing Aria2 RPC connection...')
       
+      // 使用传入的配置或默认配置
+      const testRpcUrl = config?.aria2RpcUrl || this.rpcUrl
+      const testRpcSecret = config?.aria2RpcSecret || this.rpcSecret
+      
       // 首先测试基本连接
-      const versionResult = await this.sendRequest('aria2.getVersion')
+      const versionResult = await this.sendRequestWithConfig('aria2.getVersion', [], testRpcUrl, testRpcSecret)
       console.log('[Aria2] Version check successful:', versionResult.result)
       
       // 然后测试全局选项
-      const globalOptions = await this.getGlobalOptions()
+      const globalOptions = await this.getGlobalOptionsWithConfig(testRpcUrl, testRpcSecret)
       console.log('[Aria2] Global options retrieved successfully')
       
       return {
@@ -108,8 +112,8 @@ class Aria2Client {
         message: 'Aria2 连接测试成功',
         details: {
           version: versionResult.result.version,
-          rpcUrl: this.rpcUrl,
-          hasSecret: !!this.rpcSecret,
+          rpcUrl: testRpcUrl,
+          hasSecret: !!testRpcSecret,
           globalOptions: globalOptions
         }
       }
@@ -131,9 +135,9 @@ class Aria2Client {
         message: errorDetails,
         details: {
           error: error.message,
-          rpcUrl: this.rpcUrl,
-          hasSecret: !!this.rpcSecret,
-          secretLength: this.rpcSecret ? this.rpcSecret.length : 0
+          rpcUrl: config?.aria2RpcUrl || this.rpcUrl,
+          hasSecret: !!(config?.aria2RpcSecret || this.rpcSecret),
+          secretLength: (config?.aria2RpcSecret || this.rpcSecret) ? (config?.aria2RpcSecret || this.rpcSecret).length : 0
         }
       }
     }
@@ -141,20 +145,25 @@ class Aria2Client {
 
   // 发送 RPC 请求
   async sendRequest(method, params = [], retryCount = 0) {
+    return this.sendRequestWithConfig(method, params, this.rpcUrl, this.rpcSecret, retryCount);
+  }
+  
+  // 发送 RPC 请求（使用指定配置）
+  async sendRequestWithConfig(method, params = [], rpcUrl, rpcSecret, retryCount = 0) {
     const maxRetries = 3
     const retryDelay = 1000 // 1秒
     
     try {
       // 如果设置了访问码，将其添加到参数中
-      if (this.rpcSecret) {
-        const authToken = `token:${this.rpcSecret}`
+      if (rpcSecret) {
+        const authToken = `token:${rpcSecret}`
         params.unshift(authToken)
       }
       
       // 静默处理，不打印日志
       
       // 每次都创建新的axios实例，确保使用最新的配置
-      const response = await axios.post(this.rpcUrl, {
+      const response = await axios.post(rpcUrl, {
         jsonrpc: '2.0',
         id: 'aria-max',
         method: method,
@@ -177,22 +186,22 @@ class Aria2Client {
         console.error(`[Aria2 RPC] Error response data:`, error.response.data);
         
         // 添加更多调试信息
-        if (this.rpcSecret) {
-          console.error(`[Aria2 RPC] Configured RPC secret length: ${this.rpcSecret.length}`)
-          console.error(`[Aria2 RPC] Token format: token:${this.rpcSecret.substring(0, 2)}***`)
+        if (rpcSecret) {
+          console.error(`[Aria2 RPC] Configured RPC secret length: ${rpcSecret.length}`)
+          console.error(`[Aria2 RPC] Token format: token:${rpcSecret.substring(0, 2)}***`)
         }
         
         throw new Error(`Aria2 RPC request failed (${error.response.status}): ${errorMessage}`)
       } else if (error.request) {
         // Handle network errors
         console.error(`[Aria2 RPC] Network error: ${error.message}`);
-        console.error(`[Aria2 RPC] Make sure Aria2 is running at: ${this.rpcUrl}`);
+        console.error(`[Aria2 RPC] Make sure Aria2 is running at: ${rpcUrl}`);
         
         // 对于网络错误，进行重试
         if (retryCount < maxRetries) {
           console.log(`[Aria2 RPC] Retrying ${method} request (${retryCount + 1}/${maxRetries}) in ${retryDelay}ms...`);
           await new Promise(resolve => setTimeout(resolve, retryDelay));
-          return this.sendRequest(method, params.slice(this.rpcSecret ? 1 : 0), retryCount + 1);
+          return this.sendRequestWithConfig(method, params.slice(rpcSecret ? 1 : 0), rpcUrl, rpcSecret, retryCount + 1);
         } else {
           console.error(`[Aria2 RPC] Max retries exceeded for ${method}`);
           throw new Error(`Aria2 RPC network error: ${error.message}`)
@@ -207,8 +216,13 @@ class Aria2Client {
 
   // 获取 Aria2 全局选项
   async getGlobalOptions() {
+    return this.getGlobalOptionsWithConfig(this.rpcUrl, this.rpcSecret);
+  }
+  
+  // 获取 Aria2 全局选项（使用指定配置）
+  async getGlobalOptionsWithConfig(rpcUrl, rpcSecret) {
     try {
-      const response = await this.sendRequest('aria2.getGlobalOption')
+      const response = await this.sendRequestWithConfig('aria2.getGlobalOption', [], rpcUrl, rpcSecret)
       return response.result
     } catch (error) {
       console.error('Failed to get global options:', error.message)

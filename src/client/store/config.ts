@@ -69,9 +69,9 @@ export const useConfigStore = defineStore('config', {
       }
     },
     
-    async testConnection() {
+    async testConnection(config?: { aria2RpcUrl: string; aria2RpcSecret: string }) {
       try {
-        const response = await systemApi.testConnection()
+        const response = await systemApi.testConnection(config)
         return response
       } catch (error) {
         console.error('Failed to test connection:', error)

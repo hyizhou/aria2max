@@ -187,8 +187,8 @@ export const systemApi = {
   },
 
   // 测试连接
-  async testConnection() {
-    return await apiClient.post('/system/test-connection')
+  async testConnection(config) {
+    return await apiClient.post('/system/test-connection', config)
   },
 
   // 获取实时网速（轻量级接口）
