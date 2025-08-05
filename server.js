@@ -85,41 +85,13 @@ app.use((err, req, res, next) => {
 
 // 启动服务器
 const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 aria-max server is running on port ${PORT}`)
-  console.log(`📁 Environment: ${process.env.NODE_ENV || 'development'}`)
-  
-  if (process.env.NODE_ENV === 'production') {
-    console.log(`🌐 Frontend available at http://localhost:${PORT}`)
-  } else {
-    console.log(`🌐 Vite dev server: http://localhost:3000`)
-    console.log(`⚙️  Backend API: http://localhost:2999/api`)
-    console.log(`📋 在开发模式下，请直接访问 http://localhost:3000`)
-  }
-  
-  // 启动调度器服务
   scheduler.start()
-  console.log('[Scheduler] Scheduler service started')
 })
 
 // 优雅关闭处理
 function gracefulShutdown() {
-  console.log('[Server] Starting graceful shutdown...')
-  
-  // 停止调度器
   scheduler.stop()
-  console.log('[Scheduler] Scheduler service stopped')
-  
-  // 关闭HTTP服务器
-  server.close(() => {
-    console.log('[Server] HTTP server closed')
-    process.exit(0)
-  })
-  
-  // 如果服务器没有在10秒内关闭，强制退出
-  setTimeout(() => {
-    console.error('[Server] Forcing shutdown after timeout')
-    process.exit(1)
-  }, 10000)
+  server.close(() => process.exit(0))
 }
 
 // 监听进程信号
@@ -127,14 +99,7 @@ process.on('SIGTERM', gracefulShutdown)
 process.on('SIGINT', gracefulShutdown)
 
 // 处理未捕获的异常
-process.on('uncaughtException', (error) => {
-  console.error('[Process] Uncaught Exception:', error)
-  gracefulShutdown()
-})
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('[Process] Unhandled Rejection at:', promise, 'reason:', reason)
-  gracefulShutdown()
-})
+process.on('uncaughtException', gracefulShutdown)
+process.on('unhandledRejection', gracefulShutdown)
 
 module.exports = app
