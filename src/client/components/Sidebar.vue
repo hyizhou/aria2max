@@ -227,7 +227,7 @@ const handleOverlayClick = () => {
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
-  z-index: 950;
+  z-index: 850; /* 将z-index设置为低于侧边栏，确保可以点击到菜单项 */
   opacity: 0;
   transition: opacity 0.3s ease;
   pointer-events: none;
