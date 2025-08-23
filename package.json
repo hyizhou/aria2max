@@ -1,6 +1,6 @@
 {
   "name": "aria2max",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A web-based panel for aria2 download manager - monolithic version",
   "main": "server.js",
   "scripts": {
