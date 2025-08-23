@@ -1,3 +1,4 @@
+require('express-async-errors');
 const express = require('express')
 const cors = require('cors')
 const path = require('path')
@@ -51,10 +52,12 @@ app.use((req, res) => {
 // 全局错误处理
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err)
-  res.status(500).json({
+  const statusCode = err.statusCode || 500
+  const message = err.message || 'Internal server error'
+  res.status(statusCode).json({
     error: {
-      code: 500,
-      message: 'Internal server error'
+      code: statusCode,
+      message: message
     }
   })
 })
