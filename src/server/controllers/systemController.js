@@ -65,48 +65,75 @@ class SystemController {
 
   // 保存配置信息
   async saveConfig(req, res) {
-    const { aria2RpcUrl, aria2RpcSecret, downloadDir, aria2ConfigPath, autoDeleteMetadata, autoDeleteAria2FilesOnRemove, autoDeleteAria2FilesOnSchedule } = req.body
+    try {
+      console.log('Saving config with data:', req.body);
+      
+      // 读取现有配置文件
+      const configPath = path.join(__dirname, '../config.json')
+      let existingConfig = {
+        aria2RpcUrl: 'http://localhost:6800/jsonrpc',
+        aria2RpcSecret: '',
+        // 注意：downloadDir（文件管理目录）仅用于本项目文件管理功能，不是Aria2的下载目录
+        // 文件管理功能通过此路径访问和管理已下载的文件，但不会影响Aria2的实际下载路径设置
+        downloadDir: '/tmp',
+        aria2ConfigPath: '',
+        autoDeleteMetadata: false,
+        autoDeleteAria2FilesOnRemove: false,
+        autoDeleteAria2FilesOnSchedule: false
+      }
 
-    // 读取现有配置文件
-    const configPath = path.join(__dirname, '../config.json')
-    let existingConfig = {
-      aria2RpcUrl: 'http://localhost:6800/jsonrpc',
-      aria2RpcSecret: '',
-      // 注意：downloadDir（文件管理目录）仅用于本项目文件管理功能，不是Aria2的下载目录
-      // 文件管理功能通过此路径访问和管理已下载的文件，但不会影响Aria2的实际下载路径设置
-      downloadDir: '/tmp',
-      aria2ConfigPath: '',
-      autoDeleteMetadata: false,
-      autoDeleteAria2FilesOnRemove: false,
-      autoDeleteAria2FilesOnSchedule: false
+      if (fs.existsSync(configPath)) {
+        const configData = fs.readFileSync(configPath, 'utf8')
+        existingConfig = JSON.parse(configData)
+      }
+
+      // 构建要保存的配置，对于未提供的字段保持原值
+      const configFile = { ...existingConfig }
+
+      // 只更新请求中提供的字段
+      if (req.body.aria2RpcUrl !== undefined) {
+        configFile.aria2RpcUrl = req.body.aria2RpcUrl
+      }
+      if (req.body.aria2RpcSecret !== undefined && req.body.aria2RpcSecret !== '') {
+        configFile.aria2RpcSecret = req.body.aria2RpcSecret
+      }
+      if (req.body.downloadDir !== undefined) {
+        configFile.downloadDir = req.body.downloadDir
+      }
+      if (req.body.aria2ConfigPath !== undefined) {
+        configFile.aria2ConfigPath = req.body.aria2ConfigPath
+      }
+      if (req.body.autoDeleteMetadata !== undefined) {
+        configFile.autoDeleteMetadata = req.body.autoDeleteMetadata
+      }
+      if (req.body.autoDeleteAria2FilesOnRemove !== undefined) {
+        configFile.autoDeleteAria2FilesOnRemove = req.body.autoDeleteAria2FilesOnRemove
+      }
+      if (req.body.autoDeleteAria2FilesOnSchedule !== undefined) {
+        configFile.autoDeleteAria2FilesOnSchedule = req.body.autoDeleteAria2FilesOnSchedule
+      }
+
+      console.log('Final config to save:', configFile);
+
+      // 确保目录存在
+      const configDir = path.dirname(configPath)
+      if (!fs.existsSync(configDir)) {
+        fs.mkdirSync(configDir, { recursive: true })
+      }
+
+      // 写入配置文件
+      fs.writeFileSync(configPath, JSON.stringify(configFile, null, 2))
+
+      res.json({ success: true })
+    } catch (error) {
+      console.error('Save config error:', error)
+      res.status(500).json({ 
+        success: false,
+        error: { 
+          message: error.message || 'Failed to save config' 
+        } 
+      })
     }
-
-    if (fs.existsSync(configPath)) {
-      const configData = fs.readFileSync(configPath, 'utf8')
-      existingConfig = JSON.parse(configData)
-    }
-
-    // 构建要保存的配置，对于未提供的字段保持原值
-    const configFile = {
-      aria2RpcUrl: aria2RpcUrl !== undefined ? aria2RpcUrl : existingConfig.aria2RpcUrl,
-      aria2RpcSecret: aria2RpcSecret !== undefined && aria2RpcSecret !== '' ? aria2RpcSecret : existingConfig.aria2RpcSecret,
-      downloadDir: downloadDir !== undefined ? downloadDir : existingConfig.downloadDir,
-      aria2ConfigPath: aria2ConfigPath !== undefined ? aria2ConfigPath : existingConfig.aria2ConfigPath,
-      autoDeleteMetadata: autoDeleteMetadata !== undefined ? autoDeleteMetadata : existingConfig.autoDeleteMetadata,
-      autoDeleteAria2FilesOnRemove: autoDeleteAria2FilesOnRemove !== undefined ? autoDeleteAria2FilesOnRemove : existingConfig.autoDeleteAria2FilesOnRemove,
-      autoDeleteAria2FilesOnSchedule: autoDeleteAria2FilesOnSchedule !== undefined ? autoDeleteAria2FilesOnSchedule : existingConfig.autoDeleteAria2FilesOnSchedule
-    }
-
-    // 确保目录存在
-    const configDir = path.dirname(configPath)
-    if (!fs.existsSync(configDir)) {
-      fs.mkdirSync(configDir, { recursive: true })
-    }
-
-    // 写入配置文件
-    fs.writeFileSync(configPath, JSON.stringify(configFile, null, 2))
-
-    res.json({ success: true })
   }
 
   // 测试连接

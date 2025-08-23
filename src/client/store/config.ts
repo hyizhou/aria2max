@@ -35,27 +35,19 @@ export const useConfigStore = defineStore('config', {
     },
     
     async saveConfig(config: { 
-      aria2RpcUrl: string; 
-      aria2RpcSecret: string; 
-      downloadDir: string; 
+      aria2RpcUrl?: string; 
+      aria2RpcSecret?: string; 
+      downloadDir?: string; 
       aria2ConfigPath?: string;
       autoDeleteMetadata?: boolean; 
       autoDeleteAria2FilesOnRemove?: boolean;
       autoDeleteAria2FilesOnSchedule?: boolean;
     }) {
       try {
-        const response = await systemApi.saveConfig({
-          aria2RpcUrl: config.aria2RpcUrl,
-          aria2RpcSecret: config.aria2RpcSecret,
-          downloadDir: config.downloadDir,
-          aria2ConfigPath: config.aria2ConfigPath || '',
-          autoDeleteMetadata: config.autoDeleteMetadata || false,
-          autoDeleteAria2FilesOnRemove: config.autoDeleteAria2FilesOnRemove || false,
-          autoDeleteAria2FilesOnSchedule: config.autoDeleteAria2FilesOnSchedule || false
-        })
+        const response = await systemApi.saveConfig(config)
         
         // 检查后端响应
-        if (!response || !response.success) {
+        if (!response || (response.success === false)) {
           throw new Error(response?.error?.message || 'Failed to save config')
         }
         

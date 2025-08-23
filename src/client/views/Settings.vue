@@ -13,6 +13,7 @@ const testing = ref(false)
 const testResult = ref<{ success: boolean; message: string } | null>(null)
 
 const systemConfig = ref<Record<string, any>>(systemConfigStore.getDefaultSystemConfig())
+const originalSystemConfig = ref<Record<string, any>>({})
 
 const aria2Config = ref<Record<string, any>>(defaultAria2Config)
 
@@ -44,6 +45,9 @@ const loadConfig = async () => {
     systemConfig.value.autoDeleteMetadata = configStore.autoDeleteMetadata
     systemConfig.value.autoDeleteAria2FilesOnRemove = configStore.autoDeleteAria2FilesOnRemove
     systemConfig.value.autoDeleteAria2FilesOnSchedule = configStore.autoDeleteAria2FilesOnSchedule
+    
+    // 保存原始配置用于比较
+    originalSystemConfig.value = { ...systemConfig.value }
   } catch (error) {
     console.error('Failed to load config:', error)
     testResult.value = {
@@ -53,6 +57,25 @@ const loadConfig = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// 检查配置项是否被修改
+const isConfigModified = (key: string) => {
+  return systemConfig.value[key] !== originalSystemConfig.value[key]
+}
+
+// 获取修改过的配置项
+const getModifiedConfig = () => {
+  const modifiedConfig: Record<string, any> = {}
+  const configKeys = Object.keys(systemConfig.value)
+  
+  for (const key of configKeys) {
+    if (isConfigModified(key)) {
+      modifiedConfig[key] = systemConfig.value[key]
+    }
+  }
+  
+  return modifiedConfig
 }
 
 const saveConfig = async () => {
@@ -79,18 +102,29 @@ const saveConfig = async () => {
 
   saving.value = true
   try {
-    // 构建要保存的配置对象，包含所有字段
-    const configToSave = {
-      aria2RpcUrl: systemConfig.value.aria2RpcUrl,
-      aria2RpcSecret: systemConfig.value.aria2RpcSecret || '',
-      downloadDir: systemConfig.value.downloadDir,
-      aria2ConfigPath: systemConfig.value.aria2ConfigPath || '',
-      autoDeleteMetadata: systemConfig.value.autoDeleteMetadata,
-      autoDeleteAria2FilesOnRemove: systemConfig.value.autoDeleteAria2FilesOnRemove,
-      autoDeleteAria2FilesOnSchedule: systemConfig.value.autoDeleteAria2FilesOnSchedule
+    // 只发送修改过的配置项
+    const modifiedConfig = getModifiedConfig()
+    
+    // 如果没有修改任何配置项，则直接返回
+    if (Object.keys(modifiedConfig).length === 0) {
+      testResult.value = {
+        success: true,
+        message: '配置无变化，无需保存'
+      }
+      
+      // 3秒后清除提示
+      setTimeout(() => {
+        testResult.value = null
+      }, 3000)
+      
+      saving.value = false
+      return
     }
 
-    await configStore.saveConfig(configToSave)
+    await configStore.saveConfig(modifiedConfig)
+    
+    // 保存成功后，更新原始配置为当前配置
+    Object.assign(originalSystemConfig.value, systemConfig.value)
     
     // 显示保存成功提示
     testResult.value = {
@@ -185,6 +219,7 @@ const testConnection = async () => {
                   :type="setting.type"
                   :helpText="setting.helpText"
                   :placeholder="setting.placeholder"
+                  :modified="isConfigModified(setting.key)"
                 />
                 
                 <!-- 测试连接按钮单独处理 -->

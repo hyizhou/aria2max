@@ -1,5 +1,5 @@
 <template>
-  <div class="setting-item">
+  <div class="setting-item" :class="{ 'modified': modified }">
     <div class="setting-row">
       <div class="setting-info">
         <label :for="settingId" class="setting-label">{{ label }}</label>
@@ -98,6 +98,7 @@ interface Props {
   min?: number
   max?: number
   options?: Option[]
+  modified?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -120,6 +121,16 @@ const settingId = computed(() => `setting-${Math.random().toString(36).substr(2,
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.setting-item.modified .setting-label {
+  color: #1976d2;
+  font-weight: 600;
+}
+
+.setting-item.modified .setting-input {
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
 }
 
 .setting-row {
