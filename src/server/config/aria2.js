@@ -7,7 +7,7 @@ const path = require('path')
 const defaultConfig = {
   aria2RpcUrl: 'http://localhost:6800/jsonrpc',
   aria2RpcSecret: '',
-  // 注意：downloadDir仅用于本项目文件管理功能，不是Aria2的下载目录
+  // 注意：downloadDir（文件管理目录）仅用于本项目文件管理功能，不是Aria2的下载目录
   // 文件管理功能通过此路径访问和管理已下载的文件，但不会影响Aria2的实际下载路径设置
   downloadDir: '/downloads',
   aria2ConfigPath: '',
@@ -653,9 +653,11 @@ class Aria2Client {
         }
       }))
       
-      return fileList
+      return { files: fileList, error: null }
     } catch (error) {
-      throw new Error(`Failed to read directory: ${error.message}`)
+      const errorMessage = `Failed to read directory: ${this.downloadDir}. Error: ${error.message}`
+      console.error(errorMessage)
+      return { files: [], error: errorMessage }
     }
   }
 

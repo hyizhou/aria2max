@@ -85,13 +85,21 @@ app.use((err, req, res, next) => {
 
 // 启动服务器
 const server = app.listen(PORT, '0.0.0.0', () => {
-  scheduler.start()
+  try {
+    scheduler.start()
+  } catch (err) {
+    console.error('Error starting scheduler:', err);
+    gracefulShutdown();
+  }
 })
 
 // 优雅关闭处理
-function gracefulShutdown() {
+function gracefulShutdown(reason, promise) {
+  if (reason) {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  }
   scheduler.stop()
-  server.close(() => process.exit(0))
+  server.close(() => process.exit(1)) // exit with error code
 }
 
 // 监听进程信号
@@ -99,7 +107,10 @@ process.on('SIGTERM', gracefulShutdown)
 process.on('SIGINT', gracefulShutdown)
 
 // 处理未捕获的异常
-process.on('uncaughtException', gracefulShutdown)
+process.on('uncaughtException', (err, origin) => {
+  console.error('Uncaught Exception:', err, 'Origin:', origin);
+  gracefulShutdown();
+});
 process.on('unhandledRejection', gracefulShutdown)
 
 module.exports = app

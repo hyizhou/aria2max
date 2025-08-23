@@ -6,19 +6,27 @@ export const useFileStore = defineStore('file', {
   state: () => ({
     files: [],
     currentPath: '',
-    loading: false
+    loading: false,
+    error: null
   }),
   
   actions: {
     async fetchFiles(path = '') {
       this.loading = true
+      this.error = null // Reset error on each fetch
       try {
         const response = await fileApi.getFiles(path)
-        this.files = response.files
+        if (response.error) {
+          this.error = response.error
+          this.files = []
+        } else {
+          this.files = response.files
+        }
         this.currentPath = path
       } catch (error) {
         console.error('Failed to fetch files:', error)
-        throw error
+        this.error = error.message || 'An unknown error occurred.'
+        this.files = []
       } finally {
         this.loading = false
       }

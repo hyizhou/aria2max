@@ -46,6 +46,12 @@
         <p>加载中...</p>
       </div>
       
+      <div v-else-if="fileStore.error" class="error-state">
+        <p>无法加载文件列表：</p>
+        <p class="error-message">{{ fileStore.error }}</p>
+        <button class="btn btn-secondary" @click="loadFiles">重试</button>
+      </div>
+      
       <div v-else-if="fileStore.files.length === 0" class="empty-state">
         <p>该目录为空</p>
       </div>
@@ -339,10 +345,23 @@ const handlePreviewClose = () => {
   box-sizing: border-box;
 }
 
-.loading, .empty-state {
+.loading, .empty-state, .error-state {
   padding: 2rem;
   text-align: center;
   color: #999999;
+}
+
+.error-state {
+  color: #d32f2f;
+}
+
+.error-message {
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+  color: #d32f2f;
+  font-family: monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 /* 响应式设计 */

@@ -7,8 +7,8 @@ class FileController {
   // 获取文件列表
   async getFiles(req, res) {
     const { path: dirPath = '' } = req.query
-    const files = await aria2Client.getFiles(dirPath)
-    res.json({ files })
+    const result = await aria2Client.getFiles(dirPath)
+    res.json(result)
   }
 
   // 下载文件

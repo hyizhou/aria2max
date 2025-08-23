@@ -85,12 +85,23 @@ function cpuAverage() {
 // 辅助函数：获取磁盘使用情况
 function getDiskUsage(path) {
   return new Promise((resolve, reject) => {
-    disk.check(path, (err, info) => {
+    fs.stat(path, (err, stats) => {
       if (err) {
-        reject(err)
-      } else {
-        resolve(info)
+        if (err.code === 'ENOENT') {
+          return reject(new Error(`Directory not found: ${path}`));
+        }
+        return reject(err);
       }
+      if (!stats.isDirectory()) {
+        return reject(new Error(`Path is not a directory: ${path}`));
+      }
+      disk.check(path, (err, info) => {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(info)
+        }
+      })
     })
   })
 }

@@ -28,7 +28,7 @@ export const systemSettings: SystemSetting[] = [
   {
     key: 'downloadDir',
     type: 'text',
-    label: '下载目录',
+    label: '文件管理目录',
     helpText: '注意：此路径仅用于本项目的文件管理功能，不是Aria2的下载目录。文件管理功能通过此路径访问和管理已下载的文件，但不会影响Aria2的实际下载路径设置。',
     placeholder: '例如: /home/user/downloads'
   },

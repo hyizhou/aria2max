@@ -37,7 +37,7 @@ class SchedulerService {
     const intervalMs = 30 * 60 * 1000 // 30分钟
     
     // 立即执行一次
-    this.executeAria2FileCleanup()
+    this.executeAria2FileCleanup().catch(err => console.error('[Scheduler] Unhandled error during initial cleanup:', err))
     
     // 然后设置定时器
     const interval = setInterval(() => {
