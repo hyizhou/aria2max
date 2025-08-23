@@ -18,6 +18,8 @@ class SystemController {
     let configFile = {
       aria2RpcUrl: 'http://localhost:6800/jsonrpc',
       aria2RpcSecret: '',
+      // 注意：downloadDir仅用于本项目文件管理功能，不是Aria2的下载目录
+      // 文件管理功能通过此路径访问和管理已下载的文件，但不会影响Aria2的实际下载路径设置
       downloadDir: '/tmp',
       aria2ConfigPath: '',
       autoDeleteMetadata: false,
@@ -70,6 +72,8 @@ class SystemController {
     let existingConfig = {
       aria2RpcUrl: 'http://localhost:6800/jsonrpc',
       aria2RpcSecret: '',
+      // 注意：downloadDir仅用于本项目文件管理功能，不是Aria2的下载目录
+      // 文件管理功能通过此路径访问和管理已下载的文件，但不会影响Aria2的实际下载路径设置
       downloadDir: '/tmp',
       aria2ConfigPath: '',
       autoDeleteMetadata: false,
