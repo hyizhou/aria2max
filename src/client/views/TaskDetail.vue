@@ -68,7 +68,8 @@ const loadTaskDetail = async () => {
 }
 
 const formatBytes = (bytes: number): string => {
-  if (bytes === 0) return '0 B'
+  // 处理未定义或无效的值
+  if (!bytes || bytes === 0 || isNaN(bytes)) return '0 B'
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
@@ -653,6 +654,16 @@ const handleAction = async (action: string) => {
             </span>
           </div>
           
+          <div class="info-item" v-if="taskStore.currentTask.status === 'error' && taskStore.currentTask.errorMessage">
+            <label>错误详情:</label>
+            <span class="error-message">{{ taskStore.currentTask.errorMessage }}</span>
+          </div>
+          
+          <div class="info-item" v-if="taskStore.currentTask.status === 'error' && taskStore.currentTask.errorCode">
+            <label>错误代码:</label>
+            <span class="error-code">{{ taskStore.currentTask.errorCode }}</span>
+          </div>
+          
           <div class="info-item">
             <label>进度 (健康度):</label>
             <span>{{ getProgressText() }}</span>
@@ -660,12 +671,12 @@ const handleAction = async (action: string) => {
           
           <div class="info-item">
             <label>下载数据量:</label>
-            <span>{{ formatBytes(taskStore.currentTask.completedLength) }}</span>
+            <span>{{ formatBytes(parseInt(taskStore.currentTask.completedLength || '0', 10)) }}</span>
           </div>
           
           <div class="info-item">
             <label>上传数据量:</label>
-            <span>{{ formatBytes(taskStore.currentTask.uploadLength || 0) }}</span>
+            <span>{{ formatBytes(parseInt(taskStore.currentTask.uploadLength || '0', 10)) }}</span>
           </div>
           
           <div class="info-item">
@@ -958,6 +969,18 @@ const handleAction = async (action: string) => {
 .status-badge.status-complete {
   background-color: #f3e5f5;
   color: #9c27b0;
+}
+
+.error-message {
+  color: #f44336;
+  font-weight: 500;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error-code {
+  color: #ff9800;
+  font-weight: 500;
 }
 
 .task-files {
@@ -1542,6 +1565,14 @@ const handleAction = async (action: string) => {
 .dark-theme .status-badge.status-complete {
   background-color: #3d1a4d;
   color: #ab47bc;
+}
+
+.dark-theme .error-message {
+  color: #ef5350;
+}
+
+.dark-theme .error-code {
+  color: #ffa726;
 }
 
 .dark-theme .task-files h4,
