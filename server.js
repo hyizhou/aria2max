@@ -99,7 +99,10 @@ function gracefulShutdown(reason, promise) {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
   }
   scheduler.stop()
-  server.close(() => process.exit(1)) // exit with error code
+  server.close(() => {
+    console.log('Server closed successfully');
+    process.exit(0); // exit with success code
+  });
 }
 
 // 监听进程信号
