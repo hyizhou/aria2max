@@ -484,11 +484,6 @@ onMounted(async () => {
   // 获取默认下载目录
   await configStore.fetchConfig()
   defaultDownloadDir.value = configStore.downloadDir
-  
-  // 设置默认下载目录
-  if (!taskData.options.dir) {
-    taskData.options.dir = defaultDownloadDir.value
-  }
 })
 
 // 返回上一页
