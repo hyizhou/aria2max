@@ -101,6 +101,30 @@ aria-max/
   - aria2 API 地址
   - 下载目录路径
 
+## CLI 工具
+
+项目现在包含一个命令行界面 (CLI) 工具，可以通过 `aria2max` 命令来管理应用程序：
+
+```bash
+aria2max start        # 后台启动服务
+aria2max stop         # 停止服务
+aria2max restart      # 重启服务
+aria2max status       # 查看服务状态
+aria2max log          # 查看日志
+aria2max --help       # 显示帮助信息
+aria2max --version    # 显示版本信息
+```
+
+### 全局安装
+
+要使用 CLI 工具，需要先全局安装：
+
+```bash
+npm install -g
+```
+
+安装后，可以在任何位置使用 `aria2max` 命令。
+
 ## 脚本命令
 
 ```bash

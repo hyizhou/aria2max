@@ -3,6 +3,10 @@
   "version": "0.1.2",
   "description": "A web-based panel for aria2 download manager - monolithic version",
   "main": "server.js",
+  "bin": {
+    "aria2max": "./bin/cli.js"
+  },
+  "preferGlobal": true,
   "scripts": {
     "dev": "npm-run-all --parallel dev:server dev:client",
     "dev:server": "cross-env NODE_ENV=development nodemon server.js",
@@ -15,6 +19,7 @@
   },
   "dependencies": {
     "axios": "^1.6.2",
+    "commander": "^14.0.0",
     "cors": "^2.8.5",
     "diskusage": "^1.2.0",
     "dotenv": "^16.3.1",
@@ -22,6 +27,7 @@
     "express-async-errors": "^3.1.1",
     "express-fileupload": "^1.5.2",
     "pinia": "^2.1.7",
+    "pm2": "^6.0.8",
     "vue": "^3.4.0",
     "vue-router": "^4.5.1"
   },
