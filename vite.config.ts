@@ -54,7 +54,8 @@ export default defineConfig({
   root: '.',
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src/client')
+      '@': resolve(__dirname, 'src/client'),
+      '@shared': resolve(__dirname, 'src/shared')
     }
   },
   server: {
@@ -70,6 +71,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    sourcemap: false
+    sourcemap: false,
+    emptyOutDir: false
   }
 })

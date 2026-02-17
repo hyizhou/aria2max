@@ -48,7 +48,7 @@ export const useConfigStore = defineStore('config', {
         
         // 检查后端响应
         if (!response || (response.success === false)) {
-          throw new Error(response?.error?.message || 'Failed to save config')
+          throw new Error('Failed to save config')
         }
         
         // 保存成功后，立即从后端重新加载最新配置
@@ -63,7 +63,7 @@ export const useConfigStore = defineStore('config', {
     
     async testConnection(config?: { aria2RpcUrl: string; aria2RpcSecret: string }) {
       try {
-        const response = await systemApi.testConnection(config)
+        const response = await systemApi.testConnection(config || {})
         return response
       } catch (error) {
         console.error('Failed to test connection:', error)

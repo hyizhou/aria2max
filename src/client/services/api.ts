@@ -1,8 +1,21 @@
 // API 服务层
-import axios from 'axios'
+import axios, { AxiosInstance, AxiosError } from 'axios'
+import type {
+  TaskListResponse,
+  AddTaskResponse,
+  Aria2TaskDetail,
+  FileListResponse,
+  SystemConfig,
+  SystemStatusResponse,
+  SystemInfo,
+  RealtimeSpeedResponse,
+  DeviceNetworkSpeedResponse,
+  TestConnectionResponse,
+  ApiErrorResponse
+} from '@shared/types'
 
 // 创建 axios 实例
-const apiClient = axios.create({
+const apiClient: AxiosInstance = axios.create({
   baseURL: '/api',
   timeout: 10000,
   headers: {
@@ -13,7 +26,6 @@ const apiClient = axios.create({
 // 请求拦截器
 apiClient.interceptors.request.use(
   config => {
-    // 可以在这里添加认证token等
     return config
   },
   error => {
@@ -26,29 +38,26 @@ apiClient.interceptors.response.use(
   response => {
     return response.data
   },
-  error => {
+  (error: AxiosError<ApiErrorResponse>) => {
     if (error.response) {
-      // 服务器返回错误状态码
       console.error('API Error Response:', error.response.status, error.response.data)
       return Promise.reject(error.response.data)
     } else if (error.request) {
-      // 请求发出但没有收到响应
       console.error('Network Error - No Response:', error.request)
       console.error('Error config:', error.config)
-      return Promise.reject({ 
-        error: { 
-          code: 0, 
-          message: 'Network error - No response received' 
-        } 
+      return Promise.reject({
+        error: {
+          code: 0,
+          message: 'Network error - No response received'
+        }
       })
     } else {
-      // 其他错误
       console.error('General Error:', error.message)
-      return Promise.reject({ 
-        error: { 
-          code: 0, 
-          message: error.message 
-        } 
+      return Promise.reject({
+        error: {
+          code: 0,
+          message: error.message
+        }
       })
     }
   }
@@ -57,17 +66,17 @@ apiClient.interceptors.response.use(
 // 任务管理 API
 export const taskApi = {
   // 获取下载任务列表
-  async getTasks() {
+  async getTasks(): Promise<TaskListResponse> {
     return await apiClient.get('/tasks')
   },
 
   // 添加下载任务
-  async addTask(data) {
+  async addTask(data: { uri: string; options?: Record<string, string | number> }): Promise<AddTaskResponse> {
     return await apiClient.post('/tasks', data)
   },
-  
+
   // 添加种子文件任务
-  async addTorrentFile(file, options = {}) {
+  async addTorrentFile(file: File, options: Record<string, string | number> = {}): Promise<AddTaskResponse> {
     const formData = new FormData()
     formData.append('torrent', file)
     formData.append('options', JSON.stringify(options))
@@ -77,9 +86,9 @@ export const taskApi = {
       }
     })
   },
-  
+
   // 添加Metalink文件任务
-  async addMetalinkFile(file, options = {}) {
+  async addMetalinkFile(file: File, options: Record<string, string | number> = {}): Promise<AddTaskResponse> {
     const formData = new FormData()
     formData.append('metalink', file)
     formData.append('options', JSON.stringify(options))
@@ -91,28 +100,28 @@ export const taskApi = {
   },
 
   // 获取任务详情
-  async getTaskDetail(gid) {
+  async getTaskDetail(gid: string): Promise<Aria2TaskDetail> {
     return await apiClient.get(`/tasks/${gid}`)
   },
 
   // 暂停下载任务
-  async pauseTask(gid) {
+  async pauseTask(gid: string): Promise<{ success: boolean }> {
     return await apiClient.put(`/tasks/${gid}/pause`)
   },
 
   // 继续下载任务
-  async resumeTask(gid) {
+  async resumeTask(gid: string): Promise<{ success: boolean }> {
     return await apiClient.put(`/tasks/${gid}/resume`)
   },
 
   // 删除下载任务
-  async deleteTask(gid, deleteFile = false) {
+  async deleteTask(gid: string, deleteFile = false): Promise<{ success: boolean }> {
     const params = deleteFile ? { deleteFile: 'true' } : {}
     return await apiClient.delete(`/tasks/${gid}`, { params })
   },
 
   // 清理元数据任务
-  async cleanMetadataTasks() {
+  async cleanMetadataTasks(): Promise<{ success: boolean; message: string; deletedTasks: Array<{ gid: string; name: string; status: string }> }> {
     return await apiClient.post('/tasks/clean-metadata')
   }
 }
@@ -120,46 +129,52 @@ export const taskApi = {
 // 文件管理 API
 export const fileApi = {
   // 获取文件列表
-  async getFiles(path = '') {
+  async getFiles(path = ''): Promise<FileListResponse> {
     return await apiClient.get('/files', { params: { path } })
   },
 
   // 下载文件
-  async downloadFile(path) {
-    return await apiClient.get('/files/download', { 
+  async downloadFile(path: string): Promise<Blob> {
+    return await apiClient.get('/files/download', {
       params: { path },
       responseType: 'blob'
     })
   },
 
   // 删除文件或目录
-  async deleteFile(path) {
+  async deleteFile(path: string): Promise<{ success: boolean }> {
     return await apiClient.delete('/files', { data: { path } })
   },
 
   // 创建目录
-  async createDirectory(path) {
+  async createDirectory(path: string): Promise<{ success: boolean }> {
     return await apiClient.post('/files/mkdir', { path })
   },
-  
+
   // 重命名文件或目录
-  async renameFile(oldPath, newPath) {
+  async renameFile(oldPath: string, newPath: string): Promise<{ success: boolean }> {
     return await apiClient.put('/files/rename', { oldPath, newPath })
   },
-  
+
   // 上传文件
-  async uploadFile(file, path = '', onUploadProgress) {
+  async uploadFile(file: File, path = '', onUploadProgress?: (progressEvent: { loaded: number; total: number; progress: number }) => void): Promise<{ success: boolean }> {
     const formData = new FormData()
     formData.append('file', file)
     if (path) {
       formData.append('path', path)
     }
-    
+
     return await apiClient.post('/files/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       },
-      onUploadProgress: onUploadProgress
+      onUploadProgress: onUploadProgress ? (progressEvent) => {
+        onUploadProgress({
+          loaded: progressEvent.loaded,
+          total: progressEvent.total || 0,
+          progress: progressEvent.total ? progressEvent.loaded / progressEvent.total : 0
+        })
+      } : undefined
     })
   }
 }
@@ -167,37 +182,37 @@ export const fileApi = {
 // 系统管理 API
 export const systemApi = {
   // 获取系统状态
-  async getSystemStatus() {
+  async getSystemStatus(): Promise<SystemStatusResponse> {
     return await apiClient.get('/system/status')
   },
 
   // 获取系统信息
-  async getSystemInfo() {
+  async getSystemInfo(): Promise<SystemInfo> {
     return await apiClient.get('/system/info')
   },
 
   // 获取配置信息
-  async getConfig() {
+  async getConfig(): Promise<SystemConfig> {
     return await apiClient.get('/system/config')
   },
 
   // 保存配置信息
-  async saveConfig(config) {
-    return await apiClient.put('/system/config', config);
+  async saveConfig(config: Partial<SystemConfig>): Promise<{ success: boolean }> {
+    return await apiClient.put('/system/config', config)
   },
 
   // 测试连接
-  async testConnection(config) {
+  async testConnection(config: Partial<SystemConfig>): Promise<TestConnectionResponse> {
     return await apiClient.post('/system/test-connection', config)
   },
 
   // 获取实时网速（轻量级接口）
-  async getRealtimeSpeed() {
+  async getRealtimeSpeed(): Promise<RealtimeSpeedResponse> {
     return await apiClient.get('/system/realtime-speed')
   },
 
   // 获取设备网速（专门用于网速显示）
-  async getDeviceNetworkSpeed() {
+  async getDeviceNetworkSpeed(): Promise<DeviceNetworkSpeedResponse> {
     return await apiClient.get('/system/device-network-speed')
   }
 }

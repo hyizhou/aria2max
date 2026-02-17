@@ -79,8 +79,8 @@ export const useSystemConfigStore = defineStore('systemConfig', {
   
   getters: {
     // 提供对配置元数据的访问
-    getSystemSettings: (state) => () => systemSettings,
-    getDefaultSystemConfig: (state) => () => defaultSystemConfig
+    getSystemSettings: () => () => systemSettings,
+    getDefaultSystemConfig: () => () => defaultSystemConfig
   },
   
   actions: {

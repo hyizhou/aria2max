@@ -1,44 +1,51 @@
 import { defineStore } from 'pinia'
 import { fileApi } from '@/services'
+import type { FileItem } from '@shared/types'
 
-// File store
+interface FileState {
+  files: FileItem[]
+  currentPath: string
+  loading: boolean
+  error: string | null
+}
+
 export const useFileStore = defineStore('file', {
-  state: () => ({
+  state: (): FileState => ({
     files: [],
     currentPath: '',
     loading: false,
     error: null
   }),
-  
+
   actions: {
-    async fetchFiles(path = '') {
+    async fetchFiles(path = ''): Promise<void> {
       this.loading = true
-      this.error = null // Reset error on each fetch
+      this.error = null
       try {
         const response = await fileApi.getFiles(path)
         if (response.error) {
           this.error = response.error
           this.files = []
         } else {
-          this.files = response.files
+          this.files = response.files as FileItem[]
         }
         this.currentPath = path
       } catch (error) {
+        const err = error as Error
         console.error('Failed to fetch files:', error)
-        this.error = error.message || 'An unknown error occurred.'
+        this.error = err.message || 'An unknown error occurred.'
         this.files = []
       } finally {
         this.loading = false
       }
     },
-    
-    async downloadFile(path) {
+
+    async downloadFile(path: string): Promise<{ success: boolean }> {
       try {
-        // Create a direct download link to the API endpoint
         const downloadUrl = `/api/files/download?path=${encodeURIComponent(path)}`
         const link = document.createElement('a')
         link.href = downloadUrl
-        link.setAttribute('download', path.split('/').pop())
+        link.setAttribute('download', path.split('/').pop() || 'download')
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
@@ -48,11 +55,10 @@ export const useFileStore = defineStore('file', {
         throw error
       }
     },
-    
-    async deleteFile(path) {
+
+    async deleteFile(path: string): Promise<{ success: boolean }> {
       try {
         const response = await fileApi.deleteFile(path)
-        // 删除成功后刷新文件列表
         await this.fetchFiles(this.currentPath)
         return response
       } catch (error) {
@@ -60,11 +66,10 @@ export const useFileStore = defineStore('file', {
         throw error
       }
     },
-    
-    async createDirectory(path) {
+
+    async createDirectory(path: string): Promise<{ success: boolean }> {
       try {
         const response = await fileApi.createDirectory(path)
-        // 创建成功后刷新文件列表
         await this.fetchFiles(this.currentPath)
         return response
       } catch (error) {
@@ -72,11 +77,10 @@ export const useFileStore = defineStore('file', {
         throw error
       }
     },
-    
-    async renameFile(oldPath, newPath) {
+
+    async renameFile(oldPath: string, newPath: string): Promise<{ success: boolean }> {
       try {
         const response = await fileApi.renameFile(oldPath, newPath)
-        // 重命名成功后刷新文件列表
         await this.fetchFiles(this.currentPath)
         return response
       } catch (error) {
@@ -84,11 +88,10 @@ export const useFileStore = defineStore('file', {
         throw error
       }
     },
-    
-    async uploadFile(file, path = '', onUploadProgress) {
+
+    async uploadFile(file: File, path = '', onUploadProgress?: (progressEvent: { loaded: number; total: number; progress: number }) => void): Promise<{ success: boolean }> {
       try {
         const response = await fileApi.uploadFile(file, path, onUploadProgress)
-        // 上传成功后刷新文件列表
         await this.fetchFiles(this.currentPath)
         return response
       } catch (error) {

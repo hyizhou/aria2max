@@ -1,34 +1,39 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "skipLibCheck": true,
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
+    "module": "CommonJS",
+    "lib": ["ES2020"],
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "preserve",
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
     "baseUrl": ".",
+    "outDir": "./dist",
+    "rootDir": ".",
     "paths": {
-      "@/*": ["src/client/*"]
-    }
+      "@/*": ["src/client/*"],
+      "@shared/*": ["src/shared/*"]
+    },
+    "typeRoots": ["./node_modules/@types", "./src/server/types"]
   },
   "include": [
-    "src/client/**/*.ts",
-    "src/client/**/*.d.ts",
-    "src/client/**/*.tsx",
-    "src/client/**/*.vue"
+    "src/shared/**/*.ts",
+    "src/server/**/*.ts",
+    "server.ts",
+    "bin/cli.ts"
   ],
   "exclude": [
     "node_modules",
-    "dist",
-    "src/server"
+    "dist"
   ]
 }

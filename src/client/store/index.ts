@@ -1,5 +1,3 @@
-import { defineStore } from 'pinia'
-
 // 导出所有store
 export * from './task'
 export * from './file'
