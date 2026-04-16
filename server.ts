@@ -10,6 +10,17 @@ import routes from './src/server/routes'
 const app: Express = express()
 const PORT = parseInt(String(process.env.PORT || 2999), 10)
 
+// Path resolution
+// Compiled (production):  dist/server.js  -> __dirname = dist/
+// ts-node   (development): server.ts      -> __dirname = project root
+const projectRoot = path.resolve(__dirname, __dirname.endsWith(path.join('dist')) ? '..' : '.')
+const isProduction = process.env.NODE_ENV === 'production'
+const publicDir = process.env.PUBLIC_DIR || (
+  isProduction
+    ? path.resolve(projectRoot, 'dist')
+    : path.resolve(projectRoot, 'src/client/public')
+)
+
 // 中间件
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
@@ -25,8 +36,8 @@ app.use(fileUpload({
 app.use('/api', routes)
 
 // 静态文件服务
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'dist')))
+if (isProduction) {
+  app.use(express.static(publicDir))
 
   app.get('*', (_req: Request, res: Response) => {
     if (_req.path.startsWith('/api')) {
@@ -37,14 +48,14 @@ if (process.env.NODE_ENV === 'production') {
         }
       })
     }
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'))
+    res.sendFile(path.join(publicDir, 'index.html'))
   })
 } else {
   app.get('/', (_req: Request, res: Response) => {
     res.redirect('http://localhost:3000')
   })
 
-  app.use(express.static(path.join(__dirname, 'src/client/public')))
+  app.use(express.static(publicDir))
 }
 
 // 404 处理

@@ -3,14 +3,11 @@
 import { Command } from 'commander'
 import * as path from 'path'
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const pm2 = require('pm2')
+import pm2 from 'pm2'
+import packageJson from '../package.json'
 
-interface PackageJson {
-  version: string
-}
-
-const packageJson: PackageJson = require('../package.json')
+// pm2 type definitions are incomplete, cast to access full API
+const pm2api = pm2 as any
 
 const program = new Command()
 
@@ -26,15 +23,15 @@ program
   .action(() => {
     console.log('Starting aria-max server...')
 
-    pm2.connect((err: Error) => {
+    pm2api.connect((err: Error) => {
       if (err) {
         console.error('Failed to connect to PM2:', err)
         process.exit(2)
       }
 
-      pm2.start({
+      pm2api.start({
         name: 'aria-max-server',
-        script: path.resolve(__dirname, '../dist/server.js'),
+        script: path.resolve(__dirname, '../server.js'),
         instances: 1,
         autorestart: true,
         watch: false,
@@ -48,7 +45,7 @@ program
         log_file: path.resolve(__dirname, '../logs/aria-max-combined.log'),
         time: true
       }, (err: Error) => {
-        pm2.disconnect()
+        pm2api.disconnect()
         if (err) {
           console.error('Failed to start aria-max server:', err)
           process.exit(2)
@@ -65,14 +62,14 @@ program
   .action(() => {
     console.log('Stopping aria-max server...')
 
-    pm2.connect((err: Error) => {
+    pm2api.connect((err: Error) => {
       if (err) {
         console.error('Failed to connect to PM2:', err)
         process.exit(2)
       }
 
-      pm2.stop('aria-max-server', (err: Error) => {
-        pm2.disconnect()
+      pm2api.stop('aria-max-server', (err: Error) => {
+        pm2api.disconnect()
         if (err) {
           console.error('Failed to stop aria-max server:', err)
           process.exit(2)
@@ -89,14 +86,14 @@ program
   .action(() => {
     console.log('Restarting aria-max server...')
 
-    pm2.connect((err: Error) => {
+    pm2api.connect((err: Error) => {
       if (err) {
         console.error('Failed to connect to PM2:', err)
         process.exit(2)
       }
 
-      pm2.restart('aria-max-server', (err: Error) => {
-        pm2.disconnect()
+      pm2api.restart('aria-max-server', (err: Error) => {
+        pm2api.disconnect()
         if (err) {
           console.error('Failed to restart aria-max server:', err)
           process.exit(2)
@@ -111,14 +108,14 @@ program
   .command('status')
   .description('Show aria-max server status')
   .action(() => {
-    pm2.connect((err: Error) => {
+    pm2api.connect((err: Error) => {
       if (err) {
         console.error('Failed to connect to PM2:', err)
         process.exit(2)
       }
 
-      pm2.describe('aria-max-server', (err: Error, apps: unknown[]) => {
-        pm2.disconnect()
+      pm2api.describe('aria-max-server', (err: Error, apps: unknown[]) => {
+        pm2api.disconnect()
         if (err) {
           console.error('Failed to get server status:', err)
           process.exit(2)
@@ -168,7 +165,7 @@ program
   .option('-n, --lines <number>', 'Output the last N lines', '20')
   .option('-f, --follow', 'Follow log output')
   .action((options: { lines: string; follow: boolean }) => {
-    pm2.connect((err: Error) => {
+    pm2api.connect((err: Error) => {
       if (err) {
         console.error('Failed to connect to PM2:', err)
         process.exit(2)
@@ -176,11 +173,11 @@ program
 
       if (options.follow) {
         console.log('Following aria-max server logs (Press Ctrl+C to exit):')
-        pm2.streamLogs('aria-max-server', 0)
+        pm2api.streamLogs('aria-max-server', 0)
       } else {
         const lineCount = parseInt(options.lines)
-        pm2.logs('aria-max-server', lineCount, (err: Error) => {
-          pm2.disconnect()
+        pm2api.logs('aria-max-server', lineCount, (err: Error) => {
+          pm2api.disconnect()
           if (err) {
             console.error('Failed to get logs:', err)
             process.exit(2)

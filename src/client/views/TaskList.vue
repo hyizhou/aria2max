@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
-import { useTaskStore } from '@/store/task.js'
+import { useTaskStore } from '@/store/task'
 import TaskItem from '@/components/TaskItem.vue'
 import TaskFilter from '@/components/TaskFilter.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'

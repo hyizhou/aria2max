@@ -1,4 +1,5 @@
 import * as os from 'os'
+import * as path from 'path'
 import * as disk from 'diskusage'
 import * as fs from 'fs'
 import aria2Client from '../config/aria2'
@@ -98,28 +99,33 @@ interface DiskUsageResult {
 }
 
 // 辅助函数：获取磁盘使用情况
-function getDiskUsage(path: string): Promise<DiskUsageResult> {
+// 依次尝试目标路径及其父路径，直到找到可用的挂载点
+function getDiskUsage(targetPath: string): Promise<DiskUsageResult> {
   return new Promise((resolve, reject) => {
-    fs.stat(path, (err, stats) => {
-      if (err) {
-        if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-          return reject(new Error(`Directory not found: ${path}`))
+    function tryPath(p: string): void {
+      fs.stat(p, (err, stats) => {
+        if (err || !stats.isDirectory()) {
+          // 尝试向上一级目录
+          const parent = path.dirname(p)
+          if (parent === p) {
+            // 已到根目录仍然失败
+            return reject(new Error(`No accessible directory found for: ${targetPath}`))
+          }
+          return tryPath(parent)
         }
-        return reject(err)
-      }
-      if (!stats.isDirectory()) {
-        return reject(new Error(`Path is not a directory: ${path}`))
-      }
-      disk.check(path, (err, info) => {
-        if (err) {
-          reject(err)
-        } else if (info) {
+        disk.check(p, (err, info) => {
+          if (err || !info) {
+            const parent = path.dirname(p)
+            if (parent === p) {
+              return reject(err || new Error('Failed to get disk usage info'))
+            }
+            return tryPath(parent)
+          }
           resolve(info)
-        } else {
-          reject(new Error('Failed to get disk usage info'))
-        }
+        })
       })
-    })
+    }
+    tryPath(targetPath)
   })
 }
 
