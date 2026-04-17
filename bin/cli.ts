@@ -2,6 +2,8 @@
 
 import { Command } from 'commander'
 import * as path from 'path'
+import * as fs from 'fs'
+import { execSync } from 'child_process'
 
 import pm2 from 'pm2'
 import packageJson from '../package.json'
@@ -164,27 +166,28 @@ program
   .description('View aria-max server logs')
   .option('-n, --lines <number>', 'Output the last N lines', '20')
   .option('-f, --follow', 'Follow log output')
-  .action((options: { lines: string; follow: boolean }) => {
-    pm2api.connect((err: Error) => {
-      if (err) {
-        console.error('Failed to connect to PM2:', err)
-        process.exit(2)
-      }
+  .option('-e, --error', 'Show error log instead of output log')
+  .action((options: { lines: string; follow: boolean; error: boolean }) => {
+    const logDir = path.resolve(__dirname, '../logs')
+    const logFile = options.error
+      ? path.join(logDir, 'aria-max-err-0.log')
+      : path.join(logDir, 'aria-max-out-0.log')
 
+    if (!fs.existsSync(logFile)) {
+      console.log('No log file found:', logFile)
+      return
+    }
+
+    try {
       if (options.follow) {
-        console.log('Following aria-max server logs (Press Ctrl+C to exit):')
-        pm2api.streamLogs('aria-max-server', 0)
+        execSync(`tail -f "${logFile}"`, { stdio: 'inherit' })
       } else {
         const lineCount = parseInt(options.lines)
-        pm2api.logs('aria-max-server', lineCount, (err: Error) => {
-          pm2api.disconnect()
-          if (err) {
-            console.error('Failed to get logs:', err)
-            process.exit(2)
-          }
-        })
+        execSync(`tail -n ${lineCount} "${logFile}"`, { stdio: 'inherit' })
       }
-    })
+    } catch (err) {
+      process.exit((err as { status?: number }).status || 2)
+    }
   })
 
 program.parse()
