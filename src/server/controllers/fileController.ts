@@ -36,6 +36,7 @@ class FileControllerImpl implements FileController {
     }
 
     const fullPath = path.join(aria2Client.downloadDir, filePath as string)
+    const fileName = path.basename(fullPath)
 
     try {
       await fs.access(fullPath)
@@ -49,7 +50,11 @@ class FileControllerImpl implements FileController {
       return
     }
 
-    res.sendFile(fullPath)
+    res.sendFile(fullPath, {
+      headers: {
+        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`
+      }
+    })
   }
 
   // 删除文件或目录
