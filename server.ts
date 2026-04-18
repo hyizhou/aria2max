@@ -4,6 +4,17 @@ import * as path from 'path'
 import fileUpload from 'express-fileupload'
 import 'dotenv/config'
 
+// 注册 tsconfig paths 别名，使 Node.js 运行时能解析 @shared 等路径别名
+// 生产环境: __dirname = dist/，编译后的文件在 dist/src/shared/ 下
+// 开发环境: ts-node 内置支持 tsconfig paths，此处注册不影响
+import { register } from 'tsconfig-paths'
+register({
+  baseUrl: __dirname,
+  paths: {
+    '@shared/*': ['src/shared/*']
+  }
+})
+
 import scheduler from './src/server/services/scheduler'
 import routes from './src/server/routes'
 

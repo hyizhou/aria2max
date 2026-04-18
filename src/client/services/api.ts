@@ -23,16 +23,6 @@ const apiClient: AxiosInstance = axios.create({
   }
 })
 
-// 请求拦截器
-apiClient.interceptors.request.use(
-  config => {
-    return config
-  },
-  error => {
-    return Promise.reject(error)
-  }
-)
-
 // 响应拦截器
 apiClient.interceptors.response.use(
   response => {

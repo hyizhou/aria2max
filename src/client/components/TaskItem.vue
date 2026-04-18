@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { formatBytes as _formatBytes } from '@shared/utils/format'
 
 interface Task {
   gid: string
@@ -31,12 +32,7 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const formatBytes = (bytes: string | number): string => {
-  const numBytes = typeof bytes === 'string' ? parseInt(bytes, 10) : bytes
-  if (numBytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(numBytes) / Math.log(k))
-  return parseFloat((numBytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  return _formatBytes(typeof bytes === 'string' ? parseInt(bytes, 10) : bytes)
 }
 
 const formatSpeed = (bytes: string | number): string => {

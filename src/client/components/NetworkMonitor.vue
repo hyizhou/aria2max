@@ -68,6 +68,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useNetworkStore } from '@/store'
+import { formatBytesFixed, formatBytes, parseBytes } from '@shared/utils/format'
 
 const networkMonitor = ref(null)
 const chartCanvas = ref(null)
@@ -117,37 +118,7 @@ const updateNetworkDisplay = () => {
   }
 }
 
-// 格式化字节数（固定两位小数，用0补齐）
-const formatBytesTwoDecimal = (bytes: number): string => {
-  if (bytes === 0) return '0.00 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i]
-}
-
-// 格式化字节数
-const formatBytes = (bytes: number): string => {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-}
-
-// 解析字节数
-const parseBytes = (speedStr: string): number => {
-  const match = speedStr.match(/([\d.]+)\s*(B|KB|MB|GB|TB)\/s/)
-  if (!match) return 0
-  
-  const value = parseFloat(match[1])
-  const unit = match[2]
-  const units = { 'B': 1, 'KB': 1024, 'MB': 1024*1024, 'GB': 1024*1024*1024, 'TB': 1024*1024*1024*1024 }
-  
-  return value * (units[unit] || 1)
-}
-
-// 绘制图表
+// 获取网络速度数据
 const drawChart = () => {
   if (!chartCanvas.value) return
   
@@ -242,13 +213,13 @@ const drawChart = () => {
 // 获取移动端简化下载速度显示
 const getMobileDownloadSpeed = () => {
   const speed = parseBytes(downloadSpeed.value)
-  return formatBytesTwoDecimal(speed) + '/s'
+  return formatBytesFixed(speed) + '/s'
 }
 
 // 获取移动端简化上传速度显示
 const getMobileUploadSpeed = () => {
   const speed = parseBytes(uploadSpeed.value)
-  return formatBytesTwoDecimal(speed) + '/s'
+  return formatBytesFixed(speed) + '/s'
 }
 
 // 检测是否为移动端

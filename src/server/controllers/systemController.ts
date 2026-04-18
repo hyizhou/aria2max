@@ -6,16 +6,7 @@ import aria2Client from '../config/aria2'
 import { getSystemInfo, getDeviceNetworkSpeed } from '../services/systemInfoService'
 import type { SystemConfig, TestConnectionResponse } from '../../shared/types'
 
-interface SystemController {
-  getSystemStatus(req: Request, res: Response): Promise<void>
-  getConfig(req: Request, res: Response): Promise<void>
-  saveConfig(req: Request, res: Response): Promise<void>
-  testConnection(req: Request, res: Response, next: NextFunction): Promise<void>
-  getSystemInfo(req: Request, res: Response): Promise<void>
-  getRealtimeSpeed(req: Request, res: Response): Promise<void>
-  getDeviceNetworkSpeed(req: Request, res: Response): Promise<void>
-}
-
+// 默认配置（与 aria2.ts 保持一致）
 const defaultConfig: SystemConfig = {
   aria2RpcUrl: 'http://localhost:6800/jsonrpc',
   aria2RpcSecret: '',
@@ -24,6 +15,16 @@ const defaultConfig: SystemConfig = {
   autoDeleteMetadata: false,
   autoDeleteAria2FilesOnRemove: false,
   autoDeleteAria2FilesOnSchedule: false
+}
+
+interface SystemController {
+  getSystemStatus(req: Request, res: Response): Promise<void>
+  getConfig(req: Request, res: Response): Promise<void>
+  saveConfig(req: Request, res: Response): Promise<void>
+  testConnection(req: Request, res: Response, next: NextFunction): Promise<void>
+  getSystemInfo(req: Request, res: Response): Promise<void>
+  getRealtimeSpeed(req: Request, res: Response): Promise<void>
+  getDeviceNetworkSpeed(req: Request, res: Response): Promise<void>
 }
 
 class SystemControllerImpl implements SystemController {

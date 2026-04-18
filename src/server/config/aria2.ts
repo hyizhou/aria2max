@@ -84,6 +84,39 @@ class Aria2Client {
     // 使用getter方法动态获取配置值，确保配置更新后能生效
   }
 
+  // 处理任务选项：过滤空值，数值转字符串
+  private processOptions(options: Record<string, string | number>, defaults?: Record<string, string>): Record<string, string> {
+    const processed: Record<string, string> = { ...defaults }
+    for (const [key, value] of Object.entries(options)) {
+      if (value !== '' && value !== undefined && value !== null) {
+        processed[key] = typeof value === 'number' ? value.toString() : value
+      }
+    }
+    return processed
+  }
+
+  // 解析文件路径：处理 aria2 下载目录与项目目录的映射
+  private async resolveFilePath(filePath: string): Promise<string> {
+    let fullPath = filePath
+    const globalOptions = await this.getGlobalOptions()
+    if (globalOptions && globalOptions.dir) {
+      const aria2DownloadDir = globalOptions.dir
+      if (!path.isAbsolute(filePath) || filePath.startsWith(aria2DownloadDir)) {
+        let relativePath = filePath
+        if (filePath.startsWith(aria2DownloadDir)) {
+          relativePath = filePath.substring(aria2DownloadDir.length)
+          if (relativePath.startsWith('/')) {
+            relativePath = relativePath.substring(1)
+          }
+        }
+        fullPath = path.join(this.downloadDir, relativePath)
+      }
+    } else {
+      fullPath = path.isAbsolute(filePath) ? filePath : path.join(this.downloadDir, filePath)
+    }
+    return fullPath
+  }
+
   // 使用getter方法动态获取配置值
   get rpcUrl(): string {
     return getFinalConfig().aria2RpcUrl
@@ -348,24 +381,12 @@ class Aria2Client {
     const uris = Array.isArray(uri) ? uri : [uri]
     const params: unknown[] = [uris]
 
-    const processedOptions: Record<string, string> = {}
-
     if (uris.some(u => u && u.startsWith('magnet:'))) {
       delete options['bt-metadata-only']
       delete options['bt-save-metadata']
     }
 
-    Object.keys(options).forEach(key => {
-      const value = options[key]
-      if (value !== '' && value !== undefined && value !== null) {
-        if (typeof value === 'number') {
-          processedOptions[key] = value.toString()
-        } else {
-          processedOptions[key] = value
-        }
-      }
-    })
-
+    const processedOptions = this.processOptions(options)
     if (Object.keys(processedOptions).length > 0) {
       params.push(processedOptions)
     }
@@ -377,28 +398,10 @@ class Aria2Client {
   // 添加种子文件任务
   async addTorrent(torrentData: string, options: Record<string, string | number> = {}): Promise<string> {
     const params: unknown[] = [torrentData, []]
-
-    const defaultOptions = {
-      dir: this.downloadDir
-    }
-
-    const processedOptions: Record<string, string> = { ...defaultOptions }
-
-    Object.keys(options).forEach(key => {
-      const value = options[key]
-      if (value !== '' && value !== undefined && value !== null) {
-        if (typeof value === 'number') {
-          processedOptions[key] = value.toString()
-        } else {
-          processedOptions[key] = value
-        }
-      }
-    })
-
+    const processedOptions = this.processOptions(options, { dir: this.downloadDir })
     if (Object.keys(processedOptions).length > 0) {
       params.push(processedOptions)
     }
-
     const response = await this.sendRequest<string>('aria2.addTorrent', params)
     return response.result as string
   }
@@ -406,28 +409,10 @@ class Aria2Client {
   // 添加Metalink文件任务
   async addMetalink(metalinkData: string, options: Record<string, string | number> = {}): Promise<string> {
     const params: unknown[] = [metalinkData]
-
-    const defaultOptions = {
-      dir: this.downloadDir
-    }
-
-    const processedOptions: Record<string, string> = { ...defaultOptions }
-
-    Object.keys(options).forEach(key => {
-      const value = options[key]
-      if (value !== '' && value !== undefined && value !== null) {
-        if (typeof value === 'number') {
-          processedOptions[key] = value.toString()
-        } else {
-          processedOptions[key] = value
-        }
-      }
-    })
-
+    const processedOptions = this.processOptions(options, { dir: this.downloadDir })
     if (Object.keys(processedOptions).length > 0) {
       params.push(processedOptions)
     }
-
     const response = await this.sendRequest<string>('aria2.addMetalink', params)
     return response.result as string
   }
@@ -617,25 +602,7 @@ class Aria2Client {
     const fsPromises = fs.promises
 
     try {
-      let fullPath = filePath
-
-      const globalOptions = await this.getGlobalOptions()
-      if (globalOptions && globalOptions.dir) {
-        const aria2DownloadDir = globalOptions.dir
-
-        if (!path.isAbsolute(filePath) || filePath.startsWith(aria2DownloadDir)) {
-          let relativePath = filePath
-          if (filePath.startsWith(aria2DownloadDir)) {
-            relativePath = filePath.substring(aria2DownloadDir.length)
-            if (relativePath.startsWith('/')) {
-              relativePath = relativePath.substring(1)
-            }
-          }
-          fullPath = path.join(this.downloadDir, relativePath)
-        }
-      } else {
-        fullPath = path.isAbsolute(filePath) ? filePath : path.join(this.downloadDir, filePath)
-      }
+      const fullPath = await this.resolveFilePath(filePath)
 
       try {
         await fsPromises.access(fullPath)
@@ -712,26 +679,7 @@ class Aria2Client {
     const fsPromises = fs.promises
 
     try {
-      let fullPath = filePath
-
-      const globalOptions = await this.getGlobalOptions()
-      if (globalOptions && globalOptions.dir) {
-        const aria2DownloadDir = globalOptions.dir
-
-        if (!path.isAbsolute(filePath) || filePath.startsWith(aria2DownloadDir)) {
-          let relativePath = filePath
-          if (filePath.startsWith(aria2DownloadDir)) {
-            relativePath = filePath.substring(aria2DownloadDir.length)
-            if (relativePath.startsWith('/')) {
-              relativePath = relativePath.substring(1)
-            }
-          }
-          fullPath = path.join(this.downloadDir, relativePath)
-        }
-      } else {
-        fullPath = path.isAbsolute(filePath) ? filePath : path.join(this.downloadDir, filePath)
-      }
-
+      const fullPath = await this.resolveFilePath(filePath)
       await fsPromises.access(fullPath)
       return true
     } catch {

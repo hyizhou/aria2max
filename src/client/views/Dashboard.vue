@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTaskStore } from '@/store'
+import { formatBytes } from '@shared/utils/format'
 
 const taskStore = useTaskStore()
 const router = useRouter()
@@ -75,14 +76,6 @@ const getFileName = (task: any): string => {
 const getProgress = (task: any): number => {
   if (task.totalLength === 0) return 0
   return Math.round((task.completedLength / task.totalLength) * 100)
-}
-
-const formatBytes = (bytes: number): string => {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
 const formatSpeed = (bytes: number): string => {

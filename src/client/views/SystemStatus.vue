@@ -226,6 +226,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { systemApi } from '@/services'
+import { formatBytes } from '@shared/utils/format'
 
 const systemInfo = ref<any>({})
 const loading = ref(false)
@@ -269,14 +270,6 @@ const getCpuCoreUsage = (coreIndex: number): number => {
 }
 
 // 格式化字节数
-const formatBytes = (bytes: number): string => {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-}
-
 
 // 组件挂载时获取数据并设置定时更新
 onMounted(() => {

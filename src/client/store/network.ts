@@ -1,14 +1,6 @@
 import { defineStore } from 'pinia'
 import { systemApi } from '@/services'
-
-// 格式化字节数（固定两位小数，用0补齐）
-const formatBytesTwoDecimal = (bytes: number): string => {
-  if (bytes === 0) return '0.00 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i]
-}
+import { formatBytesFixed } from '@shared/utils/format'
 
 // 解析网络速度数据
 const parseNetworkSpeed = (networkData: any): { download: number, upload: number } => {
@@ -40,6 +32,7 @@ export const useNetworkStore = defineStore('network', {
     maxDownloadSpeed: 0,
     maxUploadSpeed: 0,
     isMonitoring: false,
+    monitoringInterval: null as ReturnType<typeof setInterval> | null,
     networkHistory: {
       download: [] as number[],
       upload: [] as number[],
@@ -48,10 +41,10 @@ export const useNetworkStore = defineStore('network', {
   }),
   
   getters: {
-    downloadSpeedFormatted: (state) => formatBytesTwoDecimal(state.downloadSpeed) + '/s',
-    uploadSpeedFormatted: (state) => formatBytesTwoDecimal(state.uploadSpeed) + '/s',
-    maxDownloadSpeedFormatted: (state) => formatBytesTwoDecimal(state.maxDownloadSpeed) + '/s',
-    maxUploadSpeedFormatted: (state) => formatBytesTwoDecimal(state.maxUploadSpeed) + '/s'
+    downloadSpeedFormatted: (state) => formatBytesFixed(state.downloadSpeed) + '/s',
+    uploadSpeedFormatted: (state) => formatBytesFixed(state.uploadSpeed) + '/s',
+    maxDownloadSpeedFormatted: (state) => formatBytesFixed(state.maxDownloadSpeed) + '/s',
+    maxUploadSpeedFormatted: (state) => formatBytesFixed(state.maxUploadSpeed) + '/s'
   },
   
   actions: {
@@ -108,21 +101,23 @@ export const useNetworkStore = defineStore('network', {
     // 开始网络监控
     startMonitoring() {
       if (this.isMonitoring) return
-      
+
       this.isMonitoring = true
       // 立即获取一次数据
       this.fetchNetworkSpeed()
-      
+
       // 每2秒更新一次数据
-      setInterval(() => {
-        if (this.isMonitoring) {
-          this.fetchNetworkSpeed()
-        }
+      this.monitoringInterval = setInterval(() => {
+        this.fetchNetworkSpeed()
       }, 2000)
     },
-    
+
     // 停止网络监控
     stopMonitoring() {
+      if (this.monitoringInterval) {
+        clearInterval(this.monitoringInterval)
+        this.monitoringInterval = null
+      }
       this.isMonitoring = false
     }
   }

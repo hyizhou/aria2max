@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { isMobileDevice } from '@/utils/device'
 
 // UI store
 export const useUIStore = defineStore('ui', {
@@ -43,9 +44,7 @@ export const useUIStore = defineStore('ui', {
     
     // 初始化时根据屏幕宽度设置侧边栏状态
     initializeSidebar() {
-      // 更精确的移动端检测
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768
-      this.sidebarVisible = !isMobile
+      this.sidebarVisible = !isMobileDevice()
     },
 
     // 主题相关方法

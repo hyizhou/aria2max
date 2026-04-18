@@ -4,6 +4,14 @@ import * as disk from 'diskusage'
 import * as fs from 'fs'
 import aria2Client from '../config/aria2'
 import type { SystemInfo, NetworkSpeedInfo, DiskInfo, SwapInfo, DeviceNetworkSpeedResponse } from '@shared/types'
+import { formatBytes } from '@shared/utils/format'
+
+// 需要过滤的网络接口名模式
+const EXCLUDE_INTERFACE_PATTERNS = ['docker', 'br-', 'veth', 'lo', 'virbr', 'vmnet']
+
+function isFilteredInterface(name: string): boolean {
+  return EXCLUDE_INTERFACE_PATTERNS.some(pattern => name.includes(pattern))
+}
 
 // 缓存系统信息
 let cachedSystemInfo: SystemInfo | null = null
@@ -195,15 +203,6 @@ function getSwapInfo(): Promise<SwapInfo> {
   })
 }
 
-// 辅助函数：格式化字节数
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-}
-
 // 辅助函数：格式化运行时间
 function formatUptime(seconds: number): string {
   const days = Math.floor(seconds / 86400)
@@ -318,14 +317,7 @@ export async function getSystemInfo(): Promise<SystemInfo> {
   const networkInterfaces = os.networkInterfaces()
   const networkStats: Record<string, NetworkSpeedInfo> = {}
 
-  const filteredInterfaces = Object.keys(networkInterfaces).filter(interfaceName => {
-    return !interfaceName.includes('docker') &&
-      !interfaceName.includes('br-') &&
-      !interfaceName.includes('veth') &&
-      !interfaceName.includes('lo') &&
-      !interfaceName.includes('virbr') &&
-      !interfaceName.includes('vmnet')
-  })
+  const filteredInterfaces = Object.keys(networkInterfaces).filter(name => !isFilteredInterface(name))
 
   filteredInterfaces.forEach(interfaceName => {
     const interfaces = networkInterfaces[interfaceName]
@@ -380,15 +372,7 @@ export async function getSystemInfo(): Promise<SystemInfo> {
 export function getDeviceNetworkSpeed(): DeviceNetworkSpeedResponse {
   const networkInterfaces = os.networkInterfaces()
 
-  const filteredInterfaces = Object.keys(networkInterfaces).filter(interfaceName => {
-    return !interfaceName.includes('docker') &&
-      !interfaceName.includes('br-') &&
-      !interfaceName.includes('veth') &&
-      !interfaceName.includes('lo') &&
-      !interfaceName.includes('virbr') &&
-      !interfaceName.includes('vmnet') &&
-      !interfaceName.startsWith('docker')
-  })
+  const filteredInterfaces = Object.keys(networkInterfaces).filter(name => !isFilteredInterface(name))
 
   let totalRxSpeed = 0
   let totalTxSpeed = 0

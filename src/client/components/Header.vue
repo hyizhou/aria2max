@@ -1,14 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUIStore } from '@/store'
 import NetworkMonitor from '@/components/NetworkMonitor.vue'
 
 const router = useRouter()
 const uiStore = useUIStore()
-
-// 添加任务模态框控制
-const showAddTaskModal = ref(false)
 
 const toggleSidebar = () => {
   uiStore.toggleSidebar()
@@ -84,13 +80,6 @@ const toggleTheme = () => {
   background-color: #f5f5f5;
 }
 
-.app-logo {
-  height: 32px;
-  width: 32px;
-  margin-right: 0.5rem;
-  vertical-align: middle;
-}
-
 .app-title {
   margin: 0;
   font-size: 1.5rem;
@@ -145,13 +134,7 @@ const toggleTheme = () => {
     margin-right: 0.5rem;
     padding: 0.4rem;
   }
-  
-  .app-logo {
-    height: 28px;
-    width: 28px;
-    margin-right: 0.4rem;
-  }
-  
+
   .app-title {
     font-size: 1.25rem;
   }
@@ -179,13 +162,7 @@ const toggleTheme = () => {
   .menu-toggle {
     margin-right: 0.4rem;
   }
-  
-  .app-logo {
-    height: 24px;
-    width: 24px;
-    margin-right: 0.3rem;
-  }
-  
+
   .app-title {
     font-size: 1.125rem;
   }

@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useTaskStore } from '@/store'
 import { useRoute } from 'vue-router'
+import { formatBytes } from '@shared/utils/format'
 
 const route = useRoute()
 const taskStore = useTaskStore()
@@ -65,15 +66,6 @@ const loadTaskDetail = async () => {
   } finally {
     loading.value = false
   }
-}
-
-const formatBytes = (bytes: number): string => {
-  // 处理未定义或无效的值
-  if (!bytes || bytes === 0 || isNaN(bytes)) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
 const formatSpeed = (bytes: number): string => {

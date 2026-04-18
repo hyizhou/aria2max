@@ -2,15 +2,11 @@
 import { ref } from 'vue'
 import { useUIStore } from '@/store'
 import { useRoute, useRouter } from 'vue-router'
+import { isMobileDevice } from '@/utils/device'
 
 const uiStore = useUIStore()
 const route = useRoute()
 const router = useRouter()
-
-// 检测是否为移动端设备
-const isMobile = () => {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768
-}
 
 const menus = ref([
   { name: '仪表板', path: '/dashboard', icon: 'fas fa-home' },
@@ -27,7 +23,7 @@ const isActive = (path: string) => {
 const handleMenuClick = (path: string) => {
   router.push(path).then(() => {
     // 只在移动端点击菜单项后隐藏侧边栏
-    if (isMobile()) {
+    if (isMobileDevice()) {
       setTimeout(() => {
         uiStore.hideSidebar()
       }, 100)
@@ -48,7 +44,7 @@ const handleOverlayClick = () => {
     class="sidebar-overlay"
     :class="{ 'sidebar-overlay-visible': uiStore.sidebarVisible }"
     @click="handleOverlayClick"
-    v-if="uiStore.sidebarVisible && isMobile()"
+    v-if="uiStore.sidebarVisible && isMobileDevice()"
   ></div>
   
   <aside class="sidebar" :class="{ 'sidebar-hidden': !uiStore.sidebarVisible }">

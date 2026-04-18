@@ -3,6 +3,7 @@ import { onMounted, onUnmounted } from 'vue'
 import Header from '@/components/Header.vue'
 import Sidebar from '@/components/Sidebar.vue'
 import { useUIStore } from '@/store'
+import { isMobileDevice } from '@/utils/device'
 
 const uiStore = useUIStore()
 
@@ -15,18 +16,11 @@ const handleResize = () => {
   }
 }
 
-// 更精确的移动端检测
-const isMobileDevice = () => {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768
-}
-
 onMounted(() => {
   // 初始化主题
   uiStore.initializeTheme()
-  
-  // 使用更精确的移动端检测
-  const isMobile = isMobileDevice()
-  if (isMobile) {
+
+  if (isMobileDevice()) {
     uiStore.hideSidebar()
   } else {
     uiStore.showSidebar()
