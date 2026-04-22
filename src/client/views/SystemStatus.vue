@@ -214,6 +214,14 @@
                   <span class="label">MAC地址:</span>
                   <span class="value">{{ info.mac }}</span>
                 </div>
+                <div class="info-item">
+                  <span class="label">下载速度:</span>
+                  <span class="value speed-download">{{ info.rxSpeedFormatted || '0 B/s' }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">上传速度:</span>
+                  <span class="value speed-upload">{{ info.txSpeedFormatted || '0 B/s' }}</span>
+                </div>
                 </div>
             </div>
           </div>
@@ -507,6 +515,14 @@ onUnmounted(() => {
   font-size: 0.875rem;
 }
 
+.speed-download {
+  color: #1976d2 !important;
+}
+
+.speed-upload {
+  color: #388e3c !important;
+}
+
 
 .no-data {
   text-align: center;
@@ -773,6 +789,14 @@ onUnmounted(() => {
 
 .dark-theme .no-data {
   color: #b0b0b0;
+}
+
+.dark-theme .speed-download {
+  color: #64b5f6 !important;
+}
+
+.dark-theme .speed-upload {
+  color: #66bb6a !important;
 }
 
 .dark-theme input:checked + .toggle-slider:before {
