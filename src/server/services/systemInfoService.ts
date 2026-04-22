@@ -1,206 +1,21 @@
 import * as os from 'os'
-import * as path from 'path'
-import * as disk from 'diskusage'
-import * as fs from 'fs'
+import si from 'systeminformation'
 import aria2Client from '../config/aria2'
-import type { SystemInfo, NetworkSpeedInfo, DiskInfo, SwapInfo, DeviceNetworkSpeedResponse } from '@shared/types'
 import { formatBytes } from '@shared/utils/format'
+import type { SystemInfo, NetworkSpeedInfo, DiskInfo, DiskPartitionInfo, SwapInfo, DeviceNetworkSpeedResponse } from '@shared/types'
 
-// 需要过滤的网络接口名模式
+// 缓存系统信息（5秒缓存，减少 systeminformation 调用频率）
+let cachedSystemInfo: SystemInfo | null = null
+let lastCacheTime = 0
+const CACHE_DURATION = 5000
+
+// 需要过滤的虚拟接口名模式
 const EXCLUDE_INTERFACE_PATTERNS = ['docker', 'br-', 'veth', 'lo', 'virbr', 'vmnet']
+// 需要过滤的虚拟文件系统类型
+const EXCLUDE_FS_TYPES = ['tmpfs', 'devtmpfs', 'overlay', 'squashfs', 'iso9660']
 
 function isFilteredInterface(name: string): boolean {
   return EXCLUDE_INTERFACE_PATTERNS.some(pattern => name.includes(pattern))
-}
-
-// 缓存系统信息
-let cachedSystemInfo: SystemInfo | null = null
-let lastCacheTime = 0
-const CACHE_DURATION = 800
-
-// 全局变量存储上一次的网络统计
-const lastNetworkStats: Record<string, { rx: number; tx: number; timestamp: number }> = {}
-
-// CPU 平均信息
-interface CpuAverage {
-  idle: number
-  total: number
-}
-
-// 辅助函数：获取CPU使用率
-function getCpuUsage(): Promise<number> {
-  return new Promise((resolve) => {
-    const startMeasure = cpuAverage()
-
-    setTimeout(() => {
-      const endMeasure = cpuAverage()
-      const idleDifference = endMeasure.idle - startMeasure.idle
-      const totalDifference = endMeasure.total - startMeasure.total
-      const cpuPercentage = 100 - Math.round((idleDifference / totalDifference) * 100)
-
-      resolve(cpuPercentage)
-    }, 200)
-  })
-}
-
-// 辅助函数：获取每个CPU核心的使用率
-function getCpuCoresUsage(): Promise<number[]> {
-  return new Promise((resolve) => {
-    const cpus = os.cpus()
-    const startMeasures = cpus.map(cpu => cpuAveragePerCore(cpu))
-
-    setTimeout(() => {
-      const currentCpus = os.cpus()
-      const endMeasures = currentCpus.map(cpu => cpuAveragePerCore(cpu))
-      const coreUsages = startMeasures.map((start, index) => {
-        const end = endMeasures[index]
-        const idleDifference = end.idle - start.idle
-        const totalDifference = end.total - start.total
-        return 100 - Math.round((idleDifference / totalDifference) * 100)
-      })
-
-      resolve(coreUsages)
-    }, 200)
-  })
-}
-
-// 辅助函数：获取单个CPU核心的平均使用率
-function cpuAveragePerCore(cpu: os.CpuInfo): CpuAverage {
-  let totalTick = 0
-  let totalIdle = 0
-
-  for (const type in cpu.times) {
-    totalTick += cpu.times[type as keyof os.CpuInfo['times']]
-  }
-  totalIdle = cpu.times.idle
-
-  return {
-    idle: totalIdle,
-    total: totalTick
-  }
-}
-
-// 辅助函数：获取CPU平均使用率
-function cpuAverage(): CpuAverage {
-  const cpus = os.cpus()
-  let totalIdle = 0
-  let totalTick = 0
-
-  cpus.forEach(cpu => {
-    for (const type in cpu.times) {
-      totalTick += cpu.times[type as keyof os.CpuInfo['times']]
-    }
-    totalIdle += cpu.times.idle
-  })
-
-  return {
-    idle: totalIdle / cpus.length,
-    total: totalTick / cpus.length
-  }
-}
-
-// 磁盘使用情况类型
-interface DiskUsageResult {
-  total: number
-  free: number
-  available: number
-}
-
-// 辅助函数：获取磁盘使用情况
-// 依次尝试目标路径及其父路径，直到找到可用的挂载点
-function getDiskUsage(targetPath: string): Promise<DiskUsageResult> {
-  return new Promise((resolve, reject) => {
-    function tryPath(p: string): void {
-      fs.stat(p, (err, stats) => {
-        if (err || !stats.isDirectory()) {
-          // 尝试向上一级目录
-          const parent = path.dirname(p)
-          if (parent === p) {
-            // 已到根目录仍然失败
-            return reject(new Error(`No accessible directory found for: ${targetPath}`))
-          }
-          return tryPath(parent)
-        }
-        disk.check(p, (err, info) => {
-          if (err || !info) {
-            const parent = path.dirname(p)
-            if (parent === p) {
-              return reject(err || new Error('Failed to get disk usage info'))
-            }
-            return tryPath(parent)
-          }
-          resolve(info)
-        })
-      })
-    }
-    tryPath(targetPath)
-  })
-}
-
-// 辅助函数：获取swap信息
-function getSwapInfo(): Promise<SwapInfo> {
-  return new Promise((resolve, reject) => {
-    try {
-      const meminfo = fs.readFileSync('/proc/meminfo', 'utf8')
-      const lines = meminfo.split('\n')
-
-      let swapTotal = 0
-      let swapFree = 0
-
-      lines.forEach(line => {
-        if (line.startsWith('SwapTotal:')) {
-          swapTotal = parseInt(line.split(':')[1].trim()) * 1024
-        } else if (line.startsWith('SwapFree:')) {
-          swapFree = parseInt(line.split(':')[1].trim()) * 1024
-        }
-      })
-
-      const swapUsed = swapTotal - swapFree
-      const swapPercentage = swapTotal > 0 ? Math.round((swapUsed / swapTotal) * 100) : 0
-
-      resolve({
-        total: swapTotal,
-        used: swapUsed,
-        free: swapFree,
-        percentage: swapPercentage
-      })
-    } catch (error) {
-      try {
-        const swaps = fs.readFileSync('/proc/swaps', 'utf8')
-        const swapLines = swaps.split('\n')
-
-        let swapTotal = 0
-
-        for (let i = 1; i < swapLines.length; i++) {
-          const line = swapLines[i].trim()
-          if (line && !line.startsWith('Filename')) {
-            const parts = line.split(/\s+/)
-            if (parts.length >= 3) {
-              swapTotal += parseInt(parts[2]) * 1024
-            }
-          }
-        }
-
-        if (swapTotal > 0) {
-          resolve({
-            total: swapTotal,
-            used: 0,
-            free: swapTotal,
-            percentage: 0
-          })
-        } else {
-          resolve({
-            total: 0,
-            used: 0,
-            free: 0,
-            percentage: 0
-          })
-        }
-      } catch {
-        reject(error)
-      }
-    }
-  })
 }
 
 // 辅助函数：格式化运行时间
@@ -217,130 +32,135 @@ function formatUptime(seconds: number): string {
   return result || '0分钟'
 }
 
-// 网络速度变化
-interface NetworkSpeedDelta {
-  rxSpeed: number
-  txSpeed: number
-  rxSpeedFormatted: string
-  txSpeedFormatted: string
-}
-
-// 辅助函数：获取网络速度变化
-function getNetworkSpeedDelta(interfaceName: string): NetworkSpeedDelta {
-  try {
-    const currentRx = parseInt(fs.readFileSync(`/sys/class/net/${interfaceName}/statistics/rx_bytes`, 'utf8').trim())
-    const currentTx = parseInt(fs.readFileSync(`/sys/class/net/${interfaceName}/statistics/tx_bytes`, 'utf8').trim())
-
-    if (!lastNetworkStats[interfaceName]) {
-      lastNetworkStats[interfaceName] = { rx: currentRx, tx: currentTx, timestamp: Date.now() }
-      return { rxSpeed: 0, txSpeed: 0, rxSpeedFormatted: '0 B/s', txSpeedFormatted: '0 B/s' }
-    }
-
-    const lastStats = lastNetworkStats[interfaceName]
-    const timeDelta = (Date.now() - lastStats.timestamp) / 1000
-
-    if (timeDelta === 0) {
-      return { rxSpeed: 0, txSpeed: 0, rxSpeedFormatted: '0 B/s', txSpeedFormatted: '0 B/s' }
-    }
-
-    const rxSpeed = (currentRx - lastStats.rx) / timeDelta
-    const txSpeed = (currentTx - lastStats.tx) / timeDelta
-
-    lastNetworkStats[interfaceName] = { rx: currentRx, tx: currentTx, timestamp: Date.now() }
-
-    return {
-      rxSpeed: rxSpeed,
-      txSpeed: txSpeed,
-      rxSpeedFormatted: formatBytes(rxSpeed) + '/s',
-      txSpeedFormatted: formatBytes(txSpeed) + '/s'
-    }
-  } catch {
-    return { rxSpeed: 0, txSpeed: 0, rxSpeedFormatted: '0 B/s', txSpeedFormatted: '0 B/s' }
-  }
-}
-
 export async function getSystemInfo(): Promise<SystemInfo> {
   const now = Date.now()
   if (cachedSystemInfo && (now - lastCacheTime) < CACHE_DURATION) {
     return cachedSystemInfo
   }
 
-  const cpuUsage = await getCpuUsage()
-  const cpuCoresUsage = await getCpuCoresUsage()
+  // 并行获取所有系统数据
+  const [cpuData, loadData, memData, fsSizeData, interfacesData, statsData] =
+    await Promise.all([
+      si.cpu(),
+      si.currentLoad(),
+      si.mem(),
+      si.fsSize(),
+      si.networkInterfaces(),
+      si.networkStats()
+    ])
 
-  const totalMemory = os.totalmem()
-  const freeMemory = os.freemem()
-  const usedMemory = totalMemory - freeMemory
-  const memoryUsage = {
-    total: totalMemory,
-    used: usedMemory,
-    free: freeMemory,
-    percentage: Math.round((usedMemory / totalMemory) * 100)
+  // CPU 信息
+  const cpuInfo = {
+    usage: Math.round(loadData.currentLoad),
+    cores: cpuData.cores,
+    model: `${cpuData.manufacturer} ${cpuData.brand}`,
+    coresUsage: loadData.cpus.map(core => Math.round(core.load))
   }
 
-  let swapUsage: SwapInfo | null = null
-  try {
-    const swapInfo = await getSwapInfo()
-    if (swapInfo.total > 0) {
-      swapUsage = swapInfo
+  // 内存信息（用 available 计算真实使用量，排除 buff/cache）
+  const actualUsed = memData.total - memData.available
+  const memoryInfo = {
+    total: memData.total,
+    used: actualUsed,
+    free: memData.available,
+    percentage: Math.round((actualUsed / memData.total) * 100),
+    cache: memData.buffcache,
+    cachePercentage: Math.round((memData.buffcache / memData.total) * 100)
+  }
+
+  // Swap 信息（全平台）
+  let swapInfo: SwapInfo | null = null
+  if (memData.swaptotal > 0) {
+    swapInfo = {
+      total: memData.swaptotal,
+      used: memData.swapused,
+      free: memData.swapfree,
+      percentage: Math.round((memData.swapused / memData.swaptotal) * 100)
     }
-  } catch (swapError) {
-    const err = swapError as Error
-    console.warn('Failed to get swap info:', err.message)
   }
 
+  // 磁盘信息（多分区支持）
   const downloadDir = aria2Client.downloadDir || process.env.DOWNLOAD_DIR || '/tmp'
-  let diskUsage: DiskInfo | null = null
+  let diskInfo: DiskInfo | null = null
 
   try {
-    const diskInfo = await getDiskUsage(downloadDir)
-    diskUsage = {
-      path: downloadDir,
-      total: diskInfo.total,
-      used: diskInfo.total - diskInfo.free,
-      free: diskInfo.free,
-      percentage: Math.round(((diskInfo.total - diskInfo.free) / diskInfo.total) * 100)
+    // 过滤虚拟文件系统，只保留真实磁盘
+    const realPartitions = fsSizeData.filter(fs =>
+      !EXCLUDE_FS_TYPES.includes(fs.type) && fs.size > 0
+    )
+
+    // 查找下载目录所在的分区（最长路径匹配）
+    const matchedFs = realPartitions
+      .filter(fs => downloadDir.startsWith(fs.mount))
+      .sort((a, b) => b.mount.length - a.mount.length)[0]
+      || realPartitions.find(fs => fs.mount === '/' || fs.mount === 'C:')
+      || realPartitions[0]
+
+    // 构建分区列表
+    const partitions: DiskPartitionInfo[] = realPartitions.map(fs => ({
+      mount: fs.mount,
+      type: fs.type,
+      total: fs.size,
+      used: fs.used,
+      free: fs.available,
+      percentage: Math.round(fs.use)
+    }))
+
+    if (matchedFs) {
+      diskInfo = {
+        path: downloadDir,
+        total: matchedFs.size,
+        used: matchedFs.used,
+        free: matchedFs.available,
+        percentage: Math.round(matchedFs.use),
+        partitions
+      }
+    } else {
+      diskInfo = {
+        path: downloadDir,
+        total: 0,
+        used: 0,
+        free: 0,
+        percentage: 0,
+        partitions
+      }
     }
-  } catch (diskError) {
-    const err = diskError as Error
-    console.error('Failed to get disk usage:', err.message)
-    diskUsage = {
+  } catch (error) {
+    diskInfo = {
       path: downloadDir,
       total: 0,
       used: 0,
       free: 0,
       percentage: 0,
+      partitions: [],
       error: '无法获取磁盘信息'
     }
   }
 
-  const networkInterfaces = os.networkInterfaces()
+  // 网络信息
   const networkStats: Record<string, NetworkSpeedInfo> = {}
+  const filteredInterfaces = interfacesData.filter(iface =>
+    !iface.internal && !isFilteredInterface(iface.iface)
+  )
 
-  const filteredInterfaces = Object.keys(networkInterfaces).filter(name => !isFilteredInterface(name))
+  for (const iface of filteredInterfaces) {
+    const stats = statsData.find(s => s.iface === iface.iface)
+    const rxSpeed = stats?.rx_sec ?? 0
+    const txSpeed = stats?.tx_sec ?? 0
 
-  filteredInterfaces.forEach(interfaceName => {
-    const interfaces = networkInterfaces[interfaceName]
-    if (!interfaces) return
-
-    const ipv4Interface = interfaces.find(iface => iface.family === 'IPv4' && !iface.internal)
-
-    if (ipv4Interface) {
-      const networkSpeed = getNetworkSpeedDelta(interfaceName)
-      networkStats[interfaceName] = {
-        address: ipv4Interface.address,
-        netmask: ipv4Interface.netmask,
-        mac: ipv4Interface.mac,
-        rxSpeed: networkSpeed.rxSpeed,
-        txSpeed: networkSpeed.txSpeed,
-        rxSpeedFormatted: networkSpeed.rxSpeedFormatted,
-        txSpeedFormatted: networkSpeed.txSpeedFormatted
-      }
+    networkStats[iface.iface] = {
+      address: iface.ip4 || '',
+      netmask: iface.ip4subnet || '',
+      mac: iface.mac,
+      rxSpeed,
+      txSpeed,
+      rxSpeedFormatted: formatBytes(rxSpeed) + '/s',
+      txSpeedFormatted: formatBytes(txSpeed) + '/s'
     }
-  })
+  }
 
+  // 系统基础信息（os 模块已跨平台）
   const uptime = os.uptime()
-  const uptimeFormatted = formatUptime(uptime)
 
   const systemInfo: SystemInfo = {
     hostname: os.hostname(),
@@ -348,17 +168,12 @@ export async function getSystemInfo(): Promise<SystemInfo> {
     arch: os.arch(),
     release: os.release(),
     nodeVersion: process.version,
-    uptime: uptime,
-    uptimeFormatted: uptimeFormatted,
-    cpu: {
-      usage: cpuUsage,
-      cores: os.cpus().length,
-      model: os.cpus()[0].model,
-      coresUsage: cpuCoresUsage
-    },
-    memory: memoryUsage,
-    swap: swapUsage,
-    disk: diskUsage,
+    uptime,
+    uptimeFormatted: formatUptime(uptime),
+    cpu: cpuInfo,
+    memory: memoryInfo,
+    swap: swapInfo,
+    disk: diskInfo,
     network: networkStats,
     timestamp: Date.now()
   }
@@ -369,19 +184,20 @@ export async function getSystemInfo(): Promise<SystemInfo> {
   return systemInfo
 }
 
-export function getDeviceNetworkSpeed(): DeviceNetworkSpeedResponse {
-  const networkInterfaces = os.networkInterfaces()
+export async function getDeviceNetworkSpeed(): Promise<DeviceNetworkSpeedResponse> {
+  const statsData = await si.networkStats()
 
-  const filteredInterfaces = Object.keys(networkInterfaces).filter(name => !isFilteredInterface(name))
+  const filteredStats = statsData.filter(
+    stat => !isFilteredInterface(stat.iface)
+  )
 
   let totalRxSpeed = 0
   let totalTxSpeed = 0
 
-  filteredInterfaces.forEach(interfaceName => {
-    const networkSpeed = getNetworkSpeedDelta(interfaceName)
-    totalRxSpeed += networkSpeed.rxSpeed
-    totalTxSpeed += networkSpeed.txSpeed
-  })
+  for (const stat of filteredStats) {
+    totalRxSpeed += stat.rx_sec ?? 0
+    totalTxSpeed += stat.tx_sec ?? 0
+  }
 
   return {
     downloadSpeed: Math.round(totalRxSpeed),

@@ -174,7 +174,7 @@ class SystemControllerImpl implements SystemController {
 
   // 获取设备网速
   async getDeviceNetworkSpeed(_req: Request, res: Response): Promise<void> {
-    const speed = getDeviceNetworkSpeed()
+    const speed = await getDeviceNetworkSpeed()
     res.json(speed)
   }
 }

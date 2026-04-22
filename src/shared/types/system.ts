@@ -37,10 +37,22 @@ export interface MemoryInfo {
   used: number
   free: number
   percentage: number
+  cache?: number
+  cachePercentage?: number
 }
 
 // Swap 信息
 export interface SwapInfo {
+  total: number
+  used: number
+  free: number
+  percentage: number
+}
+
+// 单个磁盘分区信息
+export interface DiskPartitionInfo {
+  mount: string
+  type: string
   total: number
   used: number
   free: number
@@ -55,6 +67,7 @@ export interface DiskInfo {
   free: number
   percentage: number
   error?: string
+  partitions?: DiskPartitionInfo[]
 }
 
 // 网络速度信息
