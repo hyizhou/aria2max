@@ -79,22 +79,13 @@ export const useNetworkStore = defineStore('network', {
       }
     },
     
-    // 获取网络速度数据
+    // 获取网络速度数据（仅 aria2 下载/上传速度）
     async fetchNetworkSpeed() {
       try {
-        // 使用新的设备网速接口
-        const response = await systemApi.getDeviceNetworkSpeed()
+        const response = await systemApi.getRealtimeSpeed()
         this.updateNetworkSpeed(response)
       } catch (error) {
-        console.error('Failed to fetch device network speed:', error)
-        // 如果新接口失败，回退到旧的系统信息接口
-        try {
-          const response = await systemApi.getSystemInfo()
-          const network = response.network || {}
-          this.updateNetworkSpeed(network)
-        } catch (fallbackError) {
-          console.error('Failed to fetch network speed from fallback:', fallbackError)
-        }
+        console.error('Failed to fetch aria2 realtime speed:', error)
       }
     },
     
