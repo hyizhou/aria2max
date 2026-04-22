@@ -100,8 +100,13 @@
               <span class="label">使用率</span>
               <span class="value">{{ systemInfo.memory?.percentage || 0 }}%</span>
             </div>
-            <div class="progress-bar">
+            <div class="progress-bar dual-bar">
               <div class="progress-bar-fill" :style="{ width: (systemInfo.memory?.percentage || 0) + '%' }"></div>
+              <div class="progress-bar-cache" :style="{ left: (systemInfo.memory?.percentage || 0) + '%', width: (systemInfo.memory?.cachePercentage || 0) + '%' }"></div>
+            </div>
+            <div class="progress-legend">
+              <span class="legend-item"><span class="legend-color used-color"></span>已用</span>
+              <span class="legend-item"><span class="legend-color cache-color"></span>缓存</span>
             </div>
           </div>
           <div class="info-item">
@@ -111,6 +116,10 @@
           <div class="info-item">
             <span class="label">已用:</span>
             <span class="value">{{ formatBytes(systemInfo.memory?.used || 0) }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">缓存:</span>
+            <span class="value memory-cache">{{ formatBytes(systemInfo.memory?.cache || 0) }}</span>
           </div>
           <div class="info-item">
             <span class="label">可用:</span>
@@ -466,11 +475,59 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
+.progress-bar.dual-bar {
+  position: relative;
+}
+
 .progress-bar-fill {
   height: 100%;
   background: linear-gradient(90deg, #1976d2, #42a5f5);
   border-radius: 6px;
   transition: width 0.3s ease;
+}
+
+.progress-bar-cache {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #ff9800, #ffb74d);
+  opacity: 0.7;
+  border-radius: 0 6px 6px 0;
+  transition: width 0.3s ease, left 0.3s ease;
+}
+
+.progress-legend {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.4rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.legend-color {
+  display: inline-block;
+  width: 12px;
+  height: 6px;
+  border-radius: 3px;
+}
+
+.legend-color.used-color {
+  background: #1976d2;
+}
+
+.legend-color.cache-color {
+  background: #ff9800;
+  opacity: 0.7;
+}
+
+.memory-cache {
+  color: #f57c00 !important;
 }
 
 .cpu-cores-container {
@@ -797,6 +854,18 @@ onUnmounted(() => {
 
 .dark-theme .speed-upload {
   color: #66bb6a !important;
+}
+
+.dark-theme .progress-bar-cache {
+  background: linear-gradient(90deg, #ffa726, #ffcc80);
+}
+
+.dark-theme .memory-cache {
+  color: #ffb74d !important;
+}
+
+.dark-theme .legend-item {
+  color: #b0b0b0;
 }
 
 .dark-theme input:checked + .toggle-slider:before {

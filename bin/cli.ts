@@ -35,9 +35,10 @@ program
         name: 'aria-max-server',
         script: path.resolve(__dirname, '../server.js'),
         instances: 1,
+        exec_mode: 'fork',
         autorestart: true,
         watch: false,
-        max_memory_restart: '1G',
+        max_memory_restart: '512M',
         env: {
           NODE_ENV: 'production',
           PORT: String(process.env.PORT || 2999)

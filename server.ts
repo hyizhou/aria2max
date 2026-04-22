@@ -125,11 +125,17 @@ function gracefulShutdown(reason?: unknown, promise?: unknown): void {
 process.on('SIGTERM', gracefulShutdown)
 process.on('SIGINT', gracefulShutdown)
 
-// 处理未捕获的异常
+// 处理未捕获的异常（致命错误才退出）
 process.on('uncaughtException', (err: Error, origin: string) => {
   console.error('Uncaught Exception:', err, 'Origin:', origin)
-  gracefulShutdown()
+  // 致命错误才关闭，普通错误记录日志继续运行
+  if (err.message && (err.message.includes('ENOMEM') || err.message.includes('heap'))) {
+    gracefulShutdown()
+  }
 })
-process.on('unhandledRejection', gracefulShutdown)
+// 未处理的 Promise rejection 只记录日志，不关闭服务
+process.on('unhandledRejection', (reason: unknown) => {
+  console.error('Unhandled Rejection (non-fatal):', reason)
+})
 
 export default app
