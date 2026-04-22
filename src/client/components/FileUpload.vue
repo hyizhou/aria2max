@@ -11,12 +11,12 @@
     <!-- Upload Progress Modal -->
     <Modal 
       :visible="showProgress"
-      title="文件上传中" 
+      :title="t('fileUpload.title')"
       width="400px"
       @close="() => {}"
     >
       <div class="upload-progress">
-        <p>文件名: {{ fileName }}</p>
+        <p>{{ t('fileUpload.fileName', { name: fileName }) }}</p>
         <div class="progress-container">
           <div class="progress-bar">
             <div 
@@ -27,7 +27,7 @@
           <div class="progress-text">{{ progress }}%</div>
         </div>
         <div class="upload-stats" v-if="speed > 0">
-          <p>上传速度: {{ formatSpeed(speed) }}</p>
+          <p>{{ t('fileUpload.uploadSpeed', { speed: formatSpeed(speed) }) }}</p>
         </div>
       </div>
     </Modal>
@@ -36,8 +36,11 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Modal from '@/components/Modal.vue'
 import { useFileStore } from '@/store'
+
+const { t } = useI18n()
 
 const fileStore = useFileStore()
 const fileInput = ref<HTMLInputElement | null>(null)

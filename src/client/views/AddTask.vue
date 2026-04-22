@@ -3,9 +3,9 @@
     <div class="page-header">
       <button class="back-button" @click="goBack">
         <i class="fas fa-arrow-left"></i>
-        返回
+        {{ t('addTask.back') }}
       </button>
-      <h2>添加下载任务</h2>
+      <h2>{{ t('addTask.heading') }}</h2>
     </div>
     
     <div class="page-content">
@@ -19,16 +19,16 @@
             @click="activeTab = 'content'"
           >
             <i class="fas fa-link"></i>
-            下载链接
+            {{ t('addTask.downloadLink') }}
           </button>
-          <button 
-            type="button" 
-            class="tab-button" 
+          <button
+            type="button"
+            class="tab-button"
             :class="{ active: activeTab === 'settings' }"
             @click="activeTab = 'settings'"
           >
             <i class="fas fa-cog"></i>
-            下载选项
+            {{ t('addTask.downloadOptions') }}
           </button>
         </div>
         
@@ -37,24 +37,24 @@
           <!-- URL输入区域 -->
           <div class="url-input-section">
             <div class="section-header">
-              <p class="section-description">每行输入一个下载链接，支持HTTP/HTTPS/FTP/Magnet链接</p>
+              <p class="section-description">{{ t('addTask.urlHint') }}</p>
             </div>
             <div class="form-group">
               <textarea
                 v-model="urls"
                 class="url-textarea"
-                placeholder="请输入下载链接，每行一个&#10;例如:&#10;https://example.com/file1.zip&#10;magnet:?xt=urn:btih:..."
+                :placeholder="t('addTask.urlPlaceholder')"
                 rows="12"
               ></textarea>
               <div class="file-upload-buttons-bottom">
                 <label class="file-upload-button small">
                   <i class="fas fa-file-upload"></i>
-                  种子文件
+                  {{ t('addTask.torrentFile') }}
                   <input type="file" @change="handleTorrentUpload" accept=".torrent" hidden>
                 </label>
                 <label class="file-upload-button small">
                   <i class="fas fa-link"></i>
-                  Metalink文件
+                  {{ t('addTask.metalinkFile') }}
                   <input type="file" @change="handleMetalinkUpload" accept=".metalink,.meta4" hidden>
                 </label>
               </div>
@@ -76,7 +76,7 @@
                 v-model="filterOptions.global" 
                 class="filter-checkbox"
               >
-              <label for="global-filter" class="filter-label">全局</label>
+              <label for="global-filter" class="filter-label">{{ t('addTask.globalFilter') }}</label>
             </div>
             <div class="filter-option">
               <input 
@@ -85,7 +85,7 @@
                 v-model="filterOptions.http" 
                 class="filter-checkbox"
               >
-              <label for="http-filter" class="filter-label">HTTP选项</label>
+              <label for="http-filter" class="filter-label">{{ t('addTask.httpFilter') }}</label>
             </div>
             <div class="filter-option">
               <input 
@@ -94,7 +94,7 @@
                 v-model="filterOptions.bittorrent" 
                 class="filter-checkbox"
               >
-              <label for="bittorrent-filter" class="filter-label">BitTorrent选项</label>
+              <label for="bittorrent-filter" class="filter-label">{{ t('addTask.bittorrentFilter') }}</label>
             </div>
           </div>
           
@@ -104,9 +104,9 @@
               <div class="setting-item">
                 <div class="setting-row">
                   <div class="setting-info">
-                    <label for="downloadDir" class="setting-label">下载目录</label>
+                    <label for="downloadDir" class="setting-label">{{ t('addTask.downloadDir') }}</label>
                     <span class="setting-key">(dir)</span>
-                    <button type="button" class="help-button" title="指定文件下载保存的目录路径">?</button>
+                    <button type="button" class="help-button" :title="t('addTask.downloadDirHelp')">?</button>
                   </div>
                   <input
                     id="downloadDir"
@@ -121,9 +121,9 @@
               <div class="setting-item">
                 <div class="setting-row">
                   <div class="setting-info">
-                    <label for="maxDownloadLimit" class="setting-label">最大下载速度 (B/s)</label>
+                    <label for="maxDownloadLimit" class="setting-label">{{ t('addTask.maxDownloadSpeed') }}</label>
                     <span class="setting-key">(max-download-limit)</span>
-                    <button type="button" class="help-button" title="限制最大下载速度，0表示无限制">?</button>
+                    <button type="button" class="help-button" :title="t('addTask.maxDownloadSpeedHelp')">?</button>
                   </div>
                   <input
                     id="maxDownloadLimit"
@@ -138,16 +138,16 @@
               <div class="setting-item">
                 <div class="setting-row">
                   <div class="setting-info">
-                    <label for="fileAllocation" class="setting-label">文件分配方法</label>
+                    <label for="fileAllocation" class="setting-label">{{ t('addTask.fileAllocation') }}</label>
                     <span class="setting-key">(file-allocation)</span>
-                    <button type="button" class="help-button" title="设置文件分配方法">?</button>
+                    <button type="button" class="help-button" :title="t('addTask.fileAllocationHelp')">?</button>
                   </div>
                   <select
                     id="fileAllocation"
                     v-model="taskData.options.fileAllocation"
                     class="form-control setting-input"
                   >
-                    <option value="">默认</option>
+                    <option value="">{{ t('common.default') }}</option>
                     <option value="none">None</option>
                     <option value="prealloc">Prealloc</option>
                     <option value="falloc">Falloc</option>
@@ -159,18 +159,18 @@
               <div class="setting-item">
                 <div class="setting-row">
                   <div class="setting-info">
-                    <label for="forceSave" class="setting-label">强制保存</label>
+                    <label for="forceSave" class="setting-label">{{ t('addTask.forceSave') }}</label>
                     <span class="setting-key">(force-save)</span>
-                    <button type="button" class="help-button" title="是否强制保存下载文件">?</button>
+                    <button type="button" class="help-button" :title="t('addTask.forceSaveHelp')">?</button>
                   </div>
                   <select
                     id="forceSave"
                     v-model="taskData.options.forceSave"
                     class="form-control setting-input"
                   >
-                    <option value="">默认</option>
-                    <option value="true">是</option>
-                    <option value="false">否</option>
+                    <option value="">{{ t('common.default') }}</option>
+                    <option value="true">{{ t('common.yes') }}</option>
+                    <option value="false">{{ t('common.no') }}</option>
                   </select>
                 </div>
               </div>
@@ -178,18 +178,18 @@
               <div class="setting-item">
                 <div class="setting-row">
                   <div class="setting-info">
-                    <label for="parameterizedUri" class="setting-label">参数化URL支持</label>
+                    <label for="parameterizedUri" class="setting-label">{{ t('addTask.parameterizedUrl') }}</label>
                     <span class="setting-key">(parameterized-uri)</span>
-                    <button type="button" class="help-button" title="是否启用参数化URL支持">?</button>
+                    <button type="button" class="help-button" :title="t('addTask.parameterizedUrlHelp')">?</button>
                   </div>
                   <select
                     id="parameterizedUri"
                     v-model="taskData.options.parameterizedUri"
                     class="form-control setting-input"
                   >
-                    <option value="">默认</option>
-                    <option value="true">是</option>
-                    <option value="false">否</option>
+                    <option value="">{{ t('common.default') }}</option>
+                    <option value="true">{{ t('common.yes') }}</option>
+                    <option value="false">{{ t('common.no') }}</option>
                   </select>
                 </div>
               </div>
@@ -202,7 +202,7 @@
               <div class="setting-item">
                 <div class="setting-row">
                   <div class="setting-info">
-                    <label for="downloadDirHttp" class="setting-label">下载目录</label>
+                    <label for="downloadDirHttp" class="setting-label">{{ t('addTask.downloadDir') }}</label>
                     <span class="setting-key">(dir)</span>
                     <button type="button" class="help-button" title="">?</button>
                   </div>
@@ -219,7 +219,7 @@
               <div class="setting-item">
                 <div class="setting-row">
                   <div class="setting-info">
-                    <label for="maxConnectionPerServerHttp" class="setting-label">单服务器连接数</label>
+                    <label for="maxConnectionPerServerHttp" class="setting-label">{{ t('addTask.connectionsPerServer') }}</label>
                     <span class="setting-key">(max-connection-per-server)</span>
                     <button type="button" class="help-button" title="">?</button>
                   </div>
@@ -237,7 +237,7 @@
               <div class="setting-item">
                 <div class="setting-row">
                   <div class="setting-info">
-                    <label for="splitHttp" class="setting-label">文件分片数</label>
+                    <label for="splitHttp" class="setting-label">{{ t('addTask.splitCount') }}</label>
                     <span class="setting-key">(split)</span>
                     <button type="button" class="help-button" title="">?</button>
                   </div>
@@ -255,7 +255,7 @@
               <div class="setting-item">
                 <div class="setting-row">
                   <div class="setting-info">
-                    <label for="maxDownloadLimitHttp" class="setting-label">最大下载速度 (B/s)</label>
+                    <label for="maxDownloadLimitHttp" class="setting-label">{{ t('addTask.maxDownloadSpeed') }}</label>
                     <span class="setting-key">(max-download-limit)</span>
                     <button type="button" class="help-button" title="">?</button>
                   </div>
@@ -272,16 +272,16 @@
               <div class="setting-item">
                 <div class="setting-row">
                   <div class="setting-info">
-                    <label for="userAgentHttp" class="setting-label">用户代理</label>
+                    <label for="userAgentHttp" class="setting-label">{{ t('addTask.userAgent') }}</label>
                     <span class="setting-key">(user-agent)</span>
-                    <button type="button" class="help-button" title="例如: aria2/1.36.0">?</button>
+                    <button type="button" class="help-button" :title="t('addTask.userAgentHelp')">?</button>
                   </div>
                   <input
                     id="userAgentHttp"
                     v-model="taskData.options.userAgent"
                     type="text"
                     class="form-control setting-input"
-                    placeholder="例如: aria2/1.36.0"
+                    :placeholder="t('addTask.userAgentPlaceholder')"
                   />
                 </div>
               </div>
@@ -289,16 +289,16 @@
               <div class="setting-item">
                 <div class="setting-row">
                   <div class="setting-info">
-                    <label for="refererHttp" class="setting-label">引用页</label>
+                    <label for="refererHttp" class="setting-label">{{ t('addTask.referer') }}</label>
                     <span class="setting-key">(referer)</span>
-                    <button type="button" class="help-button" title="例如: https://example.com">?</button>
+                    <button type="button" class="help-button" :title="t('addTask.refererHelp')">?</button>
                   </div>
                   <input
                     id="refererHttp"
                     v-model="taskData.options.referer"
                     type="text"
                     class="form-control setting-input"
-                    placeholder="例如: https://example.com"
+                    :placeholder="t('addTask.refererPlaceholder')"
                   />
                 </div>
               </div>
@@ -311,7 +311,7 @@
               <div class="setting-item">
                 <div class="setting-row">
                   <div class="setting-info">
-                    <label for="downloadDirBt" class="setting-label">下载目录</label>
+                    <label for="downloadDirBt" class="setting-label">{{ t('addTask.downloadDir') }}</label>
                     <span class="setting-key">(dir)</span>
                     <button type="button" class="help-button" title="">?</button>
                   </div>
@@ -328,7 +328,7 @@
               <div class="setting-item">
                 <div class="setting-row">
                   <div class="setting-info">
-                    <label for="btMaxPeersBt" class="setting-label">最大连接数</label>
+                    <label for="btMaxPeersBt" class="setting-label">{{ t('addTask.btMaxPeers') }}</label>
                     <span class="setting-key">(bt-max-peers)</span>
                     <button type="button" class="help-button" title="">?</button>
                   </div>
@@ -346,7 +346,7 @@
               <div class="setting-item">
                 <div class="setting-row">
                   <div class="setting-info">
-                    <label for="btRequestPeerSpeedLimitBt" class="setting-label">请求速度限制 (B/s)</label>
+                    <label for="btRequestPeerSpeedLimitBt" class="setting-label">{{ t('addTask.btRequestSpeedLimit') }}</label>
                     <span class="setting-key">(bt-request-peer-speed-limit)</span>
                     <button type="button" class="help-button" title="">?</button>
                   </div>
@@ -363,7 +363,7 @@
               <div class="setting-item">
                 <div class="setting-row">
                   <div class="setting-info">
-                    <label for="btRemoveUnselectedFileBt" class="setting-label">删除未选择的文件</label>
+                    <label for="btRemoveUnselectedFileBt" class="setting-label">{{ t('addTask.btRemoveUnselected') }}</label>
                     <span class="setting-key">(bt-remove-unselected-file)</span>
                     <button type="button" class="help-button" title="">?</button>
                   </div>
@@ -372,9 +372,9 @@
                     v-model="taskData.options.btRemoveUnselectedFile"
                     class="form-control setting-input"
                   >
-                    <option value="">默认</option>
-                    <option value="true">是</option>
-                    <option value="false">否</option>
+                    <option value="">{{ t('common.default') }}</option>
+                    <option value="true">{{ t('common.yes') }}</option>
+                    <option value="false">{{ t('common.no') }}</option>
                   </select>
                 </div>
               </div>
@@ -382,18 +382,18 @@
               <div class="setting-item">
                 <div class="setting-row">
                   <div class="setting-info">
-                    <label for="btEnableLpdBt" class="setting-label">启用本地发现</label>
+                    <label for="btEnableLpdBt" class="setting-label">{{ t('addTask.btEnableLpd') }}</label>
                     <span class="setting-key">(bt-enable-lpd)</span>
-                    <button type="button" class="help-button" title="是否启用本地Peer发现功能">?</button>
+                    <button type="button" class="help-button" :title="t('addTask.btEnableLpdHelp')">?</button>
                   </div>
                   <select
                     id="btEnableLpdBt"
                     v-model="taskData.options.btEnableLpd"
                     class="form-control setting-input"
                   >
-                    <option value="">默认</option>
-                    <option value="true">是</option>
-                    <option value="false">否</option>
+                    <option value="">{{ t('common.default') }}</option>
+                    <option value="true">{{ t('common.yes') }}</option>
+                    <option value="false">{{ t('common.no') }}</option>
                   </select>
                 </div>
               </div>
@@ -401,18 +401,18 @@
               <div class="setting-item">
                 <div class="setting-row">
                   <div class="setting-info">
-                    <label for="btHashCheckSeedBt" class="setting-label">哈希检查后做种</label>
+                    <label for="btHashCheckSeedBt" class="setting-label">{{ t('addTask.btHashCheckSeed') }}</label>
                     <span class="setting-key">(bt-hash-check-seed)</span>
-                    <button type="button" class="help-button" title="哈希检查完成后是否继续做种">?</button>
+                    <button type="button" class="help-button" :title="t('addTask.btHashCheckSeedHelp')">?</button>
                   </div>
                   <select
                     id="btHashCheckSeedBt"
                     v-model="taskData.options.btHashCheckSeed"
                     class="form-control setting-input"
                   >
-                    <option value="">默认</option>
-                    <option value="true">是</option>
-                    <option value="false">否</option>
+                    <option value="">{{ t('common.default') }}</option>
+                    <option value="true">{{ t('common.yes') }}</option>
+                    <option value="false">{{ t('common.no') }}</option>
                   </select>
                 </div>
               </div>
@@ -421,9 +421,9 @@
         </div>
         
         <div class="form-actions">
-          <button type="button" class="btn btn-secondary" @click="goBack">取消</button>
+          <button type="button" class="btn btn-secondary" @click="goBack">{{ t('addTask.cancel') }}</button>
           <button type="submit" class="btn btn-primary" :disabled="addingTask">
-            {{ addingTask ? '添加中...' : '添加任务' }}
+            {{ addingTask ? t('addTask.adding') : t('addTask.addTask') }}
           </button>
         </div>
       </form>
@@ -434,9 +434,12 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useTaskStore } from '@/store'
 import { useConfigStore } from '@/store'
+import { extractErrorMessage } from '@shared/utils/error'
 
+const { t } = useI18n()
 const router = useRouter()
 const taskStore = useTaskStore()
 const configStore = useConfigStore()
@@ -500,17 +503,12 @@ const handleTorrentUpload = async (event: any) => {
     addingTask.value = true
     // 调用任务存储的添加种子文件方法
     await taskStore.addTorrentFile(file, taskData.options)
-    alert('种子文件添加成功')
+    alert(t('addTask.torrentAdded'))
     router.push('/tasks')
   } catch (error: any) {
     console.error('Failed to add torrent file:', error)
-    let errorMessage = '添加种子文件失败'
-    if (error && error.error && error.error.message) {
-      errorMessage = error.error.message
-    } else if (error && error.message) {
-      errorMessage = error.message
-    }
-    alert(`添加种子文件失败: ${errorMessage}`)
+    const errorMessage = extractErrorMessage(error)
+    alert(t('addTask.addTorrentFailed', { message: errorMessage }))
   } finally {
     addingTask.value = false
     // 清空文件输入
@@ -527,17 +525,12 @@ const handleMetalinkUpload = async (event: any) => {
     addingTask.value = true
     // 调用任务存储的添加Metalink文件方法
     await taskStore.addMetalinkFile(file, taskData.options)
-    alert('Metalink文件添加成功')
+    alert(t('addTask.metalinkAdded'))
     router.push('/tasks')
   } catch (error: any) {
     console.error('Failed to add metalink file:', error)
-    let errorMessage = '添加Metalink文件失败'
-    if (error && error.error && error.error.message) {
-      errorMessage = error.error.message
-    } else if (error && error.message) {
-      errorMessage = error.message
-    }
-    alert(`添加Metalink文件失败: ${errorMessage}`)
+    const errorMessage = extractErrorMessage(error)
+    alert(t('addTask.addMetalinkFailed', { message: errorMessage }))
   } finally {
     addingTask.value = false
     // 清空文件输入
@@ -548,7 +541,7 @@ const handleMetalinkUpload = async (event: any) => {
 // 添加任务
 const addTask = async () => {
   if (!urls.value.trim()) {
-    alert('请输入至少一个下载链接')
+    alert(t('addTask.pleaseEnterUrl'))
     return
   }
   
@@ -580,17 +573,12 @@ const addTask = async () => {
     }
     
     // 显示成功消息并返回任务列表
-    alert(`${urlList.length}个任务添加成功`)
+    alert(t('addTask.tasksAdded', { count: urlList.length }))
     router.push('/tasks')
   } catch (error: any) {
     console.error('Failed to add task:', error)
-    let errorMessage = '添加任务失败'
-    if (error && error.error && error.error.message) {
-      errorMessage = error.error.message
-    } else if (error && error.message) {
-      errorMessage = error.message
-    }
-    alert(`添加任务失败: ${errorMessage}`)
+    const errorMessage = extractErrorMessage(error)
+    alert(t('addTask.addTaskFailed', { message: errorMessage }))
   } finally {
     addingTask.value = false
   }

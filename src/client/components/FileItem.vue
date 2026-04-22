@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 interface File {
   name: string
@@ -71,9 +74,9 @@ const fileTypeIcon = computed(() => {
 
 const fileTypeDisplay = computed(() => {
   if (props.file.isSymlink) {
-    return props.file.isDir ? '链接目录' : '链接文件'
+    return props.file.isDir ? t('fileItem.symlinkDir') : t('fileItem.symlinkFile')
   }
-  return props.file.isDir ? '文件夹' : '文件'
+  return props.file.isDir ? t('fileItem.directory') : t('fileItem.file')
 })
 
 const isVideoFile = computed(() => {
@@ -131,22 +134,22 @@ const handleNavigate = () => {
         @click="handleAction('rename')"
       >
         <i class="fas fa-edit"></i>
-        重命名
+        {{ t('fileItem.rename') }}
       </button>
-      <button 
+      <button
         v-if="!file.isDir"
         class="btn-action"
         @click="handleAction('download')"
       >
         <i class="fas fa-download"></i>
-        下载
+        {{ t('fileItem.download') }}
       </button>
-      <button 
+      <button
         class="btn-action btn-danger"
         @click="handleAction('delete')"
       >
         <i class="fas fa-trash"></i>
-        删除
+        {{ t('fileItem.delete') }}
       </button>
     </div>
   </div>

@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useTaskStore } from '@/store/task'
+import { extractErrorMessage } from '@shared/utils/error'
+import { getTaskFileName } from '@shared/utils/task'
 import TaskItem from '@/components/TaskItem.vue'
 import TaskFilter from '@/components/TaskFilter.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
@@ -23,16 +26,10 @@ interface Task {
   uploadSpeed: string | number
 }
 
-interface ApiError {
-  error?: {
-    message?: string
-  }
-  message?: string
-}
-
 const taskStore = useTaskStore()
 const router = useRouter()
 const route = useRoute()
+const { t } = useI18n()
 
 const loading = ref(false)
 const selectedTasks = ref<string[]>([])
@@ -99,17 +96,7 @@ const loadTasks = async () => {
 }
 
 const getFileName = (task: any): string => {
-  // 对于BT任务，使用BT任务名称
-  if (task.bittorrent?.info?.name) {
-    return task.bittorrent.info.name
-  }
-  
-  // 对于普通任务，使用文件名
-  if (task.files && task.files.length > 0) {
-    const path = task.files[0].path
-    return path.split('/').pop() || path
-  }
-  return '未知文件'
+  return getTaskFileName(task) || t('common.unknownFile')
 }
 
 // 添加确认状态管理
@@ -142,14 +129,8 @@ const handleTaskAction = async (action: string, gid: string) => {
     await loadTasks()
   } catch (error: any) {
     console.error('Task action failed:', error)
-    // Display error message to user
-    let errorMessage = '操作失败'
-    if (error?.error?.message) {
-      errorMessage = error.error.message
-    } else if (error?.message) {
-      errorMessage = error.message
-    }
-    alert(`任务操作失败: ${errorMessage}`)
+    const errorMessage = extractErrorMessage(error) || t('common.operationFailed')
+    alert(t('tasks.taskActionFailed', { message: errorMessage }))
   }
 }
 
@@ -166,14 +147,8 @@ const confirmDeleteTask = async (gid: string) => {
     console.error('Delete task failed:', error)
     // 关闭确认弹窗
     confirmDelete.value = null
-    // Display error message to user
-    let errorMessage = '操作失败'
-    if (error?.error?.message) {
-      errorMessage = error.error.message
-    } else if (error?.message) {
-      errorMessage = error.message
-    }
-    alert(`删除任务失败: ${errorMessage}`)
+    const errorMessage = extractErrorMessage(error) || t('common.operationFailed')
+    alert(t('tasks.deleteTaskFailed', { message: errorMessage }))
   }
 }
 
@@ -195,15 +170,8 @@ const confirmDeleteTaskWithFile = async (deleteFile: boolean) => {
     console.error('Delete task failed:', error)
     // 关闭确认弹窗
     confirmDelete.value = null
-    // Display error message to user
-    let errorMessage = '操作失败'
-    const apiError = error as ApiError
-    if (apiError?.error?.message) {
-      errorMessage = apiError.error.message
-    } else if (apiError?.message) {
-      errorMessage = apiError.message
-    }
-    alert(`删除任务失败: ${errorMessage}`)
+    const errorMessage = extractErrorMessage(error) || t('common.operationFailed')
+    alert(t('tasks.deleteTaskFailed', { message: errorMessage }))
   }
 }
 
@@ -238,14 +206,8 @@ const handleBatchAction = async (action: string) => {
     await loadTasks()
   } catch (error: any) {
     console.error('Batch action failed:', error)
-    // Display error message to user
-    let errorMessage = '操作失败'
-    if (error && error.error && error.error.message) {
-      errorMessage = error.error.message
-    } else if (error && error.message) {
-      errorMessage = error.message
-    }
-    alert(`批量操作失败: ${errorMessage}`)
+    const errorMessage = extractErrorMessage(error) || t('common.operationFailed')
+    alert(t('tasks.batchActionFailed', { message: errorMessage }))
   }
 }
 
@@ -268,14 +230,8 @@ const confirmBatchDeleteTask = async () => {
     console.error('Batch delete failed:', error)
     // 关闭确认弹窗
     confirmBatchDelete.value = false
-    // Display error message to user
-    let errorMessage = '操作失败'
-    if (error?.error?.message) {
-      errorMessage = error.error.message
-    } else if (error?.message) {
-      errorMessage = error.message
-    }
-    alert(`批量删除任务失败: ${errorMessage}`)
+    const errorMessage = extractErrorMessage(error) || t('common.operationFailed')
+    alert(t('tasks.batchDeleteFailed', { message: errorMessage }))
   }
 }
 
@@ -298,14 +254,8 @@ const confirmBatchDeleteTaskWithFile = async (deleteFile: boolean) => {
     console.error('Batch delete failed:', error)
     // 关闭确认弹窗
     confirmBatchDelete.value = false
-    // Display error message to user
-    let errorMessage = '操作失败'
-    if (error && error.error && error.error.message) {
-      errorMessage = error.error.message
-    } else if (error && error.message) {
-      errorMessage = error.message
-    }
-    alert(`批量删除任务失败: ${errorMessage}`)
+    const errorMessage = extractErrorMessage(error) || t('common.operationFailed')
+    alert(t('tasks.batchDeleteFailed', { message: errorMessage }))
   }
 }
 
@@ -319,19 +269,14 @@ const handleCleanMetadata = async () => {
   try {
     const response = await taskStore.cleanMetadataTasks()
     if (response && response.success) {
-      alert(response.message || `已清理 ${response.deletedTasks?.length || 0} 个元数据任务`)
+      alert(response.message || t('tasks.cleanedMetadata', { count: response.deletedTasks?.length || 0 }))
     } else {
-      alert('清理元数据任务失败')
+      alert(t('tasks.cleanMetadataFailed'))
     }
   } catch (error: any) {
     console.error('Clean metadata tasks failed:', error)
-    let errorMessage = '清理元数据任务失败'
-    if (error?.error?.message) {
-      errorMessage = error.error.message
-    } else if (error?.message) {
-      errorMessage = error.message
-    }
-    alert(`清理失败: ${errorMessage}`)
+    const errorMessage = extractErrorMessage(error) || t('tasks.cleanMetadataFailed')
+    alert(t('tasks.cleanFailed', { message: errorMessage }))
   }
 }
 
@@ -393,7 +338,7 @@ const filteredTasks = computed(() => {
 <template>
   <div class="task-list">
     <div class="page-header">
-      <h2>下载任务</h2>
+      <h2>{{ t('tasks.heading') }}</h2>
     </div>
     
     <TaskFilter :initial-status="filter.status" @filter-change="handleFilterChange" />
@@ -406,45 +351,45 @@ const filteredTasks = computed(() => {
             :checked="selectedTasks.length === filteredTasks.length && filteredTasks.length > 0"
             @change="handleSelectAll"
           />
-          全选
+          {{ t('tasks.selectAll') }}
         </label>
       </div>
       <div class="task-actions-right">
         <button 
           class="btn btn-info"
           @click="handleCleanMetadata"
-          title="清理[xx]元数据"
+          :title="t('tasks.cleanMetadataTooltip')"
         >
           <i class="fas fa-broom"></i>
-          清理元数据
+          {{ t('tasks.cleanMetadata') }}
         </button>
         <button 
           class="btn btn-secondary"
           :disabled="selectedTasks.length === 0"
           @click="handleBatchAction('pause')"
         >
-          暂停选中
+          {{ t('tasks.pauseSelected') }}
         </button>
         <button 
           class="btn btn-secondary"
           :disabled="selectedTasks.length === 0"
           @click="handleBatchAction('resume')"
         >
-          继续选中
+          {{ t('tasks.resumeSelected') }}
         </button>
         <button 
           class="btn btn-danger"
           :disabled="selectedTasks.length === 0"
           @click="handleBatchAction('delete')"
         >
-          删除选中
+          {{ t('tasks.deleteSelected') }}
         </button>
       </div>
     </div>
     
     <div class="task-list-container">
       <div v-if="filteredTasks.length === 0" class="empty-state">
-        <p>暂无下载任务</p>
+        <p>{{ t('tasks.noTasks') }}</p>
       </div>
       
       <div class="task-items">
@@ -463,22 +408,22 @@ const filteredTasks = computed(() => {
     <!-- 删除确认弹窗 -->
     <ConfirmDialog
       v-if="confirmDelete && confirmDelete.show"
-      title="确认删除"
-      message="确定要删除这个任务吗？此操作不可恢复。"
-      confirm-text="确定删除"
-      checkbox-label="同时删除本地文件"
+      :title="t('tasks.confirmDelete')"
+      :message="t('tasks.confirmDeleteMessage')"
+      :confirm-text="t('tasks.confirmDelete')"
+      :checkbox-label="t('tasks.deleteWithFile')"
       :initial-checkbox-value="false"
       @confirm-with-checkbox="confirmDeleteTaskWithFile"
       @cancel="cancelDeleteTask"
     />
-    
+
     <!-- 批量删除确认弹窗 -->
     <ConfirmDialog
       v-if="confirmBatchDelete"
-      title="确认批量删除"
-      :message="`确定要删除选中的 ${selectedTasks.length} 个任务吗？此操作不可恢复。`"
-      confirm-text="确定删除"
-      checkbox-label="同时删除本地文件"
+      :title="t('tasks.confirmBatchDelete')"
+      :message="t('tasks.confirmBatchDeleteMessage', { count: selectedTasks.length })"
+      :confirm-text="t('tasks.confirmDelete')"
+      :checkbox-label="t('tasks.deleteWithFile')"
       :initial-checkbox-value="false"
       @confirm-with-checkbox="confirmBatchDeleteTaskWithFile"
       @cancel="cancelBatchDeleteTask"

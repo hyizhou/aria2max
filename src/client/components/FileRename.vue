@@ -1,23 +1,23 @@
 <template>
   <Modal 
     :visible="visible"
-    title="重命名文件" 
+    :title="t('fileRename.title')"
     width="400px"
     @close="close"
   >
     <div class="rename-form">
-      <p>当前文件名: {{ oldName }}</p>
+      <p>{{ t('fileRename.currentName', { name: oldName }) }}</p>
       <input 
         v-model="newName" 
         type="text" 
         class="form-input"
-        placeholder="输入新文件名"
+        :placeholder="t('fileRename.placeholder')"
         style="width: 100%; margin: 1rem 0; padding: 0.5rem;"
         @keyup.enter="confirm"
       >
       <div class="modal-footer">
-        <button class="btn btn-secondary" @click="close">取消</button>
-        <button class="btn btn-primary" @click="confirm">确定</button>
+        <button class="btn btn-secondary" @click="close">{{ t('fileRename.cancel') }}</button>
+        <button class="btn btn-primary" @click="confirm">{{ t('fileRename.confirm') }}</button>
       </div>
     </div>
   </Modal>
@@ -25,8 +25,11 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Modal from '@/components/Modal.vue'
 import { useFileStore } from '@/store'
+
+const { t } = useI18n()
 
 const fileStore = useFileStore()
 const visible = ref(false)

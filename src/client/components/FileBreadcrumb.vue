@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 interface Props {
   currentPath: string
@@ -11,14 +12,15 @@ interface Emits {
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+const { t } = useI18n()
 
 const pathSegments = computed(() => {
   if (!props.currentPath) {
-    return [{ name: '根目录', path: '' }]
+    return [{ name: t('fileBreadcrumb.root'), path: '' }]
   }
-  
+
   const segments = props.currentPath.split('/').filter(segment => segment)
-  const result = [{ name: '根目录', path: '' }]
+  const result = [{ name: t('fileBreadcrumb.root'), path: '' }]
   
   let currentPath = ''
   segments.forEach(segment => {

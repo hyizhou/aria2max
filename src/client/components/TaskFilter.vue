@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 interface Props {
   initialStatus?: string
@@ -25,14 +28,14 @@ watch(() => props.initialStatus, (newStatus) => {
   }
 })
 
-const statusOptions = [
-  { value: 'all', label: '全部状态' },
-  { value: 'active', label: '下载中' },
-  { value: 'waiting', label: '等待中' },
-  { value: 'paused', label: '已暂停' },
-  { value: 'error', label: '错误' },
-  { value: 'complete', label: '已完成' }
-]
+const statusOptions = computed(() => [
+  { value: 'all', label: t('status.all') },
+  { value: 'active', label: t('status.active') },
+  { value: 'waiting', label: t('status.waiting') },
+  { value: 'paused', label: t('status.paused') },
+  { value: 'error', label: t('status.error') },
+  { value: 'complete', label: t('status.complete') }
+])
 
 const handleStatusChange = (status: string) => {
   filter.value.status = status
@@ -54,7 +57,7 @@ const clearKeyword = () => {
 <template>
   <div class="task-filter">
     <div class="filter-item">
-      <label>状态:</label>
+      <label>{{ t('taskFilter.status') }}</label>
       <select 
         :value="filter.status" 
         @change="handleStatusChange(($event.target as HTMLSelectElement).value)"
@@ -70,12 +73,12 @@ const clearKeyword = () => {
     </div>
     
     <div class="filter-item">
-      <label>搜索:</label>
+      <label>{{ t('taskFilter.search') }}</label>
       <div class="search-input">
         <input 
           type="text" 
           :value="filter.keyword"
-          placeholder="文件名或任务ID"
+          :placeholder="t('taskFilter.placeholder')"
           @input="handleKeywordChange"
         />
         <button 

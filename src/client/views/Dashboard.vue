@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useTaskStore } from '@/store'
 import { formatBytes } from '@shared/utils/format'
+import { getTaskFileName } from '@shared/utils/task'
+
+const { t } = useI18n()
 
 const taskStore = useTaskStore()
 const router = useRouter()
@@ -66,11 +70,7 @@ const loadDashboardData = async () => {
 }
 
 const getFileName = (task: any): string => {
-  if (task.files && task.files.length > 0) {
-    const path = task.files[0].path
-    return path.split('/').pop() || path
-  }
-  return '未知文件'
+  return getTaskFileName(task) || t('common.unknownFile')
 }
 
 const getProgress = (task: any): number => {
@@ -99,7 +99,7 @@ const handleTaskClick = (gid: string) => {
 <template>
   <div class="dashboard">
     <div class="page-header">
-      <h2>仪表板</h2>
+      <h2>{{ t('dashboard.heading') }}</h2>
     </div>
     
     <div class="stats-grid">

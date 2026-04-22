@@ -1,19 +1,22 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useUIStore } from '@/store'
 import { useRoute, useRouter } from 'vue-router'
 import { isMobileDevice } from '@/utils/device'
+
+const { t } = useI18n()
 
 const uiStore = useUIStore()
 const route = useRoute()
 const router = useRouter()
 
-const menus = ref([
-  { name: '仪表板', path: '/dashboard', icon: 'fas fa-home' },
-  { name: '下载任务', path: '/tasks', icon: 'fas fa-tasks' },
-  { name: '文件管理', path: '/files', icon: 'fas fa-folder' },
-  { name: '系统状态', path: '/system-status', icon: 'fas fa-chart-line' },
-  { name: '系统设置', path: '/settings', icon: 'fas fa-cog' }
+const menus = computed(() => [
+  { nameKey: 'sidebar.dashboard', path: '/dashboard', icon: 'fas fa-home' },
+  { nameKey: 'sidebar.tasks', path: '/tasks', icon: 'fas fa-tasks' },
+  { nameKey: 'sidebar.files', path: '/files', icon: 'fas fa-folder' },
+  { nameKey: 'sidebar.systemStatus', path: '/system-status', icon: 'fas fa-chart-line' },
+  { nameKey: 'sidebar.settings', path: '/settings', icon: 'fas fa-cog' }
 ])
 
 const isActive = (path: string) => {
@@ -58,7 +61,7 @@ const handleOverlayClick = () => {
             @click="handleMenuClick(menu.path)"
           >
             <i :class="menu.icon"></i>
-            <span class="menu-text">{{ menu.name }}</span>
+            <span class="menu-text">{{ t(menu.nameKey) }}</span>
           </div>
         </li>
       </ul>
@@ -108,6 +111,8 @@ const handleOverlayClick = () => {
   color: #666666;
   transition: all 0.2s ease;
   position: relative;
+  cursor: pointer;
+  user-select: none;
 }
 
 .menu-link:hover {

@@ -2,8 +2,8 @@
 export interface Aria2Setting {
   key: string
   type: 'text' | 'number' | 'boolean' | 'select' | 'password'
-  label: string
-  helpText: string
+  labelKey: string
+  helpTextKey: string
   placeholder?: string
   options?: Array<{ label: string; value: string }>
   min?: number
@@ -16,22 +16,22 @@ export const aria2Settings: Aria2Setting[] = [
   {
     key: 'dir',
     type: 'text',
-    label: '下载目录',
-    helpText: '下载目录。可使用绝对路径或相对路径, 默认: 当前启动位置',
+    labelKey: 'aria2Config.dir.label',
+    helpTextKey: 'aria2Config.dir.helpText',
     placeholder: '/downloads'
   },
   {
     key: 'disk-cache',
     type: 'text',
-    label: '磁盘缓存',
-    helpText: '磁盘缓存, 0 为禁用缓存，默认:16M',
+    labelKey: 'aria2Config.disk-cache.label',
+    helpTextKey: 'aria2Config.disk-cache.helpText',
     placeholder: '64M'
   },
   {
     key: 'file-allocation',
     type: 'select',
-    label: '文件预分配方式',
-    helpText: '文件预分配方式, 可选：none, prealloc, trunc, falloc',
+    labelKey: 'aria2Config.file-allocation.label',
+    helpTextKey: 'aria2Config.file-allocation.helpText',
     options: [
       { label: 'none', value: 'none' },
       { label: 'prealloc', value: 'prealloc' },
@@ -42,368 +42,368 @@ export const aria2Settings: Aria2Setting[] = [
   {
     key: 'no-file-allocation-limit',
     type: 'text',
-    label: '文件预分配大小限制',
-    helpText: '文件预分配大小限制。小于此选项值大小的文件不预分配空间，单位 K 或 M，默认：5M',
+    labelKey: 'aria2Config.no-file-allocation-limit.label',
+    helpTextKey: 'aria2Config.no-file-allocation-limit.helpText',
     placeholder: '64M'
   },
   {
     key: 'continue',
     type: 'boolean',
-    label: '断点续传',
-    helpText: '断点续传，默认启用'
+    labelKey: 'aria2Config.continue.label',
+    helpTextKey: 'aria2Config.continue.helpText'
   },
   {
     key: 'always-resume',
     type: 'boolean',
-    label: '始终尝试断点续传',
-    helpText: '始终尝试断点续传，无法断点续传则终止下载，默认启用'
+    labelKey: 'aria2Config.always-resume.label',
+    helpTextKey: 'aria2Config.always-resume.helpText'
   },
   {
     key: 'max-resume-failure-tries',
     type: 'number',
-    label: '不支持断点续传的URI数值',
-    helpText: '不支持断点续传的 URI 数值，当 always-resume=false 时生效',
+    labelKey: 'aria2Config.max-resume-failure-tries.label',
+    helpTextKey: 'aria2Config.max-resume-failure-tries.helpText',
     placeholder: '0',
     min: 0
   },
   {
     key: 'remote-time',
     type: 'boolean',
-    label: '获取服务器文件时间',
-    helpText: '获取服务器文件时间，默认启用'
+    labelKey: 'aria2Config.remote-time.label',
+    helpTextKey: 'aria2Config.remote-time.helpText'
   },
 
   // 进度保存设置
   {
     key: 'input-file',
     type: 'text',
-    label: '会话文件读取路径',
-    helpText: '从会话文件中读取下载任务',
+    labelKey: 'aria2Config.input-file.label',
+    helpTextKey: 'aria2Config.input-file.helpText',
     placeholder: '/config/aria2.session'
   },
   {
     key: 'save-session',
     type: 'text',
-    label: '会话文件保存路径',
-    helpText: '会话文件保存路径',
+    labelKey: 'aria2Config.save-session.label',
+    helpTextKey: 'aria2Config.save-session.helpText',
     placeholder: '/config/aria2.session'
   },
   {
     key: 'save-session-interval',
     type: 'number',
-    label: '会话保存间隔',
-    helpText: '任务状态改变后保存会话的间隔时间（秒）, 0 为仅在进程正常退出时保存',
+    labelKey: 'aria2Config.save-session-interval.label',
+    helpTextKey: 'aria2Config.save-session-interval.helpText',
     placeholder: '1',
     min: 0
   },
   {
     key: 'auto-save-interval',
     type: 'number',
-    label: '自动保存间隔',
-    helpText: '自动保存任务进度到控制文件的间隔时间（秒）',
+    labelKey: 'aria2Config.auto-save-interval.label',
+    helpTextKey: 'aria2Config.auto-save-interval.helpText',
     placeholder: '20',
     min: 0
   },
   {
     key: 'force-save',
     type: 'boolean',
-    label: '强制保存',
-    helpText: '强制保存，即使任务已完成也保存信息到会话文件'
+    labelKey: 'aria2Config.force-save.label',
+    helpTextKey: 'aria2Config.force-save.helpText'
   },
 
   // 下载连接设置
   {
     key: 'max-file-not-found',
     type: 'number',
-    label: '文件未找到重试次数',
-    helpText: '文件未找到重试次数，默认:10',
+    labelKey: 'aria2Config.max-file-not-found.label',
+    helpTextKey: 'aria2Config.max-file-not-found.helpText',
     placeholder: '10',
     min: 0
   },
   {
     key: 'max-tries',
     type: 'number',
-    label: '最大尝试次数',
-    helpText: '最大尝试次数，0 表示无限，默认:5',
+    labelKey: 'aria2Config.max-tries.label',
+    helpTextKey: 'aria2Config.max-tries.helpText',
     placeholder: '0',
     min: 0
   },
   {
     key: 'retry-wait',
     type: 'number',
-    label: '重试等待时间',
-    helpText: '重试等待时间（秒）, 默认:0 (禁用)',
+    labelKey: 'aria2Config.retry-wait.label',
+    helpTextKey: 'aria2Config.retry-wait.helpText',
     placeholder: '10',
     min: 0
   },
   {
     key: 'connect-timeout',
     type: 'number',
-    label: '连接超时时间',
-    helpText: '连接超时时间（秒），默认：10',
+    labelKey: 'aria2Config.connect-timeout.label',
+    helpTextKey: 'aria2Config.connect-timeout.helpText',
     placeholder: '10',
     min: 1
   },
   {
     key: 'timeout',
     type: 'number',
-    label: '超时时间',
-    helpText: '超时时间（秒），默认：10',
+    labelKey: 'aria2Config.timeout.label',
+    helpTextKey: 'aria2Config.timeout.helpText',
     placeholder: '10',
     min: 1
   },
   {
     key: 'max-concurrent-downloads',
     type: 'number',
-    label: '最大同时下载任务数',
-    helpText: '最大同时下载任务数, 运行时可修改, 默认:5',
+    labelKey: 'aria2Config.max-concurrent-downloads.label',
+    helpTextKey: 'aria2Config.max-concurrent-downloads.helpText',
     placeholder: '5',
     min: 1
   },
   {
     key: 'max-connection-per-server',
     type: 'number',
-    label: '单服务器最大连接线程数',
-    helpText: '单服务器最大连接线程数, 任务添加时可指定, 默认:32',
+    labelKey: 'aria2Config.max-connection-per-server.label',
+    helpTextKey: 'aria2Config.max-connection-per-server.helpText',
     placeholder: '32',
     min: 1
   },
   {
     key: 'split',
     type: 'number',
-    label: '单任务最大连接线程数',
-    helpText: '单任务最大连接线程数, 任务添加时可指定, 默认:64',
+    labelKey: 'aria2Config.split.label',
+    helpTextKey: 'aria2Config.split.helpText',
     placeholder: '64',
     min: 1
   },
   {
     key: 'min-split-size',
     type: 'text',
-    label: '文件最小分段大小',
-    helpText: '文件最小分段大小, 取值范围 1M-1024M',
+    labelKey: 'aria2Config.min-split-size.label',
+    helpTextKey: 'aria2Config.min-split-size.helpText',
     placeholder: '1M'
   },
   {
     key: 'piece-length',
     type: 'text',
-    label: 'HTTP/FTP下载分片大小',
-    helpText: 'HTTP/FTP 下载分片大小，默认：1M',
+    labelKey: 'aria2Config.piece-length.label',
+    helpTextKey: 'aria2Config.piece-length.helpText',
     placeholder: '1M'
   },
   {
     key: 'allow-piece-length-change',
     type: 'boolean',
-    label: '允许分片大小变化',
-    helpText: '允许分片大小变化，默认启用'
+    labelKey: 'aria2Config.allow-piece-length-change.label',
+    helpTextKey: 'aria2Config.allow-piece-length-change.helpText'
   },
   {
     key: 'lowest-speed-limit',
     type: 'text',
-    label: '最低下载速度限制',
-    helpText: '最低下载速度限制，单位 K 或 M ，默认：0 (无限制)',
+    labelKey: 'aria2Config.lowest-speed-limit.label',
+    helpTextKey: 'aria2Config.lowest-speed-limit.helpText',
     placeholder: '0'
   },
   {
     key: 'max-overall-download-limit',
     type: 'text',
-    label: '全局最大下载速度限制',
-    helpText: '全局最大下载速度限制, 运行时可修改, 默认：0 (无限制)',
+    labelKey: 'aria2Config.max-overall-download-limit.label',
+    helpTextKey: 'aria2Config.max-overall-download-limit.helpText',
     placeholder: '0'
   },
   {
     key: 'max-download-limit',
     type: 'text',
-    label: '单任务下载速度限制',
-    helpText: '单任务下载速度限制, 默认：0 (无限制)',
+    labelKey: 'aria2Config.max-download-limit.label',
+    helpTextKey: 'aria2Config.max-download-limit.helpText',
     placeholder: '0'
   },
   {
     key: 'disable-ipv6',
     type: 'boolean',
-    label: '禁用 IPv6',
-    helpText: '禁用 IPv6, 默认:false'
+    labelKey: 'aria2Config.disable-ipv6.label',
+    helpTextKey: 'aria2Config.disable-ipv6.helpText'
   },
   {
     key: 'http-accept-gzip',
     type: 'boolean',
-    label: 'GZip 支持',
-    helpText: 'GZip 支持，默认启用'
+    labelKey: 'aria2Config.http-accept-gzip.label',
+    helpTextKey: 'aria2Config.http-accept-gzip.helpText'
   },
   {
     key: 'reuse-uri',
     type: 'boolean',
-    label: 'URI 复用',
-    helpText: 'URI 复用，默认启用'
+    labelKey: 'aria2Config.reuse-uri.label',
+    helpTextKey: 'aria2Config.reuse-uri.helpText'
   },
   {
     key: 'no-netrc',
     type: 'boolean',
-    label: '禁用 netrc 支持',
-    helpText: '禁用 netrc 支持，默认启用'
+    labelKey: 'aria2Config.no-netrc.label',
+    helpTextKey: 'aria2Config.no-netrc.helpText'
   },
   {
     key: 'allow-overwrite',
     type: 'boolean',
-    label: '允许覆盖',
-    helpText: '允许覆盖，当相关控制文件不存在时从头开始重新下载'
+    labelKey: 'aria2Config.allow-overwrite.label',
+    helpTextKey: 'aria2Config.allow-overwrite.helpText'
   },
   {
     key: 'auto-file-renaming',
     type: 'boolean',
-    label: '文件自动重命名',
-    helpText: '文件自动重命名，默认启用'
+    labelKey: 'aria2Config.auto-file-renaming.label',
+    helpTextKey: 'aria2Config.auto-file-renaming.helpText'
   },
   {
     key: 'content-disposition-default-utf8',
     type: 'boolean',
-    label: 'UTF-8 处理 Content-Disposition',
-    helpText: '使用 UTF-8 处理 Content-Disposition，默认启用'
+    labelKey: 'aria2Config.content-disposition-default-utf8.label',
+    helpTextKey: 'aria2Config.content-disposition-default-utf8.helpText'
   },
 
   // BT/PT 下载设置
   {
     key: 'listen-port',
     type: 'text',
-    label: 'BT 监听端口',
-    helpText: 'BT 监听端口(TCP), 默认:6881-6999',
+    labelKey: 'aria2Config.listen-port.label',
+    helpTextKey: 'aria2Config.listen-port.helpText',
     placeholder: '6999'
   },
   {
     key: 'dht-listen-port',
     type: 'text',
-    label: 'DHT 监听端口',
-    helpText: 'DHT 网络与 UDP tracker 监听端口(UDP), 默认:6881-6999',
+    labelKey: 'aria2Config.dht-listen-port.label',
+    helpTextKey: 'aria2Config.dht-listen-port.helpText',
     placeholder: '6999'
   },
   {
     key: 'enable-dht',
     type: 'boolean',
-    label: '启用 IPv4 DHT',
-    helpText: '启用 IPv4 DHT 功能, PT 下载会自动禁用, 默认启用'
+    labelKey: 'aria2Config.enable-dht.label',
+    helpTextKey: 'aria2Config.enable-dht.helpText'
   },
   {
     key: 'enable-dht6',
     type: 'boolean',
-    label: '启用 IPv6 DHT',
-    helpText: '启用 IPv6 DHT 功能, PT 下载会自动禁用，默认启用'
+    labelKey: 'aria2Config.enable-dht6.label',
+    helpTextKey: 'aria2Config.enable-dht6.helpText'
   },
   {
     key: 'dht-file-path',
     type: 'text',
-    label: 'IPv4 DHT 文件路径',
-    helpText: 'IPv4 DHT 文件路径，默认：$HOME/.aria2/dht.dat',
+    labelKey: 'aria2Config.dht-file-path.label',
+    helpTextKey: 'aria2Config.dht-file-path.helpText',
     placeholder: '/config/dht.dat'
   },
   {
     key: 'dht-file-path6',
     type: 'text',
-    label: 'IPv6 DHT 文件路径',
-    helpText: 'IPv6 DHT 文件路径，默认：$HOME/.aria2/dht6.dat',
+    labelKey: 'aria2Config.dht-file-path6.label',
+    helpTextKey: 'aria2Config.dht-file-path6.helpText',
     placeholder: '/config/dht6.dat'
   },
   {
     key: 'bt-enable-lpd',
     type: 'boolean',
-    label: '本地节点发现',
-    helpText: '本地节点发现, PT 下载会自动禁用，默认启用'
+    labelKey: 'aria2Config.bt-enable-lpd.label',
+    helpTextKey: 'aria2Config.bt-enable-lpd.helpText'
   },
   {
     key: 'enable-peer-exchange',
     type: 'boolean',
-    label: '节点交换',
-    helpText: '启用节点交换, PT 下载会自动禁用, 默认启用'
+    labelKey: 'aria2Config.enable-peer-exchange.label',
+    helpTextKey: 'aria2Config.enable-peer-exchange.helpText'
   },
   {
     key: 'bt-max-peers',
     type: 'number',
-    label: 'BT 下载最大连接数',
-    helpText: 'BT 下载最大连接数（单任务），0 为不限制，默认:128',
+    labelKey: 'aria2Config.bt-max-peers.label',
+    helpTextKey: 'aria2Config.bt-max-peers.helpText',
     placeholder: '128',
     min: 0
   },
   {
     key: 'bt-request-peer-speed-limit',
     type: 'text',
-    label: 'BT 下载期望速度',
-    helpText: 'BT 下载期望速度值（单任务），单位 K 或 M ，默认:10M',
+    labelKey: 'aria2Config.bt-request-peer-speed-limit.label',
+    helpTextKey: 'aria2Config.bt-request-peer-speed-limit.helpText',
     placeholder: '10M'
   },
   {
     key: 'max-overall-upload-limit',
     type: 'text',
-    label: '全局最大上传速度限制',
-    helpText: '全局最大上传速度限制, 运行时可修改, 默认:2M',
+    labelKey: 'aria2Config.max-overall-upload-limit.label',
+    helpTextKey: 'aria2Config.max-overall-upload-limit.helpText',
     placeholder: '2M'
   },
   {
     key: 'max-upload-limit',
     type: 'text',
-    label: '单任务上传速度限制',
-    helpText: '单任务上传速度限制, 默认：0 (无限制)',
+    labelKey: 'aria2Config.max-upload-limit.label',
+    helpTextKey: 'aria2Config.max-upload-limit.helpText',
     placeholder: '0'
   },
   {
     key: 'seed-ratio',
     type: 'number',
-    label: '最小分享率',
-    helpText: '最小分享率。当种子的分享率达到此值时停止做种, 0 为一直做种, 默认:0',
+    labelKey: 'aria2Config.seed-ratio.label',
+    helpTextKey: 'aria2Config.seed-ratio.helpText',
     placeholder: '0',
     min: 0
   },
   {
     key: 'seed-time',
     type: 'number',
-    label: '最小做种时间',
-    helpText: '最小做种时间（分钟）。设置为 0 时将在 BT 任务下载完成后停止做种',
+    labelKey: 'aria2Config.seed-time.label',
+    helpTextKey: 'aria2Config.seed-time.helpText',
     placeholder: '2880',
     min: 0
   },
   {
     key: 'bt-hash-check-seed',
     type: 'boolean',
-    label: '做种前检查文件哈希',
-    helpText: '做种前检查文件哈希, 默认启用'
+    labelKey: 'aria2Config.bt-hash-check-seed.label',
+    helpTextKey: 'aria2Config.bt-hash-check-seed.helpText'
   },
   {
     key: 'bt-seed-unverified',
     type: 'boolean',
-    label: '无需再次校验',
-    helpText: '继续之前的BT任务时, 无需再次校验, 默认:false'
+    labelKey: 'aria2Config.bt-seed-unverified.label',
+    helpTextKey: 'aria2Config.bt-seed-unverified.helpText'
   },
   {
     key: 'bt-tracker-connect-timeout',
     type: 'number',
-    label: 'BT tracker 连接超时',
-    helpText: 'BT tracker 服务器连接超时时间（秒），默认：10',
+    labelKey: 'aria2Config.bt-tracker-connect-timeout.label',
+    helpTextKey: 'aria2Config.bt-tracker-connect-timeout.helpText',
     placeholder: '10',
     min: 1
   },
   {
     key: 'bt-tracker-timeout',
     type: 'number',
-    label: 'BT tracker 超时时间',
-    helpText: 'BT tracker 服务器超时时间（秒），默认：10',
+    labelKey: 'aria2Config.bt-tracker-timeout.label',
+    helpTextKey: 'aria2Config.bt-tracker-timeout.helpText',
     placeholder: '10',
     min: 1
   },
   {
     key: 'bt-prioritize-piece',
     type: 'text',
-    label: 'BT 下载优先下载文件',
-    helpText: 'BT 下载优先下载文件开头或结尾',
+    labelKey: 'aria2Config.bt-prioritize-piece.label',
+    helpTextKey: 'aria2Config.bt-prioritize-piece.helpText',
     placeholder: 'head=32M,tail=32M'
   },
   {
     key: 'rpc-save-upload-metadata',
     type: 'boolean',
-    label: '保存上传的种子文件',
-    helpText: '保存通过 WebUI(RPC) 上传的种子文件，默认启用'
+    labelKey: 'aria2Config.rpc-save-upload-metadata.label',
+    helpTextKey: 'aria2Config.rpc-save-upload-metadata.helpText'
   },
   {
     key: 'follow-torrent',
     type: 'select',
-    label: '下载种子文件自动开始',
-    helpText: '下载种子文件自动开始下载',
+    labelKey: 'aria2Config.follow-torrent.label',
+    helpTextKey: 'aria2Config.follow-torrent.helpText',
     options: [
       { label: 'true - 保存种子文件', value: 'true' },
       { label: 'false - 仅下载种子文件', value: 'false' },
@@ -413,64 +413,64 @@ export const aria2Settings: Aria2Setting[] = [
   {
     key: 'pause-metadata',
     type: 'boolean',
-    label: '种子文件下载完后暂停',
-    helpText: '种子文件下载完后暂停任务，默认:false'
+    labelKey: 'aria2Config.pause-metadata.label',
+    helpTextKey: 'aria2Config.pause-metadata.helpText'
   },
   {
     key: 'bt-save-metadata',
     type: 'boolean',
-    label: '保存磁力链接元数据',
-    helpText: '保存磁力链接元数据为种子文件, 默认:false'
+    labelKey: 'aria2Config.bt-save-metadata.label',
+    helpTextKey: 'aria2Config.bt-save-metadata.helpText'
   },
   {
     key: 'bt-load-saved-metadata',
     type: 'boolean',
-    label: '加载已保存的元数据',
-    helpText: '加载已保存的元数据文件，默认启用'
+    labelKey: 'aria2Config.bt-load-saved-metadata.label',
+    helpTextKey: 'aria2Config.bt-load-saved-metadata.helpText'
   },
   {
     key: 'bt-remove-unselected-file',
     type: 'boolean',
-    label: '删除未选择文件',
-    helpText: '删除 BT 下载任务中未选择文件，默认:false'
+    labelKey: 'aria2Config.bt-remove-unselected-file.label',
+    helpTextKey: 'aria2Config.bt-remove-unselected-file.helpText'
   },
   {
     key: 'bt-force-encryption',
     type: 'boolean',
-    label: 'BT强制加密',
-    helpText: 'BT强制加密，启用后将拒绝旧的 BT 握手协议'
+    labelKey: 'aria2Config.bt-force-encryption.label',
+    helpTextKey: 'aria2Config.bt-force-encryption.helpText'
   },
   {
     key: 'bt-detach-seed-only',
     type: 'boolean',
-    label: '分离仅做种任务',
-    helpText: '分离仅做种任务，默认:false'
+    labelKey: 'aria2Config.bt-detach-seed-only.label',
+    helpTextKey: 'aria2Config.bt-detach-seed-only.helpText'
   },
 
   // RPC 设置
   {
     key: 'enable-rpc',
     type: 'boolean',
-    label: '启用 RPC 服务器',
-    helpText: '启用 JSON-RPC/XML-RPC 服务器, 默认启用'
+    labelKey: 'aria2Config.enable-rpc.label',
+    helpTextKey: 'aria2Config.enable-rpc.helpText'
   },
   {
     key: 'rpc-allow-origin-all',
     type: 'boolean',
-    label: '接受所有远程请求',
-    helpText: '接受所有远程请求, 默认启用'
+    labelKey: 'aria2Config.rpc-allow-origin-all.label',
+    helpTextKey: 'aria2Config.rpc-allow-origin-all.helpText'
   },
   {
     key: 'rpc-listen-all',
     type: 'boolean',
-    label: '允许外部访问',
-    helpText: '允许外部访问, 默认启用'
+    labelKey: 'aria2Config.rpc-listen-all.label',
+    helpTextKey: 'aria2Config.rpc-listen-all.helpText'
   },
   {
     key: 'rpc-listen-port',
     type: 'number',
-    label: 'RPC 监听端口',
-    helpText: 'RPC 监听端口, 默认:6800',
+    labelKey: 'aria2Config.rpc-listen-port.label',
+    helpTextKey: 'aria2Config.rpc-listen-port.helpText',
     placeholder: '6800',
     min: 1,
     max: 65535
@@ -478,15 +478,15 @@ export const aria2Settings: Aria2Setting[] = [
   {
     key: 'rpc-secret',
     type: 'password',
-    label: 'RPC 密钥',
-    helpText: 'RPC 密钥，用于访问验证',
+    labelKey: 'aria2Config.rpc-secret.label',
+    helpTextKey: 'aria2Config.rpc-secret.helpText',
     placeholder: '输入RPC密钥'
   },
   {
     key: 'rpc-max-request-size',
     type: 'text',
-    label: 'RPC 最大请求大小',
-    helpText: 'RPC 最大请求大小，默认：10M',
+    labelKey: 'aria2Config.rpc-max-request-size.label',
+    helpTextKey: 'aria2Config.rpc-max-request-size.helpText',
     placeholder: '10M'
   }
 ]

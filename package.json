@@ -34,6 +34,7 @@
     "systeminformation": "^5.31.5",
     "tsconfig-paths": "^4.2.0",
     "vue": "^3.4.0",
+    "vue-i18n": "^11.3.2",
     "vue-router": "^4.5.1"
   },
   "devDependencies": {

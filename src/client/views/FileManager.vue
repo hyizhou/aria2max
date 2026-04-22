@@ -1,7 +1,7 @@
 <template>
   <div class="file-manager">
     <div class="page-header">
-      <h2>文件管理</h2>
+      <h2>{{ t('files.heading') }}</h2>
     </div>
     
     <FileBreadcrumb 
@@ -17,43 +17,43 @@
             :checked="selectedFiles.length === fileStore.files.length && fileStore.files.length > 0"
             @change="handleSelectAll"
           />
-          全选
+          {{ t('common.selectAll') }}
         </label>
       </div>
       <div class="file-actions-right">
         <button class="btn btn-secondary" @click="loadFiles">
           <i class="fas fa-sync-alt"></i>
-          刷新
+          {{ t('common.refresh') }}
         </button>
         <button class="btn btn-secondary" @click="handleUploadClick">
-          上传文件
+          {{ t('files.uploadFile') }}
         </button>
         <button class="btn btn-secondary" @click="handleCreateDirectory">
-          新建目录
+          {{ t('files.createDirectory') }}
         </button>
         <button 
           class="btn btn-danger"
           :disabled="selectedFiles.length === 0"
           @click="handleBatchDelete"
         >
-          删除选中
+          {{ t('files.deleteSelected') }}
         </button>
       </div>
     </div>
     
     <div class="file-list-container">
       <div v-if="loading" class="loading">
-        <p>加载中...</p>
+        <p>{{ t('common.loading') }}</p>
       </div>
       
       <div v-else-if="fileStore.error" class="error-state">
-        <p>无法加载文件列表：</p>
+        <p>{{ t('files.loadFailed') }}</p>
         <p class="error-message">{{ fileStore.error }}</p>
-        <button class="btn btn-secondary" @click="loadFiles">重试</button>
+        <button class="btn btn-secondary" @click="loadFiles">{{ t('common.refresh') }}</button>
       </div>
       
       <div v-else-if="fileStore.files.length === 0" class="empty-state">
-        <p>该目录为空</p>
+        <p>{{ t('files.emptyDirectory') }}</p>
       </div>
       
       <div v-else class="file-items">
@@ -82,9 +82,9 @@
   <!-- 删除确认弹窗 -->
   <ConfirmDialog
     v-if="confirmDelete && confirmDelete.show"
-    title="确认删除"
-    message="确定要删除这个文件或目录吗？此操作不可恢复。"
-    confirm-text="确定删除"
+    :title="t('files.confirmDeleteTitle')"
+    :message="t('files.confirmDeleteMessage')"
+    :confirm-text="t('files.confirmDelete')"
     @confirm="confirmDeleteFile"
     @cancel="cancelDeleteFile"
   />
@@ -92,9 +92,9 @@
   <!-- 批量删除确认弹窗 -->
   <ConfirmDialog
     v-if="confirmBatchDelete"
-    title="确认批量删除"
-    :message="`确定要删除选中的 ${selectedFiles.length} 个文件或目录吗？此操作不可恢复。`"
-    confirm-text="确定删除"
+    :title="t('files.confirmBatchDeleteTitle')"
+    :message="t('files.confirmBatchDeleteMessage', { count: selectedFiles.length })"
+    :confirm-text="t('files.confirmDelete')"
     @confirm="confirmBatchDeleteFiles"
     @cancel="cancelBatchDeleteFile"
   />
@@ -102,6 +102,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useFileStore } from '@/store'
 import FileItem from '@/components/FileItem.vue'
 import FileBreadcrumb from '@/components/FileBreadcrumb.vue'
@@ -111,6 +112,7 @@ import FilePreview from '@/components/FilePreview.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 
 const fileStore = useFileStore()
+const { t } = useI18n()
 const loading = ref(false)
 const selectedFiles = ref<string[]>([])
 const fileUploadRef = ref<typeof FileUpload | null>(null)
@@ -203,7 +205,7 @@ const confirmDeleteFile = async () => {
   } catch (error) {
     console.error('Delete file failed:', error)
     confirmDelete.value = null
-    alert(`删除失败: ${error instanceof Error ? error.message : '未知错误'}`)
+    alert(t('files.deleteFailed', { message: error instanceof Error ? error.message : t('common.unknownError') }))
   }
 }
 
@@ -219,7 +221,7 @@ const confirmBatchDeleteFiles = async () => {
   } catch (error) {
     console.error('Batch delete failed:', error)
     confirmBatchDelete.value = false
-    alert(`批量删除失败: ${error instanceof Error ? error.message : '未知错误'}`)
+    alert(t('files.batchDeleteFailed', { message: error instanceof Error ? error.message : t('common.unknownError') }))
   }
 }
 

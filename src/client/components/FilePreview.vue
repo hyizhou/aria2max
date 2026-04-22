@@ -14,7 +14,7 @@
           style="width: 100%; max-height: 60vh;"
         >
           <source :src="`/api/files/download?path=${encodeURIComponent(filePath)}`" :type="getVideoType(filePath)">
-          您的浏览器不支持视频播放。
+          {{ t('filePreview.unsupportedVideo') }}
         </video>
       </div>
       
@@ -26,7 +26,7 @@
           style="width: 100%;"
         >
           <source :src="`/api/files/download?path=${encodeURIComponent(filePath)}`" :type="getAudioType(filePath)">
-          您的浏览器不支持音频播放。
+          {{ t('filePreview.unsupportedAudio') }}
         </audio>
       </div>
       
@@ -46,8 +46,8 @@
       
       <!-- Unknown file type -->
       <div v-else class="unknown-file">
-        <p>该文件类型无法预览。</p>
-        <p>文件名: {{ filePath.split('/').pop() }}</p>
+        <p>{{ t('filePreview.unknownType') }}</p>
+        <p>{{ t('filePreview.fileName', { name: filePath.split('/').pop() }) }}</p>
       </div>
       
       <p class="file-name">{{ filePath.split('/').pop() }}</p>
@@ -57,7 +57,10 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Modal from '@/components/Modal.vue'
+
+const { t } = useI18n()
 
 const visible = ref(false)
 const filePath = ref('')

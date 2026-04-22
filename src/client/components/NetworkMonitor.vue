@@ -38,26 +38,26 @@
       @click.self="hideChart"
     >
       <div class="chart-header">
-        <h3>网络速度监控</h3>
+        <h3>{{ t('networkMonitor.chartTitle') }}</h3>
       </div>
       <div class="chart-container">
         <canvas ref="chartCanvas" width="400" height="200"></canvas>
       </div>
       <div class="chart-info">
         <div class="info-item">
-          <span class="label">当前下载:</span>
+          <span class="label">{{ t('networkMonitor.currentDownload') }}</span>
           <span class="value download">{{ downloadSpeed }}</span>
         </div>
         <div class="info-item">
-          <span class="label">当前上传:</span>
+          <span class="label">{{ t('networkMonitor.currentUpload') }}</span>
           <span class="value upload">{{ uploadSpeed }}</span>
         </div>
         <div class="info-item">
-          <span class="label">最高下载:</span>
+          <span class="label">{{ t('networkMonitor.maxDownload') }}</span>
           <span class="value">{{ maxDownloadSpeed }}</span>
         </div>
         <div class="info-item">
-          <span class="label">最高上传:</span>
+          <span class="label">{{ t('networkMonitor.maxUpload') }}</span>
           <span class="value">{{ maxUploadSpeed }}</span>
         </div>
       </div>
@@ -67,8 +67,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useNetworkStore } from '@/store'
 import { formatBytesFixed, formatBytes, parseBytes } from '@shared/utils/format'
+
+const { t, locale } = useI18n()
 
 const networkMonitor = ref(null)
 const chartCanvas = ref(null)
@@ -202,12 +205,12 @@ const drawChart = () => {
   ctx.fillStyle = '#333'
   ctx.font = '12px Arial'
   ctx.textAlign = 'left'
-  ctx.fillText('下载', width - 100, 15)
+  ctx.fillText(t('networkMonitor.download'), width - 100, 15)
   
   ctx.fillStyle = '#388e3c'
   ctx.fillRect(width - 120, 25, 15, 3)
   ctx.fillStyle = '#333'
-  ctx.fillText('上传', width - 100, 30)
+  ctx.fillText(t('networkMonitor.upload'), width - 100, 30)
 }
 
 // 获取移动端简化下载速度显示
@@ -360,6 +363,11 @@ const doUpdatePopupPosition = (rect) => {
 // 监听store数据变化
 watch(() => networkStore.downloadSpeed, updateNetworkDisplay)
 watch(() => networkStore.uploadSpeed, updateNetworkDisplay)
+
+// 监听语言变化重绘图表
+watch(locale, () => {
+  if (showChart.value) drawChart()
+})
 
 // 组件挂载时开始监控
 onMounted(() => {

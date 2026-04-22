@@ -3,12 +3,12 @@
     <div class="warning-content">
       <i class="fas fa-exclamation-triangle warning-icon"></i>
       <div class="warning-text">
-        <h4>系统配置警告</h4>
+        <h4>{{ t('systemStatusChecker.warningTitle') }}</h4>
         <p>{{ systemInfo.disk.error }}</p>
-        <p v-if="systemInfo.disk.path">路径: {{ systemInfo.disk.path }}</p>
+        <p v-if="systemInfo.disk.path">{{ t('systemStatus.path') }} {{ systemInfo.disk.path }}</p>
         <div class="warning-actions">
           <button @click="goToSettings" class="btn btn-primary btn-sm">
-            <i class="fas fa-cog"></i> 前往设置
+            <i class="fas fa-cog"></i> {{ t('systemStatusChecker.goToSettings') }}
           </button>
         </div>
       </div>
@@ -18,8 +18,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { systemApi } from '@/services/api'
+
+const { t } = useI18n()
 
 const router = useRouter()
 const systemInfo = ref<any>(null)

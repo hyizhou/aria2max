@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useTaskStore } from '@/store'
 import { useRoute } from 'vue-router'
 import { formatBytes } from '@shared/utils/format'
+import { getTaskFileName } from '@shared/utils/task'
 
+const { t } = useI18n()
 const route = useRoute()
 const taskStore = useTaskStore()
 
@@ -78,15 +81,7 @@ const formatDate = (timestamp: string): string => {
 }
 
 const getStatusText = (status: string): string => {
-  const statusMap: Record<string, string> = {
-    active: '下载中',
-    waiting: '等待中',
-    paused: '已暂停',
-    error: '错误',
-    complete: '已完成',
-    removed: '已删除'
-  }
-  return statusMap[status] || status
+  return t('status.' + status, status)
 }
 
 const getProgressText = (): string => {
@@ -120,20 +115,9 @@ const getTaskSpeed = (task: any) => {
 
 const getTaskName = (): string => {
   const task = taskStore.currentTask
-  if (!task) return '未知任务'
-  
-  // 对于BT任务，使用BT任务名称
-  if (task.bittorrent && task.bittorrent.info && task.bittorrent.info.name) {
-    return task.bittorrent.info.name
-  }
-  
-  // 对于普通任务，使用文件名
-  if (task.files && task.files.length > 0) {
-    const path = task.files[0].path
-    return path.split('/').pop() || path
-  }
-  
-  return '未知文件'
+  if (!task) return t('common.unknownTask')
+
+  return getTaskFileName(task) || t('common.unknownFile')
 }
 
 // 采样函数：从区块数组中采样指定数量的区块用于显示
@@ -311,7 +295,7 @@ const getPeers = computed(() => {
     }
     
     // 处理 peerId - 先URL解码，再解析客户端
-    let decodedPeerId = '未知ID';
+    let decodedPeerId = t('taskDetail.unknownID');
     const originalPeerId = conn.peerId || conn.id || '';
     
     if (originalPeerId) {

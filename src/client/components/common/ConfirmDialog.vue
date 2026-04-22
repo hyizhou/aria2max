@@ -2,7 +2,7 @@
   <div class="confirm-overlay" @click="onCancel">
     <div class="confirm-dialog" @click.stop>
       <div class="confirm-header">
-        <h3>{{ title }}</h3>
+        <h3>{{ title || t('common.confirm') }}</h3>
       </div>
       <div class="confirm-body">
         <p>{{ message }}</p>
@@ -18,8 +18,8 @@
         </div>
       </div>
       <div class="confirm-footer">
-        <button class="btn btn-secondary" @click="onCancel">{{ cancelText }}</button>
-        <button class="btn" :class="confirmButtonType" @click="onConfirm">{{ confirmText }}</button>
+        <button class="btn btn-secondary" @click="onCancel">{{ cancelText || t('common.cancel') }}</button>
+        <button class="btn" :class="confirmButtonType" @click="onConfirm">{{ confirmText || t('common.confirm') }}</button>
       </div>
     </div>
   </div>
@@ -27,6 +27,9 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 interface Props {
   title?: string
@@ -45,9 +48,9 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  title: '确认',
-  confirmText: '确定',
-  cancelText: '取消',
+  title: '',
+  confirmText: '',
+  cancelText: undefined,
   confirmButtonType: 'btn-danger',
   checkboxLabel: undefined,
   initialCheckboxValue: false

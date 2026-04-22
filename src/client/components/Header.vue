@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useUIStore } from '@/store'
 import NetworkMonitor from '@/components/NetworkMonitor.vue'
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 
 const router = useRouter()
 const uiStore = useUIStore()
+const { t } = useI18n()
 
 const toggleSidebar = () => {
   uiStore.toggleSidebar()
@@ -33,10 +36,11 @@ const toggleTheme = () => {
       <NetworkMonitor />
     </div>
     <div class="header-right">
-      <button class="action-button" @click="toggleTheme" :title="uiStore.theme === 'light' ? '切换到暗色主题' : '切换到亮色主题'">
+      <LanguageSwitcher />
+      <button class="action-button" @click="toggleTheme" :title="uiStore.theme === 'light' ? t('header.switchToDark') : t('header.switchToLight')">
         <i :class="uiStore.theme === 'light' ? 'fas fa-moon' : 'fas fa-sun'"></i>
       </button>
-      <button class="action-button" @click="goToAddTask" title="添加下载任务">
+      <button class="action-button" @click="goToAddTask" :title="t('header.addTask')">
         <i class="fas fa-plus"></i>
       </button>
     </div>

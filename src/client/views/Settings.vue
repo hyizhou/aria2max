@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useConfigStore, useSystemConfigStore } from '@/store'
 import SettingItem from '@/components/SettingItem.vue'
 import { aria2Settings, defaultAria2Config } from '@/config/aria2Config'
 
+const { t } = useI18n()
 const configStore = useConfigStore()
 const systemConfigStore = useSystemConfigStore()
 
@@ -52,7 +54,7 @@ const loadConfig = async () => {
     console.error('Failed to load config:', error)
     testResult.value = {
       success: false,
-      message: '加载配置失败'
+      message: t('settings.loadFailed')
     }
   } finally {
     loading.value = false
@@ -86,13 +88,13 @@ const saveConfig = async () => {
       console.log('配置已保存:', config)
       testResult.value = {
         success: true,
-        message: '配置保存成功！'
+        message: t('settings.saveSuccess')
       }
     } catch (error: any) {
       console.error('保存配置失败:', error)
       testResult.value = {
         success: false,
-        message: error?.message || '配置保存失败'
+        message: error?.message || t('settings.saveFailed')
       }
     } finally {
       saving.value = false
@@ -104,12 +106,12 @@ const saveConfig = async () => {
   try {
     // 只发送修改过的配置项
     const modifiedConfig = getModifiedConfig()
-    
+
     // 如果没有修改任何配置项，则直接返回
     if (Object.keys(modifiedConfig).length === 0) {
       testResult.value = {
         success: true,
-        message: '配置无变化，无需保存'
+        message: t('settings.saveNoChange')
       }
       
       // 3秒后清除提示
@@ -129,7 +131,7 @@ const saveConfig = async () => {
     // 显示保存成功提示
     testResult.value = {
       success: true,
-      message: '配置保存成功，已立即生效'
+      message: t('settings.saveSuccessImmediate')
     }
     
     // 3秒后清除提示
@@ -140,7 +142,7 @@ const saveConfig = async () => {
     console.error('Save config failed:', error)
     testResult.value = {
       success: false,
-      message: error?.message || '配置保存失败'
+      message: error?.message || t('settings.saveFailed')
     }
   } finally {
     saving.value = false
@@ -160,13 +162,13 @@ const testConnection = async () => {
     await configStore.testConnection(tempConfig)
     testResult.value = {
       success: true,
-      message: '连接测试成功'
+      message: t('settings.testSuccess')
     }
   } catch (error: any) {
     console.error('Test connection failed:', error)
     testResult.value = {
       success: false,
-      message: error?.message || '连接测试失败'
+      message: error?.message || t('settings.testFailed')
     }
   } finally {
     testing.value = false
@@ -177,7 +179,7 @@ const testConnection = async () => {
 <template>
   <div class="settings">
     <div class="page-header">
-      <h2>系统设置</h2>
+      <h2>{{ t('settings.heading') }}</h2>
     </div>
     
     <div class="settings-tabs">
@@ -188,7 +190,7 @@ const testConnection = async () => {
           @click="activeTab = 'system'"
         >
           <i class="fas fa-cog"></i>
-          系统设置
+          {{ t('settings.systemSettings') }}
         </button>
         <button 
           class="tab-button" 
@@ -196,7 +198,7 @@ const testConnection = async () => {
           @click="activeTab = 'aria2'"
         >
           <i class="fas fa-download"></i>
-          Aria2 设置
+          {{ t('settings.aria2Settings') }}
         </button>
 
       </div>
@@ -206,7 +208,7 @@ const testConnection = async () => {
         <div v-if="activeTab === 'system'" class="tab-panel">
           <div class="settings-form">
             <div v-if="loading" class="loading">
-              <p>加载中...</p>
+              <p>{{ t('settings.loading') }}</p>
             </div>
             
             <form v-else @submit.prevent="saveConfig">
@@ -215,10 +217,10 @@ const testConnection = async () => {
                   v-for="setting in systemConfigStore.getSystemSettings()"
                   :key="setting.key"
                   v-model="systemConfig[setting.key]"
-                  :label="setting.label"
+                  :label="t(setting.labelKey)"
                   :type="setting.type"
-                  :helpText="setting.helpText"
-                  :placeholder="setting.placeholder"
+                  :helpText="setting.helpTextKey ? t(setting.helpTextKey) : ''"
+                  :placeholder="setting.placeholderKey ? t(setting.placeholderKey) : ''"
                   :modified="isConfigModified(setting.key)"
                 />
                 
@@ -226,7 +228,7 @@ const testConnection = async () => {
                 <div class="setting-item">
                   <div class="setting-row">
                     <div class="setting-info">
-                      <label class="setting-label">Aria2 RPC 连接测试</label>
+                      <label class="setting-label">{{ t('settings.rpcTestLabel') }}</label>
                     </div>
                     <div class="input-group">
                       <button
@@ -235,7 +237,7 @@ const testConnection = async () => {
                         :disabled="testing"
                         @click="testConnection"
                       >
-                        {{ testing ? '测试中...' : '测试连接' }}
+                        {{ testing ? t('settings.testing') : t('settings.testConnection') }}
                       </button>
                     </div>
                   </div>
@@ -248,7 +250,7 @@ const testConnection = async () => {
                   class="btn btn-primary"
                   :disabled="saving"
                 >
-                  {{ saving ? '保存中...' : '保存配置' }}
+                  {{ saving ? t('settings.saving') : t('settings.saveConfig') }}
                 </button>
               </div>
               
@@ -263,21 +265,21 @@ const testConnection = async () => {
         <div v-if="activeTab === 'aria2'" class="tab-panel">
           <div class="settings-form">
             <div class="aria2-settings-intro coming-soon">
-              <p><i class="fas fa-tools"></i> Aria2 设置功能正在开发中，敬请期待...</p>
-              <p class="sub-text">此页面将提供完整的 Aria2 配置选项管理功能</p>
+              <p><i class="fas fa-tools"></i> {{ t('settings.comingSoonTitle') }}</p>
+              <p class="sub-text">{{ t('settings.comingSoonSubtext') }}</p>
             </div>
             
             <div class="aria2-categories">
               <div class="settings-section">
-                <h3>Aria2 设置</h3>
+                <h3>{{ t('settings.aria2Settings') }}</h3>
                 <SettingItem
                   v-for="setting in aria2Settings"
                   :key="setting.key"
                   v-model="aria2Config[setting.key]"
-                  :label="setting.label"
+                  :label="t(setting.labelKey)"
                   :type="setting.type"
-                  :helpText="setting.helpText"
-                  :placeholder="setting.placeholder"
+                  :helpText="setting.helpTextKey ? t(setting.helpTextKey) : ''"
+                  :placeholder="setting.placeholderKey ? t(setting.placeholderKey) : ''"
                   :options="setting.options"
                   :min="setting.min"
                   :max="setting.max"
@@ -285,8 +287,8 @@ const testConnection = async () => {
               </div>
 
               <div class="form-actions">
-                <button type="button" class="btn btn-secondary">重置默认</button>
-                <button type="button" class="btn btn-primary">应用设置</button>
+                <button type="button" class="btn btn-secondary">{{ t('settings.resetDefault') }}</button>
+                <button type="button" class="btn btn-primary">{{ t('settings.applySettings') }}</button>
               </div>
             </div>
           </div>

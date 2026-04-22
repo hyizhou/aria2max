@@ -1,7 +1,7 @@
 <template>
   <div class="system-status">
     <div class="page-header">
-      <h2>系统状态</h2>
+      <h2>{{ t('systemStatus.heading') }}</h2>
     </div>
     
     <div class="status-grid">
@@ -9,32 +9,32 @@
       <div class="status-card">
         <div class="card-header">
           <i class="fas fa-server"></i>
-          <h3>系统信息</h3>
+          <h3>{{ t('systemStatus.systemInfo') }}</h3>
         </div>
         <div class="card-content">
           <div class="info-item">
-            <span class="label">主机名:</span>
-            <span class="value">{{ systemInfo.hostname || '未知' }}</span>
+            <span class="label">{{ t('systemStatus.hostname') }}</span>
+            <span class="value">{{ systemInfo.hostname || t('systemStatus.unknown') }}</span>
           </div>
           <div class="info-item">
-            <span class="label">系统:</span>
-            <span class="value">{{ systemInfo.platform || '未知' }}</span>
+            <span class="label">{{ t('systemStatus.system') }}</span>
+            <span class="value">{{ systemInfo.platform || t('systemStatus.unknown') }}</span>
           </div>
           <div class="info-item">
-            <span class="label">架构:</span>
-            <span class="value">{{ systemInfo.arch || '未知' }}</span>
+            <span class="label">{{ t('systemStatus.architecture') }}</span>
+            <span class="value">{{ systemInfo.arch || t('systemStatus.unknown') }}</span>
           </div>
           <div class="info-item">
-            <span class="label">内核版本:</span>
-            <span class="value">{{ systemInfo.release || '未知' }}</span>
+            <span class="label">{{ t('systemStatus.kernelVersion') }}</span>
+            <span class="value">{{ systemInfo.release || t('systemStatus.unknown') }}</span>
           </div>
           <div class="info-item">
-            <span class="label">Node.js版本:</span>
-            <span class="value">{{ systemInfo.nodeVersion || '未知' }}</span>
+            <span class="label">{{ t('systemStatus.nodeVersion') }}</span>
+            <span class="value">{{ systemInfo.nodeVersion || t('systemStatus.unknown') }}</span>
           </div>
           <div class="info-item">
-            <span class="label">运行时间:</span>
-            <span class="value">{{ systemInfo.uptimeFormatted || '未知' }}</span>
+            <span class="label">{{ t('systemStatus.uptime') }}</span>
+            <span class="value">{{ systemInfo.uptimeFormatted || t('systemStatus.unknown') }}</span>
           </div>
         </div>
       </div>
@@ -43,20 +43,20 @@
       <div class="status-card">
         <div class="card-header">
           <i class="fas fa-microchip"></i>
-          <h3>CPU使用率</h3>
+          <h3>{{ t('systemStatus.cpuUsage') }}</h3>
           <div class="cpu-toggle" v-if="systemInfo.cpu?.cores > 1">
             <label class="toggle-switch">
               <input type="checkbox" v-model="showCpuCores">
               <span class="toggle-slider"></span>
             </label>
-            <span class="toggle-label">显示核心</span>
+            <span class="toggle-label">{{ t('systemStatus.showCores') }}</span>
           </div>
         </div>
         <div class="card-content">
           <!-- 整体CPU使用率条形图（始终显示） -->
           <div class="progress-bar-container">
             <div class="progress-info">
-              <span class="label">整体使用率</span>
+              <span class="label">{{ t('systemStatus.overallUsage') }}</span>
               <span class="value">{{ systemInfo.cpu?.usage || 0 }}%</span>
             </div>
             <div class="progress-bar">
@@ -68,7 +68,7 @@
           <div v-if="showCpuCores" class="cpu-cores-container">
             <div v-for="core in systemInfo.cpu?.cores" :key="core" class="core-progress">
               <div class="progress-info">
-                <span class="label">核心 {{ core }}</span>
+                <span class="label">{{ t('systemStatus.core', { index: core }) }}</span>
                 <span class="value">{{ getCpuCoreUsage(core-1) }}%</span>
               </div>
               <div class="progress-bar">
@@ -78,12 +78,12 @@
           </div>
 
           <div class="info-item">
-            <span class="label">核心数:</span>
+            <span class="label">{{ t('systemStatus.coreCount') }}</span>
             <span class="value">{{ systemInfo.cpu?.cores || 0 }}</span>
           </div>
           <div class="info-item">
-            <span class="label">型号:</span>
-            <span class="value">{{ systemInfo.cpu?.model || '未知' }}</span>
+            <span class="label">{{ t('systemStatus.model') }}</span>
+            <span class="value">{{ systemInfo.cpu?.model || t('systemStatus.unknown') }}</span>
           </div>
         </div>
       </div>
@@ -92,12 +92,12 @@
       <div class="status-card">
         <div class="card-header">
           <i class="fas fa-memory"></i>
-          <h3>内存使用率</h3>
+          <h3>{{ t('systemStatus.memoryUsage') }}</h3>
         </div>
         <div class="card-content">
           <div class="progress-bar-container">
             <div class="progress-info">
-              <span class="label">使用率</span>
+              <span class="label">{{ t('systemStatus.usageRate') }}</span>
               <span class="value">{{ systemInfo.memory?.percentage || 0 }}%</span>
             </div>
             <div class="progress-bar">
@@ -105,15 +105,15 @@
             </div>
           </div>
           <div class="info-item">
-            <span class="label">总内存:</span>
+            <span class="label">{{ t('systemStatus.totalMemory') }}</span>
             <span class="value">{{ formatBytes(systemInfo.memory?.total || 0) }}</span>
           </div>
           <div class="info-item">
-            <span class="label">已用:</span>
+            <span class="label">{{ t('systemStatus.used') }}</span>
             <span class="value">{{ formatBytes(systemInfo.memory?.used || 0) }}</span>
           </div>
           <div class="info-item">
-            <span class="label">可用:</span>
+            <span class="label">{{ t('systemStatus.available') }}</span>
             <span class="value">{{ formatBytes(systemInfo.memory?.free || 0) }}</span>
           </div>
         </div>
@@ -123,12 +123,12 @@
       <div v-if="systemInfo.swap && systemInfo.swap.total > 0" class="status-card">
         <div class="card-header">
           <i class="fas fa-exchange-alt"></i>
-          <h3>Swap使用率</h3>
+          <h3>{{ t('systemStatus.swapUsage') }}</h3>
         </div>
         <div class="card-content">
           <div class="progress-bar-container">
             <div class="progress-info">
-              <span class="label">使用率</span>
+              <span class="label">{{ t('systemStatus.usageRate') }}</span>
               <span class="value">{{ systemInfo.swap?.percentage || 0 }}%</span>
             </div>
             <div class="progress-bar">
@@ -136,15 +136,15 @@
             </div>
           </div>
           <div class="info-item">
-            <span class="label">总Swap:</span>
+            <span class="label">{{ t('systemStatus.totalSwap') }}</span>
             <span class="value">{{ formatBytes(systemInfo.swap?.total || 0) }}</span>
           </div>
           <div class="info-item">
-            <span class="label">已用:</span>
+            <span class="label">{{ t('systemStatus.used') }}</span>
             <span class="value">{{ formatBytes(systemInfo.swap?.used || 0) }}</span>
           </div>
           <div class="info-item">
-            <span class="label">可用:</span>
+            <span class="label">{{ t('systemStatus.available') }}</span>
             <span class="value">{{ formatBytes(systemInfo.swap?.free || 0) }}</span>
           </div>
         </div>
@@ -154,12 +154,12 @@
       <div class="status-card">
         <div class="card-header">
           <i class="fas fa-hdd"></i>
-          <h3>磁盘使用率</h3>
+          <h3>{{ t('systemStatus.diskUsage') }}</h3>
         </div>
         <div class="card-content">
           <div class="progress-bar-container">
             <div class="progress-info">
-              <span class="label">使用率</span>
+              <span class="label">{{ t('systemStatus.usageRate') }}</span>
               <span class="value">{{ systemInfo.disk?.percentage || 0 }}%</span>
             </div>
             <div class="progress-bar">
@@ -167,19 +167,19 @@
             </div>
           </div>
           <div class="info-item">
-            <span class="label">路径:</span>
-            <span class="value">{{ systemInfo.disk?.path || '未知' }}</span>
+            <span class="label">{{ t('systemStatus.path') }}</span>
+            <span class="value">{{ systemInfo.disk?.path || t('systemStatus.unknown') }}</span>
           </div>
           <div class="info-item">
-            <span class="label">总容量:</span>
+            <span class="label">{{ t('systemStatus.totalCapacity') }}</span>
             <span class="value">{{ formatBytes(systemInfo.disk?.total || 0) }}</span>
           </div>
           <div class="info-item">
-            <span class="label">已用:</span>
+            <span class="label">{{ t('systemStatus.used') }}</span>
             <span class="value">{{ formatBytes(systemInfo.disk?.used || 0) }}</span>
           </div>
           <div class="info-item">
-            <span class="label">可用:</span>
+            <span class="label">{{ t('systemStatus.available') }}</span>
             <span class="value">{{ formatBytes(systemInfo.disk?.free || 0) }}</span>
           </div>
           <div v-if="systemInfo.disk?.error" class="error-message">
@@ -192,34 +192,34 @@
       <div class="status-card">
         <div class="card-header">
           <i class="fas fa-network-wired"></i>
-          <h3>网络信息</h3>
+          <h3>{{ t('systemStatus.networkInfo') }}</h3>
         </div>
         <div class="card-content">
           <div v-if="Object.keys(systemInfo.network || {}).length === 0" class="no-data">
-            暂无网络接口信息
+            {{ t('systemStatus.noNetworkInfo') }}
           </div>
           <div v-else>
             <div v-for="(info, name) in systemInfo.network" :key="name" class="network-item">
               <div class="network-name">{{ name }}</div>
               <div class="network-details">
                 <div class="info-item">
-                  <span class="label">IP地址:</span>
+                  <span class="label">{{ t('systemStatus.ipAddress') }}</span>
                   <span class="value">{{ info.address }}</span>
                 </div>
                 <div class="info-item">
-                  <span class="label">子网掩码:</span>
+                  <span class="label">{{ t('systemStatus.subnetMask') }}</span>
                   <span class="value">{{ info.netmask }}</span>
                 </div>
                 <div class="info-item">
-                  <span class="label">MAC地址:</span>
+                  <span class="label">{{ t('systemStatus.macAddress') }}</span>
                   <span class="value">{{ info.mac }}</span>
                 </div>
                 <div class="info-item">
-                  <span class="label">下载速度:</span>
+                  <span class="label">{{ t('systemStatus.downloadSpeed') }}</span>
                   <span class="value speed-download">{{ info.rxSpeedFormatted || '0 B/s' }}</span>
                 </div>
                 <div class="info-item">
-                  <span class="label">上传速度:</span>
+                  <span class="label">{{ t('systemStatus.uploadSpeed') }}</span>
                   <span class="value speed-upload">{{ info.txSpeedFormatted || '0 B/s' }}</span>
                 </div>
                 </div>
@@ -233,9 +233,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { systemApi } from '@/services'
 import { formatBytes } from '@shared/utils/format'
 
+const { t } = useI18n()
 const systemInfo = ref<any>({})
 const loading = ref(false)
 const showCpuCores = ref(false) // CPU核心切换开关
@@ -251,16 +253,16 @@ const fetchSystemInfo = async () => {
     console.error('Failed to fetch system info:', error)
     // 显示错误信息
     systemInfo.value = {
-      hostname: '获取失败',
-      platform: '未知',
-      arch: '未知',
-      release: '未知',
-      nodeVersion: '未知',
-      uptimeFormatted: '未知',
-      cpu: { usage: 0, cores: 0, model: '未知' },
+      hostname: t('systemStatus.fetchFailed'),
+      platform: t('systemStatus.unknown'),
+      arch: t('systemStatus.unknown'),
+      release: t('systemStatus.unknown'),
+      nodeVersion: t('systemStatus.unknown'),
+      uptimeFormatted: t('systemStatus.unknown'),
+      cpu: { usage: 0, cores: 0, model: t('systemStatus.unknown') },
       memory: { total: 0, used: 0, free: 0, percentage: 0 },
       swap: null,
-      disk: { path: '未知', total: 0, used: 0, free: 0, percentage: 0, error: '无法获取磁盘信息' },
+      disk: { path: t('systemStatus.unknown'), total: 0, used: 0, free: 0, percentage: 0, error: t('systemStatus.cannotGetDiskInfo') },
       network: {}
     }
   } finally {

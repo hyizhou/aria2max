@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { formatBytes as _formatBytes } from '@shared/utils/format'
+import { getTaskFileName } from '@shared/utils/task'
+
+const { t } = useI18n()
 
 interface Task {
   gid: string
@@ -47,15 +51,7 @@ const progress = computed(() => {
 })
 
 const statusText = computed(() => {
-  const statusMap: Record<string, string> = {
-    active: '下载中',
-    waiting: '等待中',
-    paused: '已暂停',
-    error: '错误',
-    complete: '已完成',
-    removed: '已删除'  // 为了兼容性显示，但通过我们项目操作的任务不会变成此状态
-  }
-  return statusMap[props.task.status] || props.task.status
+  return t('status.' + props.task.status, props.task.status)
 })
 
 const statusClass = computed(() => {
@@ -75,17 +71,7 @@ const handleClickDetail = () => {
 }
 
 const getFileName = (): string => {
-  // 对于BT任务，使用BT任务名称
-  if (props.task.bittorrent && props.task.bittorrent.info && props.task.bittorrent.info.name) {
-    return props.task.bittorrent.info.name
-  }
-  
-  // 对于普通任务，使用文件名
-  if (props.task.files && props.task.files.length > 0) {
-    const path = props.task.files[0].path
-    return path.split('/').pop() || path
-  }
-  return '未知文件'
+  return getTaskFileName(props.task) || t('common.unknownFile')
 }
 </script>
 
@@ -135,32 +121,32 @@ const getFileName = (): string => {
       <div class="task-details">
         <div class="task-speed">
           <span v-if="parseInt(task.downloadSpeed, 10) > 0">
-            下载速度: {{ formatSpeed(task.downloadSpeed) }}
+            {{ t('tasks.downloadSpeed', { speed: formatSpeed(task.downloadSpeed) }) }}
           </span>
           <span v-if="parseInt(task.uploadSpeed, 10) > 0">
-            上传速度: {{ formatSpeed(task.uploadSpeed) }}
+            {{ t('tasks.uploadSpeed', { speed: formatSpeed(task.uploadSpeed) }) }}
           </span>
         </div>
         <div class="task-actions">
-          <button 
-            v-if="task.status === 'active'" 
+          <button
+            v-if="task.status === 'active'"
             class="btn-action"
             @click="handleAction('pause')"
           >
-            暂停
+            {{ t('tasks.pause') }}
           </button>
-          <button 
-            v-else-if="task.status === 'paused'" 
+          <button
+            v-else-if="task.status === 'paused'"
             class="btn-action"
             @click="handleAction('resume')"
           >
-            继续
+            {{ t('tasks.resume') }}
           </button>
-          <button 
+          <button
             class="btn-action btn-danger"
             @click="handleAction('delete')"
           >
-            删除
+            {{ t('common.delete') }}
           </button>
         </div>
       </div>
