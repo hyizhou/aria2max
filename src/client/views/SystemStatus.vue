@@ -53,8 +53,8 @@
           </div>
         </div>
         <div class="card-content">
-          <!-- 整体CPU使用率条形图 -->
-          <div v-if="!showCpuCores" class="progress-bar-container">
+          <!-- 整体CPU使用率条形图（始终显示） -->
+          <div class="progress-bar-container">
             <div class="progress-info">
               <span class="label">整体使用率</span>
               <span class="value">{{ systemInfo.cpu?.usage || 0 }}%</span>
@@ -63,9 +63,9 @@
               <div class="progress-bar-fill" :style="{ width: (systemInfo.cpu?.usage || 0) + '%' }"></div>
             </div>
           </div>
-          
-          <!-- CPU核心使用率条形图 -->
-          <div v-else class="cpu-cores-container">
+
+          <!-- CPU核心使用率条形图（可折叠） -->
+          <div v-if="showCpuCores" class="cpu-cores-container">
             <div v-for="core in systemInfo.cpu?.cores" :key="core" class="core-progress">
               <div class="progress-info">
                 <span class="label">核心 {{ core }}</span>
@@ -76,7 +76,7 @@
               </div>
             </div>
           </div>
-          
+
           <div class="info-item">
             <span class="label">核心数:</span>
             <span class="value">{{ systemInfo.cpu?.cores || 0 }}</span>
@@ -100,13 +100,8 @@
               <span class="label">使用率</span>
               <span class="value">{{ systemInfo.memory?.percentage || 0 }}%</span>
             </div>
-            <div class="progress-bar dual-bar">
+            <div class="progress-bar">
               <div class="progress-bar-fill" :style="{ width: (systemInfo.memory?.percentage || 0) + '%' }"></div>
-              <div class="progress-bar-cache" :style="{ left: (systemInfo.memory?.percentage || 0) + '%', width: (systemInfo.memory?.cachePercentage || 0) + '%' }"></div>
-            </div>
-            <div class="progress-legend">
-              <span class="legend-item"><span class="legend-color used-color"></span>已用</span>
-              <span class="legend-item"><span class="legend-color cache-color"></span>缓存</span>
             </div>
           </div>
           <div class="info-item">
@@ -116,10 +111,6 @@
           <div class="info-item">
             <span class="label">已用:</span>
             <span class="value">{{ formatBytes(systemInfo.memory?.used || 0) }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">缓存:</span>
-            <span class="value memory-cache">{{ formatBytes(systemInfo.memory?.cache || 0) }}</span>
           </div>
           <div class="info-item">
             <span class="label">可用:</span>
@@ -335,6 +326,9 @@ onUnmounted(() => {
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 400px;
 }
 
 .card-header {
@@ -360,6 +354,24 @@ onUnmounted(() => {
 
 .card-content {
   padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #c0c0c0 transparent;
+}
+
+.card-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.card-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.card-content::-webkit-scrollbar-thumb {
+  background: #c0c0c0;
+  border-radius: 2px;
 }
 
 .info-item {
@@ -475,10 +487,6 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-.progress-bar.dual-bar {
-  position: relative;
-}
-
 .progress-bar-fill {
   height: 100%;
   background: linear-gradient(90deg, #1976d2, #42a5f5);
@@ -486,52 +494,25 @@ onUnmounted(() => {
   transition: width 0.3s ease;
 }
 
-.progress-bar-cache {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  background: linear-gradient(90deg, #ff9800, #ffb74d);
-  opacity: 0.7;
-  border-radius: 0 6px 6px 0;
-  transition: width 0.3s ease, left 0.3s ease;
-}
-
-.progress-legend {
-  display: flex;
-  gap: 1rem;
-  margin-top: 0.4rem;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.75rem;
-  color: #666;
-}
-
-.legend-color {
-  display: inline-block;
-  width: 12px;
-  height: 6px;
-  border-radius: 3px;
-}
-
-.legend-color.used-color {
-  background: #1976d2;
-}
-
-.legend-color.cache-color {
-  background: #ff9800;
-  opacity: 0.7;
-}
-
-.memory-cache {
-  color: #f57c00 !important;
-}
-
 .cpu-cores-container {
   margin-bottom: 1.5rem;
+  max-height: 260px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #c0c0c0 transparent;
+}
+
+.cpu-cores-container::-webkit-scrollbar {
+  width: 4px;
+}
+
+.cpu-cores-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cpu-cores-container::-webkit-scrollbar-thumb {
+  background: #c0c0c0;
+  border-radius: 2px;
 }
 
 .core-progress {
@@ -854,18 +835,6 @@ onUnmounted(() => {
 
 .dark-theme .speed-upload {
   color: #66bb6a !important;
-}
-
-.dark-theme .progress-bar-cache {
-  background: linear-gradient(90deg, #ffa726, #ffcc80);
-}
-
-.dark-theme .memory-cache {
-  color: #ffb74d !important;
-}
-
-.dark-theme .legend-item {
-  color: #b0b0b0;
 }
 
 .dark-theme input:checked + .toggle-slider:before {
