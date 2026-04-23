@@ -34,5 +34,7 @@ router.put('/system/config', systemController.saveConfig.bind(systemController))
 router.post('/system/test-connection', systemController.testConnection.bind(systemController))
 router.get('/system/realtime-speed', systemController.getRealtimeSpeed.bind(systemController))
 router.get('/system/device-network-speed', systemController.getDeviceNetworkSpeed.bind(systemController))
+router.get('/system/aria2-options', systemController.getAria2Options.bind(systemController))
+router.put('/system/aria2-options', systemController.setAria2Options.bind(systemController))
 
 export default router

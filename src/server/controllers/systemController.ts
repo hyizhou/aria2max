@@ -25,6 +25,8 @@ interface SystemController {
   getSystemInfo(req: Request, res: Response): Promise<void>
   getRealtimeSpeed(req: Request, res: Response): Promise<void>
   getDeviceNetworkSpeed(req: Request, res: Response): Promise<void>
+  getAria2Options(req: Request, res: Response): Promise<void>
+  setAria2Options(req: Request, res: Response): Promise<void>
 }
 
 class SystemControllerImpl implements SystemController {
@@ -176,6 +178,28 @@ class SystemControllerImpl implements SystemController {
   async getDeviceNetworkSpeed(_req: Request, res: Response): Promise<void> {
     const speed = await getDeviceNetworkSpeed()
     res.json(speed)
+  }
+
+  // 获取 Aria2 运行时全局选项
+  async getAria2Options(_req: Request, res: Response): Promise<void> {
+    try {
+      const options = await aria2Client.getGlobalOptions()
+      res.json(options)
+    } catch (error) {
+      const err = error as Error
+      res.status(500).json({ success: false, error: { message: err.message } })
+    }
+  }
+
+  // 临时修改 Aria2 运行时全局选项（不持久化）
+  async setAria2Options(req: Request, res: Response): Promise<void> {
+    try {
+      await aria2Client.changeGlobalOption(req.body)
+      res.json({ success: true })
+    } catch (error) {
+      const err = error as Error
+      res.status(500).json({ success: false, error: { message: err.message } })
+    }
   }
 }
 

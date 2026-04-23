@@ -114,6 +114,7 @@ class Aria2Client {
     } else {
       fullPath = path.isAbsolute(filePath) ? filePath : path.join(this.downloadDir, filePath)
     }
+    console.log(`[Aria2] resolveFilePath: "${filePath}" -> "${fullPath}" (aria2 dir resolved: ${!!(globalOptions && globalOptions.dir)})`)
     return fullPath
   }
 
@@ -277,6 +278,12 @@ class Aria2Client {
       console.error('Failed to get global options:', err.message)
       return null
     }
+  }
+
+  // 修改 Aria2 全局选项（运行时临时修改，不持久化）
+  async changeGlobalOption(options: Record<string, string>): Promise<string> {
+    const response = await this.sendRequest<string>('aria2.changeGlobalOption', [options])
+    return response.result as string
   }
 
   // 获取下载任务列表
@@ -598,7 +605,7 @@ class Aria2Client {
   }
 
   // 删除文件或目录
-  async deleteFile(filePath: string): Promise<{ success: boolean }> {
+  async deleteFile(filePath: string): Promise<{ success: boolean; message?: string }> {
     const fsPromises = fs.promises
 
     try {
@@ -609,8 +616,8 @@ class Aria2Client {
       } catch (accessError) {
         const err = accessError as NodeJS.ErrnoException
         if (err.code === 'ENOENT') {
-          console.log(`File not found, skipping deletion: ${fullPath}`)
-          return { success: true }
+          console.warn(`[Aria2] File not found at resolved path: ${fullPath} (original: ${filePath})`)
+          return { success: false, message: `File not found: ${fullPath}` }
         }
         throw accessError
       }
@@ -621,6 +628,7 @@ class Aria2Client {
       } else {
         await fsPromises.rm(fullPath, { recursive: true, force: true })
       }
+      console.log(`[Aria2] File deleted successfully: ${fullPath}`)
 
       return { success: true }
     } catch (error) {

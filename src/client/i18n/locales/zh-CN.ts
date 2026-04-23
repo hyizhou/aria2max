@@ -194,6 +194,7 @@ export default {
     rpcTestLabel: 'Aria2 RPC 连接测试',
     comingSoonTitle: 'Aria2 设置功能正在开发中，敬请期待...',
     comingSoonSubtext: '此页面将提供完整的 Aria2 配置选项管理功能',
+    aria2SettingsTip: '以下设置通过 RPC 临时修改 aria2 运行时参数，立即生效但不会持久化保存。aria2 重启后所有修改将恢复为配置文件中的原始值。',
   },
   systemStatus: {
     heading: '系统状态',
@@ -359,6 +360,13 @@ export default {
     'rpc-listen-port': { label: 'RPC 监听端口', helpText: 'RPC 监听端口, 默认:6800' },
     'rpc-secret': { label: 'RPC 密钥', helpText: 'RPC 密钥，用于访问验证' },
     'rpc-max-request-size': { label: 'RPC 最大请求大小', helpText: 'RPC 最大请求大小，默认：10M' },
+    category: {
+      fileSave: '文件保存设置',
+      progressSave: '进度保存设置',
+      downloadConnection: '下载连接设置',
+      btPt: 'BT/PT 下载设置',
+      rpc: 'RPC 设置',
+    },
   },
   systemConfig: {
     aria2RpcUrl: { label: 'Aria2 RPC 地址', helpText: 'Aria2 RPC 服务器地址', placeholder: '例如: http://localhost:6800/jsonrpc' },

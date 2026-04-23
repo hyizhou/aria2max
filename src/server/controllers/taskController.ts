@@ -181,6 +181,8 @@ class TaskControllerImpl implements TaskController {
 
       await aria2Client.removeTask(gid)
 
+      let fileDeleteResult: { success: boolean; message?: string } | null = null
+
       if (deleteFile === 'true' && taskDetails && taskDetails.files && taskDetails.files.length > 0) {
         try {
           let filePathToDelete: string | null = null
@@ -208,11 +210,11 @@ class TaskControllerImpl implements TaskController {
                 }
               }
 
-              for (const path of possiblePaths) {
+              for (const tryPath of possiblePaths) {
                 try {
-                  await aria2Client.testFileExists(path)
-                  filePathToDelete = path
-                  console.log(`Found BT directory to delete: ${path}`)
+                  await aria2Client.testFileExists(tryPath)
+                  filePathToDelete = tryPath
+                  console.log(`[Task Delete] Found BT path to delete: ${tryPath}`)
                   break
                 } catch {
                   continue
@@ -220,29 +222,36 @@ class TaskControllerImpl implements TaskController {
               }
 
               if (!filePathToDelete && firstFilePath) {
-                try {
-                  await aria2Client.testFileExists(firstFilePath)
-                  filePathToDelete = firstFilePath
-                  console.log(`BT directory not found, deleting first file: ${firstFilePath}`)
-                } catch {
-                  console.log(`BT directory and first file not found, skipping file deletion`)
-                }
+                filePathToDelete = firstFilePath
+                console.log(`[Task Delete] BT directory not found, will try deleting first file: ${firstFilePath}`)
               }
             }
           } else {
             filePathToDelete = taskDetails.files[0].path
-            console.log(`Non-BT task, deleting file: ${filePathToDelete}`)
+            console.log(`[Task Delete] Non-BT task, deleting file: ${filePathToDelete}`)
           }
 
           if (filePathToDelete) {
-            await aria2Client.deleteFile(filePathToDelete)
+            fileDeleteResult = await aria2Client.deleteFile(filePathToDelete)
+            if (!fileDeleteResult.success) {
+              console.warn(`[Task Delete] File deletion reported failure: ${fileDeleteResult.message}`)
+            }
+          } else {
+            console.warn('[Task Delete] Could not determine file path for deletion')
+            fileDeleteResult = { success: false, message: 'Could not determine file path' }
           }
         } catch (fileError) {
-          console.error('Failed to delete file:', fileError)
+          const err = fileError as Error
+          console.error('[Task Delete] Failed to delete file:', err.message)
+          fileDeleteResult = { success: false, message: err.message }
         }
       }
 
-      res.json({ success: true })
+      res.json({
+        success: true,
+        fileDeleted: deleteFile === 'true' ? fileDeleteResult?.success ?? false : undefined,
+        fileDeleteMessage: fileDeleteResult?.message
+      })
     } catch (error) {
       const err = error as Error & { response?: { status: number } }
       console.error('Failed to delete task:', error)

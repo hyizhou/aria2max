@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useConfigStore, useSystemConfigStore } from '@/store'
 import SettingItem from '@/components/SettingItem.vue'
-import { aria2Settings, defaultAria2Config } from '@/config/aria2Config'
+import { aria2Settings, aria2SettingCategories } from '@/config/aria2Config'
+import { systemApi } from '@/services/api'
 
 const { t } = useI18n()
 const configStore = useConfigStore()
@@ -17,21 +18,21 @@ const testResult = ref<{ success: boolean; message: string } | null>(null)
 const systemConfig = ref<Record<string, any>>(systemConfigStore.getDefaultSystemConfig())
 const originalSystemConfig = ref<Record<string, any>>({})
 
-const aria2Config = ref<Record<string, any>>(defaultAria2Config)
+const aria2Config = ref<Record<string, any>>({})
+const aria2Loading = ref(false)
+const aria2Saving = ref(false)
+const originalAria2Config = ref<Record<string, any>>({})
+const aria2LoadFailed = ref(false)
 
 const activeTab = ref('system')
 
 onMounted(async () => {
   await loadConfig()
-  // 加载保存的Aria2配置
-  const savedConfig = localStorage.getItem('aria2Config')
-  if (savedConfig) {
-    try {
-      const config = JSON.parse(savedConfig)
-      Object.assign(aria2Config.value, config)
-    } catch (error) {
-      console.error('加载配置失败:', error)
-    }
+})
+
+watch(activeTab, async (newTab) => {
+  if (newTab === 'aria2') {
+    await loadAria2Options()
   }
 })
 
@@ -70,37 +71,99 @@ const isConfigModified = (key: string) => {
 const getModifiedConfig = () => {
   const modifiedConfig: Record<string, any> = {}
   const configKeys = Object.keys(systemConfig.value)
-  
+
   for (const key of configKeys) {
     if (isConfigModified(key)) {
       modifiedConfig[key] = systemConfig.value[key]
     }
   }
-  
+
   return modifiedConfig
 }
 
-const saveConfig = async () => {
-  if (activeTab.value === 'aria2') {
-    try {
-      const config = { ...aria2Config.value }
-      localStorage.setItem('aria2Config', JSON.stringify(config))
-      console.log('配置已保存:', config)
-      testResult.value = {
-        success: true,
-        message: t('settings.saveSuccess')
-      }
-    } catch (error: any) {
-      console.error('保存配置失败:', error)
-      testResult.value = {
-        success: false,
-        message: error?.message || t('settings.saveFailed')
-      }
-    } finally {
-      saving.value = false
+// 加载 Aria2 运行时选项
+const loadAria2Options = async () => {
+  aria2Loading.value = true
+  aria2LoadFailed.value = false
+  try {
+    const options = await systemApi.getAria2Options()
+    if (!options) {
+      aria2LoadFailed.value = true
+      return
     }
-    return
+    // 只用 aria2 返回的真实值填充，没有返回的字段留空
+    const config: Record<string, any> = {}
+    for (const setting of aria2Settings) {
+      if (options[setting.key] !== undefined) {
+        const rawValue = options[setting.key]
+        if (setting.type === 'boolean') {
+          config[setting.key] = rawValue === 'true'
+        } else if (setting.type === 'number') {
+          config[setting.key] = parseInt(rawValue, 10)
+        } else {
+          config[setting.key] = rawValue
+        }
+      }
+    }
+    aria2Config.value = config
+    originalAria2Config.value = { ...config }
+  } catch (error: any) {
+    console.error('Failed to load aria2 options:', error)
+    aria2LoadFailed.value = true
+    aria2Config.value = {}
+    originalAria2Config.value = {}
+    testResult.value = { success: false, message: error?.error?.message || error?.message || t('settings.loadFailed') }
+  } finally {
+    aria2Loading.value = false
   }
+}
+
+// 检查 Aria2 配置项是否被修改
+const isAria2ConfigModified = (key: string) => {
+  return aria2Config.value[key] !== originalAria2Config.value[key]
+}
+
+// 应用 Aria2 设置（通过 RPC 临时修改）
+const applyAria2Settings = async () => {
+  aria2Saving.value = true
+  try {
+    const modifiedOptions: Record<string, string> = {}
+    for (const setting of aria2Settings) {
+      if (isAria2ConfigModified(setting.key)) {
+        const value = aria2Config.value[setting.key]
+        if (setting.type === 'boolean') {
+          modifiedOptions[setting.key] = value ? 'true' : 'false'
+        } else {
+          modifiedOptions[setting.key] = String(value)
+        }
+      }
+    }
+
+    if (Object.keys(modifiedOptions).length === 0) {
+      testResult.value = { success: true, message: t('settings.saveNoChange') }
+      setTimeout(() => { testResult.value = null }, 3000)
+      return
+    }
+
+    await systemApi.setAria2Options(modifiedOptions)
+    originalAria2Config.value = { ...aria2Config.value }
+    testResult.value = { success: true, message: t('settings.saveSuccessImmediate') }
+    setTimeout(() => { testResult.value = null }, 3000)
+  } catch (error: any) {
+    console.error('Failed to apply aria2 settings:', error)
+    testResult.value = { success: false, message: error?.error?.message || error?.message || t('settings.saveFailed') }
+  } finally {
+    aria2Saving.value = false
+  }
+}
+
+// 重置 Aria2 配置为上次从 aria2 加载的值
+const resetAria2Config = () => {
+  if (aria2LoadFailed.value) return
+  aria2Config.value = { ...originalAria2Config.value }
+}
+
+const saveConfig = async () => {
 
   saving.value = true
   try {
@@ -264,32 +327,61 @@ const testConnection = async () => {
         <!-- Aria2 设置 -->
         <div v-if="activeTab === 'aria2'" class="tab-panel">
           <div class="settings-form">
-            <div class="aria2-settings-intro coming-soon">
-              <p><i class="fas fa-tools"></i> {{ t('settings.comingSoonTitle') }}</p>
-              <p class="sub-text">{{ t('settings.comingSoonSubtext') }}</p>
+            <div class="aria2-settings-intro">
+              <p><i class="fas fa-info-circle"></i> {{ t('settings.aria2SettingsTip') }}</p>
             </div>
-            
-            <div class="aria2-categories">
-              <div class="settings-section">
-                <h3>{{ t('settings.aria2Settings') }}</h3>
-                <SettingItem
-                  v-for="setting in aria2Settings"
-                  :key="setting.key"
-                  v-model="aria2Config[setting.key]"
-                  :label="t(setting.labelKey)"
-                  :type="setting.type"
-                  :helpText="setting.helpTextKey ? t(setting.helpTextKey) : ''"
-                  :placeholder="setting.placeholderKey ? t(setting.placeholderKey) : ''"
-                  :options="setting.options"
-                  :min="setting.min"
-                  :max="setting.max"
-                />
+
+            <div v-if="aria2Loading" class="loading">
+              <p>{{ t('settings.loading') }}</p>
+            </div>
+
+            <div v-else-if="aria2LoadFailed" class="loading">
+              <p>{{ testResult?.message || t('settings.loadFailed') }}</p>
+              <button type="button" class="btn btn-primary" style="margin-top: 1rem;" @click="loadAria2Options">
+                {{ t('common.refresh') }}
+              </button>
+            </div>
+
+            <div v-else class="aria2-categories">
+              <div v-for="category in aria2SettingCategories" :key="category.key" class="category-section">
+                <h3 class="category-title">
+                  <i :class="category.icon"></i>
+                  {{ t(category.labelKey) }}
+                </h3>
+                <div class="settings-list">
+                  <SettingItem
+                    v-for="setting in category.settings"
+                    :key="setting.key"
+                    v-model="aria2Config[setting.key]"
+                    :label="t(setting.labelKey)"
+                    :type="setting.type"
+                    :helpText="setting.helpTextKey ? t(setting.helpTextKey) : ''"
+                    :placeholder="setting.placeholderKey ? t(setting.placeholderKey) : ''"
+                    :options="setting.options"
+                    :min="setting.min"
+                    :max="setting.max"
+                    :modified="isAria2ConfigModified(setting.key)"
+                  />
+                </div>
               </div>
 
               <div class="form-actions">
-                <button type="button" class="btn btn-secondary">{{ t('settings.resetDefault') }}</button>
-                <button type="button" class="btn btn-primary">{{ t('settings.applySettings') }}</button>
+                <button type="button" class="btn btn-secondary" @click="resetAria2Config">
+                  {{ t('settings.resetDefault') }}
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  :disabled="aria2Saving"
+                  @click="applyAria2Settings"
+                >
+                  {{ aria2Saving ? t('settings.saving') : t('settings.applySettings') }}
+                </button>
               </div>
+            </div>
+
+            <div v-if="testResult" class="test-result" :class="{ 'success': testResult.success, 'error': !testResult.success }">
+              {{ testResult.message }}
             </div>
           </div>
         </div>

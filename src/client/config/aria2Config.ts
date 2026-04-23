@@ -570,3 +570,51 @@ export const defaultAria2Config: Record<string, any> = {
   'rpc-secret': '',
   'rpc-max-request-size': '10M'
 }
+
+// Aria2 设置分类
+export interface Aria2SettingCategory {
+  key: string
+  labelKey: string
+  icon: string
+  settings: Aria2Setting[]
+}
+
+const categoryDefinitions = [
+  {
+    key: 'file-save',
+    labelKey: 'aria2Config.category.fileSave',
+    icon: 'fas fa-save',
+    keys: ['dir', 'disk-cache', 'file-allocation', 'no-file-allocation-limit', 'continue', 'always-resume', 'max-resume-failure-tries', 'remote-time']
+  },
+  {
+    key: 'progress-save',
+    labelKey: 'aria2Config.category.progressSave',
+    icon: 'fas fa-tasks',
+    keys: ['input-file', 'save-session', 'save-session-interval', 'auto-save-interval', 'force-save']
+  },
+  {
+    key: 'download-connection',
+    labelKey: 'aria2Config.category.downloadConnection',
+    icon: 'fas fa-network-wired',
+    keys: ['max-file-not-found', 'max-tries', 'retry-wait', 'connect-timeout', 'timeout', 'max-concurrent-downloads', 'max-connection-per-server', 'split', 'min-split-size', 'piece-length', 'allow-piece-length-change', 'lowest-speed-limit', 'max-overall-download-limit', 'max-download-limit', 'disable-ipv6', 'http-accept-gzip', 'reuse-uri', 'no-netrc', 'allow-overwrite', 'auto-file-renaming', 'content-disposition-default-utf8']
+  },
+  {
+    key: 'bt-pt',
+    labelKey: 'aria2Config.category.btPt',
+    icon: 'fas fa-magnet',
+    keys: ['listen-port', 'dht-listen-port', 'enable-dht', 'enable-dht6', 'dht-file-path', 'dht-file-path6', 'bt-enable-lpd', 'enable-peer-exchange', 'bt-max-peers', 'bt-request-peer-speed-limit', 'max-overall-upload-limit', 'max-upload-limit', 'seed-ratio', 'seed-time', 'bt-hash-check-seed', 'bt-seed-unverified', 'bt-tracker-connect-timeout', 'bt-tracker-timeout', 'bt-prioritize-piece', 'rpc-save-upload-metadata', 'follow-torrent', 'pause-metadata', 'bt-save-metadata', 'bt-load-saved-metadata', 'bt-remove-unselected-file', 'bt-force-encryption', 'bt-detach-seed-only']
+  },
+  {
+    key: 'rpc',
+    labelKey: 'aria2Config.category.rpc',
+    icon: 'fas fa-plug',
+    keys: ['enable-rpc', 'rpc-allow-origin-all', 'rpc-listen-all', 'rpc-listen-port', 'rpc-secret', 'rpc-max-request-size']
+  }
+]
+
+export const aria2SettingCategories: Aria2SettingCategory[] = categoryDefinitions.map(cat => ({
+  key: cat.key,
+  labelKey: cat.labelKey,
+  icon: cat.icon,
+  settings: aria2Settings.filter(s => cat.keys.includes(s.key))
+}))

@@ -194,6 +194,7 @@ export default {
     rpcTestLabel: 'Aria2 RPC Connection Test',
     comingSoonTitle: 'Aria2 settings are under development, coming soon...',
     comingSoonSubtext: 'This page will provide complete Aria2 configuration management',
+    aria2SettingsTip: 'These settings temporarily modify aria2 runtime options via RPC. Changes take effect immediately but are not persisted. All changes will revert to the original config file values after aria2 restarts.',
   },
   systemStatus: {
     heading: 'System Status',
@@ -359,6 +360,13 @@ export default {
     'rpc-listen-port': { label: 'RPC Listen Port', helpText: 'RPC listen port. Default: 6800' },
     'rpc-secret': { label: 'RPC Secret', helpText: 'RPC secret token for access verification' },
     'rpc-max-request-size': { label: 'RPC Max Request Size', helpText: 'Maximum RPC request size. Default: 10M' },
+    category: {
+      fileSave: 'File Saving',
+      progressSave: 'Progress Saving',
+      downloadConnection: 'Download Connection',
+      btPt: 'BT/PT Download',
+      rpc: 'RPC Settings',
+    },
   },
   systemConfig: {
     aria2RpcUrl: { label: 'Aria2 RPC Address', helpText: 'Aria2 RPC server address', placeholder: 'e.g. http://localhost:6800/jsonrpc' },

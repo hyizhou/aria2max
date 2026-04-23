@@ -204,6 +204,16 @@ export const systemApi = {
   // 获取设备网速（专门用于网速显示）
   async getDeviceNetworkSpeed(): Promise<DeviceNetworkSpeedResponse> {
     return await apiClient.get('/system/device-network-speed')
+  },
+
+  // 获取 Aria2 运行时全局选项
+  async getAria2Options(): Promise<Record<string, string>> {
+    return await apiClient.get('/system/aria2-options')
+  },
+
+  // 临时修改 Aria2 运行时全局选项
+  async setAria2Options(options: Record<string, string>): Promise<{ success: boolean }> {
+    return await apiClient.put('/system/aria2-options', options)
   }
 }
 
