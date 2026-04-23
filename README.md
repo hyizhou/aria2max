@@ -2,236 +2,152 @@
 
 [![Version](https://img.shields.io/badge/version-0.1.2-blue.svg)](https://github.com/your-repo/aria-max)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
-[![Node](https://img.shields.io/badge/Node.js-16+-green.svg)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/license-MIT-orange.svg)](#许可证)
 
-aria-max 是一个基于 aria2 的 Web 端面板工具，提供可视化下载管理、配置、进度查看、下载细节展示和文件管理功能。
+aria-max 是一个为 aria2 打造的现代 Web 管理面板。提供直观的下载任务管理、文件浏览、实时系统监控和运行时配置调整能力。
 
-## 特色功能
+## 为什么选择 aria-max
 
-- **自动清理元数据** - 下载完成后自动清理 aria2 元数据文件
-- **自动屏蔽迅雷吸血** - (计划中)
-- **单体应用架构** - 部署简单，一个进程搞定前后端
-- **TypeScript 全栈** - 前后端完全使用 TypeScript 开发，类型安全
-- **PWA 支持** - 可安装为桌面/移动应用
-- **响应式设计** - 完美适配手机与 PC 端
-- **CLI 工具** - 提供命令行管理工具，支持 PM2 后台运行
+- **开箱即用** — 单进程部署，无需额外配置数据库或反向代理。一个命令启动，前后端一体化运行
+- **远程管理** — aria2 可以运行在任何地方：本机、局域网、Docker 容器、远程服务器。通过 RPC 连接，无需与 aria2 部署在同一环境
+- **运行时调参** — 通过 Web 界面直接调整 aria2 运行时参数（连接数、速度限制、BT 设置等），修改立即生效，无需重启 aria2
+- **i18n** — 内置中文/英文双语支持
+- **PWA** — 可安装为桌面或移动应用，获得接近原生应用的体验
+- **响应式** — 手机和电脑都有良好的操作体验
+- **TypeScript 全栈** — 前后端完全类型安全，共享类型定义
 
-## 功能预览
+## 功能概览
 
-- 下载任务管理（添加、暂停、恢复、删除）
-- 实时下载进度显示
-- 文件浏览与管理（上传、重命名、预览、删除）
-- 多媒体文件预览（视频、音频、图片、文本）
-- 系统配置管理
-- Aria2 连接状态监控
+### 下载管理
+- 支持 HTTP/HTTPS/FTP/磁力链/种子文件/Metalink 多种下载方式
+- 任务暂停、恢复、删除，支持批量操作
+- 实时下载/上传速度、连接数、进度展示
+- BT 任务详情：Peer 连接信息、Tracker 状态
 
-## 项目结构
+### 文件管理
+- 在线浏览下载目录，支持目录导航
+- 多媒体文件在线预览（视频、音频、图片、文本）
+- 文件上传、重命名、删除
+- 创建目录、符号链接处理
 
-```
-aria-max/
-├── src/
-│   ├── client/         # 前端代码 (Vue 3 + TypeScript)
-│   │   ├── components/ # 可复用 UI 组件
-│   │   ├── views/      # 页面组件
-│   │   ├── router/     # 路由配置
-│   │   ├── store/      # Pinia 状态管理
-│   │   ├── services/   # API 服务层
-│   │   └── assets/     # 静态资源
-│   ├── server/         # 后端代码 (Node.js + Express + TypeScript)
-│   │   ├── config/     # 配置文件
-│   │   ├── controllers/# 控制器
-│   │   ├── routes/     # 路由定义
-│   │   ├── services/   # 业务逻辑
-│   │   └── types/      # 类型定义
-│   ├── shared/         # 前后端共享代码
-│   └── public/         # 静态资源
-├── bin/                # CLI 工具
-│   ├── cli.ts          # 命令行入口
-│   └── ecosystem.config.cjs  # PM2 配置
-├── dist/               # 构建输出目录
-├── docs/               # 文档目录
-├── server.ts           # 服务端入口
-├── package.json        # 项目配置
-└── README.md           # 项目说明文件
-```
+### 系统监控
+- 实时系统状态：CPU、内存、磁盘、网络
+- aria2 连接状态检测与版本信息
+- 下载速度实时刷新
 
-## 技术栈
-
-### 前端
-- Vue 3 (Composition API)
-- TypeScript
-- Vite (构建工具)
-- Vue Router
-- Pinia (状态管理)
-- PWA (Progressive Web App)
-- 响应式设计 (适配手机与PC端)
-
-### 后端
-- Node.js
-- Express.js
-- TypeScript
-- RESTful API
-- 与 aria2 JSON-RPC 通信
-
-### CLI 工具
-- Commander.js
-- PM2 (进程管理)
+### 配置管理
+- **系统设置** — 配置 RPC 连接地址、密钥、文件管理目录等，持久化保存
+- **Aria2 设置** — 通过 RPC 临时调整 aria2 运行时参数，按分类展示（文件保存、进度保存、下载连接、BT/PT、RPC），立即生效，重启后恢复
 
 ## 快速开始
 
 ### 环境要求
+
 - Node.js 16+
-- aria2 已安装并运行
+- aria2 已安装并运行（可在远程机器或容器中）
 
-### 安装和启动
+### 安装
 
-1. **克隆项目**
-   ```bash
-   git clone <repository-url>
-   cd aria-max
-   ```
+```bash
+git clone <repository-url>
+cd aria-max
+npm install
+```
 
-2. **安装依赖**
-   ```bash
-   npm install
-   ```
+### 开发
 
-3. **配置环境**
-   ```bash
-   cp .env.example .env
-   # 编辑 .env 文件，配置 aria2 连接信息
-   ```
+```bash
+# 同时启动前后端开发服务器
+npm run dev
 
-4. **启动开发模式**
-   ```bash
-   npm run dev
-   ```
+# 或分别启动
+npm run dev:server   # 后端 http://localhost:2999
+npm run dev:client   # 前端 http://localhost:3000
+```
 
-5. **构建生产版本**
-   ```bash
-   npm run build
-   ```
+### 生产部署
 
-6. **启动生产模式**
-   ```bash
-   npm start
-   ```
+```bash
+npm run build        # 构建
+npm start            # 启动 http://localhost:2999
 
-## 访问地址
+# 或使用 CLI 工具后台运行
+npm link
+aria2max start       # PM2 后台启动
+```
 
-- **开发模式**: http://localhost:3000 (前端) + http://localhost:3001/api (后端API)
-- **生产模式**: http://localhost:3001 (单体应用)
+### 首次配置
+
+1. 打开浏览器访问 `http://localhost:2999`
+2. 进入 **系统设置** 页面
+3. 填写 aria2 RPC 地址和密钥
+4. 点击 **测试连接** 确认连通
+5. 保存配置，开始使用
 
 ## CLI 工具
 
-项目提供命令行界面工具，可以通过 `aria2max` 命令管理应用程序：
-
 ```bash
-aria2max start        # 后台启动服务 (使用 PM2)
-aria2max stop         # 停止服务
-aria2max restart      # 重启服务
-aria2max status       # 查看服务状态
-aria2max log          # 查看日志
-aria2max --help       # 显示帮助信息
-aria2max --version    # 显示版本信息
+aria2max start       # 后台启动服务 (PM2)
+aria2max stop        # 停止服务
+aria2max restart     # 重启服务
+aria2max status      # 查看服务状态
+aria2max log         # 查看日志
 ```
 
-### 安装 CLI 工具
+安装方式：`npm link` 或 `npm install -g .`
 
-```bash
-# 方式一：使用 npm link (开发测试推荐)
-npm link
+## 技术栈
 
-# 方式二：全局安装
-npm install -g .
+| 层级 | 技术 |
+|------|------|
+| 前端 | Vue 3 + TypeScript + Vite + Pinia + Vue Router |
+| 后端 | Node.js + Express + TypeScript |
+| 通信 | RESTful API（前后端）、JSON-RPC（与 aria2） |
+| 进程管理 | Commander.js + PM2 |
+| 国际化 | vue-i18n |
+
+## 项目结构
+
 ```
-
-安装后，可以在任何位置使用 `aria2max` 命令。
+src/
+├── client/          # 前端 Vue 3 应用
+│   ├── components/  # UI 组件
+│   ├── views/       # 页面（Dashboard、TaskList、FileManager、Settings...）
+│   ├── store/       # Pinia 状态管理
+│   ├── services/    # API 调用
+│   ├── config/      # 前端配置
+│   └── i18n/        # 国际化
+├── server/          # 后端 Express 应用
+│   ├── controllers/ # 请求处理
+│   ├── routes/      # 路由定义
+│   ├── config/      # aria2 RPC 客户端
+│   └── services/    # 业务逻辑
+└── shared/          # 前后端共享类型
+```
 
 ## NPM 脚本
 
 ```bash
-# 开发
 npm run dev              # 同时启动前后端开发服务器
-npm run dev:server       # 仅启动后端开发服务器
-npm run dev:client       # 仅启动前端开发服务器
-
-# 构建
-npm run build            # 构建前后端
-npm run build:server     # 仅构建后端
-npm run build:client     # 仅构建前端
-
-# 生产运行
+npm run dev:server       # 仅后端
+npm run dev:client       # 仅前端
+npm run build            # 构建生产版本
 npm start                # 启动生产服务器
-npm run preview          # 构建并预览
-
-# 代码质量
-npm run lint             # 运行 ESLint
-npm run typecheck        # 后端类型检查
-npm run typecheck:client # 前端类型检查
+npm run lint             # ESLint 检查
 ```
 
-## 部署要求
+## 注意事项
 
-- aria2 程序安装并运行
-- Node.js 运行环境
-- 重要配置项：
-  - aria2 RPC 地址 (`ARIA2_RPC_URL`)
-  - aria2 RPC 密钥 (`ARIA2_RPC_SECRET`)
-  - 下载目录路径 (`DOWNLOAD_DIR`)
-
-> **注意**: aria2 程序可以运行在与本项目不同的机器或容器中。如果 aria2 在容器中运行，请注意容器内外的路径映射差异。
-
-## API 接口
-
-### 任务管理
-- `GET /api/tasks` - 获取所有下载任务
-- `POST /api/tasks` - 添加新下载任务
-- `GET /api/tasks/:gid` - 获取任务详情
-- `PUT /api/tasks/:gid/pause` - 暂停任务
-- `PUT /api/tasks/:gid/resume` - 恢复任务
-- `DELETE /api/tasks/:gid` - 删除任务
-
-### 文件管理
-- `GET /api/files` - 获取文件列表
-- `GET /api/files/download` - 下载文件
-- `DELETE /api/files` - 删除文件/目录
-- `POST /api/files/mkdir` - 创建目录
-- `PUT /api/files/rename` - 重命名文件/目录
-- `POST /api/files/upload` - 上传文件
-
-### 系统配置
-- `GET /api/system/config` - 获取系统配置
-- `PUT /api/system/config` - 更新系统配置
-- `POST /api/system/test-connection` - 测试 Aria2 连接
-- `GET /api/system/status` - 获取 Aria2 系统状态
+- aria2 可以运行在与本项目不同的机器或容器中，只需确保 RPC 端口可达
+- 如果 aria2 在容器中运行，容器内外的文件路径可能不同。系统设置中的「文件管理目录」应填写本机能访问到的路径
+- Aria2 设置页面的修改是运行时临时的，不会修改 aria2 配置文件，重启 aria2 后恢复原始值
 
 ## 文档
 
-- [CLI 需求文档](docs/cli-requirements.md)
-- [代码分析报告](docs/code_analysis_report.md)
+- [Aria2 配置说明](docs/aria2-config-guide.md) — aria2 配置选项完整参考
+- [CLI 工具需求](docs/cli-requirements.md)
 - [待办事项](docs/TODO.md)
-
-## 从旧版本迁移
-
-如果你之前使用的是前后端分离版本，可以通过以下步骤迁移：
-
-1. 备份原有配置
-2. 更新到新的单体项目结构
-3. 将原有的 `.env` 配置迁移到新项目
-4. 删除 `frontend/` 和 `backend/` 目录（可选）
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
 
 ## 许可证
 
 [MIT License](LICENSE)
-
-## 致谢
-
-- [aria2](https://aria2.github.io/) - 强大的命令行下载工具
-- [Vue.js](https://vuejs.org/) - 渐进式 JavaScript 框架
-- [Express.js](https://expressjs.com/) - Node.js Web 框架
