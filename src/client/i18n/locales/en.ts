@@ -127,6 +127,10 @@ export default {
     confirmBatchDeleteMessage: 'Are you sure you want to delete {count} selected files or folders? This action cannot be undone.',
     deleteFailed: 'Delete failed: {message}',
     batchDeleteFailed: 'Batch delete failed: {message}',
+    createDirectoryTitle: 'New Folder',
+    createDirectoryPlaceholder: 'Enter folder name',
+    createDirectoryFailed: 'Failed to create folder: {message}',
+    directoryNameRequired: 'Please enter a folder name',
   },
   fileItem: {
     symlinkDir: 'Symlink Folder',

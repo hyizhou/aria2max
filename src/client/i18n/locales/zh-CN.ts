@@ -127,6 +127,10 @@ export default {
     confirmBatchDeleteMessage: '确定要删除选中的 {count} 个文件或目录吗？此操作不可恢复。',
     deleteFailed: '删除失败: {message}',
     batchDeleteFailed: '批量删除失败: {message}',
+    createDirectoryTitle: '新建目录',
+    createDirectoryPlaceholder: '请输入目录名称',
+    createDirectoryFailed: '创建目录失败: {message}',
+    directoryNameRequired: '请输入目录名称',
   },
   fileItem: {
     symlinkDir: '链接目录',

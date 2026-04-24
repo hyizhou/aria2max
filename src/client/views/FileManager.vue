@@ -98,10 +98,33 @@
     @confirm="confirmBatchDeleteFiles"
     @cancel="cancelBatchDeleteFile"
   />
+
+  <!-- 新建目录弹窗 -->
+  <div v-if="showCreateDirectory" class="confirm-overlay" @click="showCreateDirectory = false">
+    <div class="confirm-dialog" @click.stop>
+      <div class="confirm-header">
+        <h3>{{ t('files.createDirectoryTitle') }}</h3>
+      </div>
+      <div class="confirm-body">
+        <input
+          ref="directoryNameInput"
+          v-model="newDirectoryName"
+          class="directory-name-input"
+          :placeholder="t('files.createDirectoryPlaceholder')"
+          @keyup.enter="confirmCreateDirectory"
+          @keyup.escape="showCreateDirectory = false"
+        />
+      </div>
+      <div class="confirm-footer">
+        <button class="btn btn-secondary" @click="showCreateDirectory = false">{{ t('common.cancel') }}</button>
+        <button class="btn btn-primary" @click="confirmCreateDirectory">{{ t('common.ok') }}</button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFileStore } from '@/store'
 import FileItem from '@/components/FileItem.vue'
@@ -122,6 +145,9 @@ const filePreviewRef = ref<typeof FilePreview | null>(null)
 // 删除确认状态管理
 const confirmDelete = ref<{path: string, show: boolean} | null>(null)
 const confirmBatchDelete = ref<boolean>(false)
+const showCreateDirectory = ref(false)
+const newDirectoryName = ref('')
+const directoryNameInput = ref<HTMLInputElement | null>(null)
 
 onMounted(async () => {
   await loadFiles()
@@ -235,8 +261,26 @@ const cancelBatchDeleteFile = () => {
   confirmBatchDelete.value = false
 }
 
-const handleCreateDirectory = async () => {
-  // TODO: 实现创建目录功能
+const handleCreateDirectory = () => {
+  newDirectoryName.value = ''
+  showCreateDirectory.value = true
+  nextTick(() => {
+    directoryNameInput.value?.focus()
+  })
+}
+
+const confirmCreateDirectory = async () => {
+  const name = newDirectoryName.value.trim()
+  if (!name) return
+
+  try {
+    const fullPath = fileStore.currentPath ? `${fileStore.currentPath}/${name}` : name
+    await fileStore.createDirectory(fullPath)
+    showCreateDirectory.value = false
+  } catch (error) {
+    console.error('Create directory failed:', error)
+    alert(t('files.createDirectoryFailed', { message: error instanceof Error ? error.message : t('common.unknownError') }))
+  }
 }
 
 const handleUploadClick = () => {
@@ -513,5 +557,110 @@ const handlePreviewClose = () => {
 
 .dark-theme .empty-state p {
   color: #b0b0b0;
+}
+
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.confirm-dialog {
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 90%;
+  max-width: 400px;
+  overflow: hidden;
+}
+
+.confirm-header {
+  padding: 1.5rem 1.5rem 0;
+}
+
+.confirm-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333333;
+}
+
+.confirm-body {
+  padding: 1rem 1.5rem;
+}
+
+.confirm-footer {
+  padding: 1rem 1.5rem 1.5rem;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.confirm-footer .btn {
+  min-width: 80px;
+  padding: 0.5rem 1rem;
+}
+
+.btn-primary {
+  background-color: #1976d2;
+  color: #ffffff;
+  border-color: #1976d2;
+}
+
+.btn-primary:hover {
+  background-color: #1565c0;
+  border-color: #1565c0;
+}
+
+.dark-theme .confirm-dialog {
+  background-color: #2d2d2d;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.dark-theme .confirm-header h3 {
+  color: #e0e0e0;
+}
+
+.dark-theme .btn-primary {
+  background-color: #1976d2;
+  border-color: #1976d2;
+  color: #ffffff;
+}
+
+.dark-theme .btn-primary:hover {
+  background-color: #1565c0;
+  border-color: #1565c0;
+}
+
+.directory-name-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.directory-name-input:focus {
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+}
+
+.dark-theme .directory-name-input {
+  background-color: #3d3d3d;
+  border-color: #555555;
+  color: #e0e0e0;
+}
+
+.dark-theme .directory-name-input:focus {
+  border-color: #1976d2;
 }
 </style>
