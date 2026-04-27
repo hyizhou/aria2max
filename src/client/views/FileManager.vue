@@ -217,13 +217,23 @@ const handleBatchDelete = async () => {
   confirmBatchDelete.value = true
 }
 
+// 提取后端返回的错误信息
+function getErrorMessage(error: unknown): string {
+  if (error && typeof error === 'object' && 'error' in error) {
+    const apiError = error as { error: { message?: string } }
+    return apiError.error.message || t('common.unknownError')
+  }
+  if (error instanceof Error) return error.message
+  return t('common.unknownError')
+}
+
 // 确认删除单个文件/目录
 const confirmDeleteFile = async () => {
   if (!confirmDelete.value) return
-  
+
   const path = confirmDelete.value.path
   if (!path) return
-  
+
   try {
     await fileStore.deleteFile(path)
     await loadFiles()
@@ -231,7 +241,7 @@ const confirmDeleteFile = async () => {
   } catch (error) {
     console.error('Delete file failed:', error)
     confirmDelete.value = null
-    alert(t('files.deleteFailed', { message: error instanceof Error ? error.message : t('common.unknownError') }))
+    alert(t('files.deleteFailed', { message: getErrorMessage(error) }))
   }
 }
 
@@ -247,7 +257,7 @@ const confirmBatchDeleteFiles = async () => {
   } catch (error) {
     console.error('Batch delete failed:', error)
     confirmBatchDelete.value = false
-    alert(t('files.batchDeleteFailed', { message: error instanceof Error ? error.message : t('common.unknownError') }))
+    alert(t('files.batchDeleteFailed', { message: getErrorMessage(error) }))
   }
 }
 

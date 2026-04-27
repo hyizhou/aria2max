@@ -1,23 +1,14 @@
-// 文件管理控制器
+// 文件管理控制器 — HTTP 层，委托给 fileService
 import { Request, Response } from 'express'
 import * as path from 'path'
 import * as fs from 'fs/promises'
-import aria2Client from '../config/aria2'
+import fileService from '../services/fileService'
 
-interface FileController {
-  getFiles(req: Request, res: Response): Promise<void>
-  downloadFile(req: Request, res: Response): Promise<void>
-  deleteFile(req: Request, res: Response): Promise<void>
-  createDirectory(req: Request, res: Response): Promise<void>
-  renameFile(req: Request, res: Response): Promise<void>
-  uploadFile(req: Request, res: Response): Promise<void>
-}
-
-class FileControllerImpl implements FileController {
+class FileControllerImpl {
   // 获取文件列表
   async getFiles(req: Request, res: Response): Promise<void> {
     const { path: dirPath = '' } = req.query
-    const result = await aria2Client.getFiles(dirPath as string)
+    const result = await fileService.getFiles(dirPath as string)
     res.json(result)
   }
 
@@ -26,27 +17,17 @@ class FileControllerImpl implements FileController {
     const { path: filePath } = req.query
 
     if (!filePath) {
-      res.status(400).json({
-        error: {
-          code: 400,
-          message: 'File path is required'
-        }
-      })
+      res.status(400).json({ error: { code: 400, message: 'File path is required' } })
       return
     }
 
-    const fullPath = path.join(aria2Client.downloadDir, filePath as string)
+    const fullPath = fileService.getFullPath(filePath as string)
     const fileName = path.basename(fullPath)
 
     try {
       await fs.access(fullPath)
     } catch {
-      res.status(404).json({
-        error: {
-          code: 404,
-          message: 'File not found'
-        }
-      })
+      res.status(404).json({ error: { code: 404, message: 'File not found' } })
       return
     }
 
@@ -62,16 +43,15 @@ class FileControllerImpl implements FileController {
     const { path: filePath } = req.body
 
     if (!filePath) {
-      res.status(400).json({
-        error: {
-          code: 400,
-          message: 'File path is required'
-        }
-      })
+      res.status(400).json({ error: { code: 400, message: 'File path is required' } })
       return
     }
 
-    await aria2Client.deleteFile(filePath)
+    const result = await fileService.deleteFile(filePath)
+    if (!result.success) {
+      res.status(500).json({ error: { code: 500, message: result.message } })
+      return
+    }
     res.json({ success: true })
   }
 
@@ -80,16 +60,15 @@ class FileControllerImpl implements FileController {
     const { path: dirPath } = req.body
 
     if (!dirPath) {
-      res.status(400).json({
-        error: {
-          code: 400,
-          message: 'Directory path is required'
-        }
-      })
+      res.status(400).json({ error: { code: 400, message: 'Directory path is required' } })
       return
     }
 
-    await aria2Client.createDirectory(dirPath)
+    const result = await fileService.createDirectory(dirPath)
+    if (!result.success) {
+      res.status(500).json({ error: { code: 500, message: result.message } })
+      return
+    }
     res.json({ success: true })
   }
 
@@ -98,28 +77,22 @@ class FileControllerImpl implements FileController {
     const { oldPath, newPath } = req.body
 
     if (!oldPath || !newPath) {
-      res.status(400).json({
-        error: {
-          code: 400,
-          message: 'Both oldPath and newPath are required'
-        }
-      })
+      res.status(400).json({ error: { code: 400, message: 'Both oldPath and newPath are required' } })
       return
     }
 
-    await aria2Client.renameFile(oldPath, newPath)
+    const result = await fileService.renameFile(oldPath, newPath)
+    if (!result.success) {
+      res.status(500).json({ error: { code: 500, message: result.message } })
+      return
+    }
     res.json({ success: true })
   }
 
   // 上传文件
   async uploadFile(req: Request, res: Response): Promise<void> {
     if (!req.files || !req.files.file) {
-      res.status(400).json({
-        error: {
-          code: 400,
-          message: 'File is required'
-        }
-      })
+      res.status(400).json({ error: { code: 400, message: 'File is required' } })
       return
     }
 
@@ -133,8 +106,7 @@ class FileControllerImpl implements FileController {
       try {
         const buffer = Buffer.from(fileName, 'binary')
         const fixedName = buffer.toString('utf8')
-
-        if (/[\u4e00-\u9fff]/.test(fixedName)) {
+        if (/[一-鿿]/.test(fixedName)) {
           fileName = fixedName
         }
       } catch (fixError) {
@@ -147,9 +119,12 @@ class FileControllerImpl implements FileController {
       fileName = file.originalFilename
     }
 
-    const filePath = req.body.path ? `${req.body.path}/${fileName}` : fileName
-
-    await aria2Client.uploadFile(filePath, file.data)
+    const relativePath = req.body.path ? `${req.body.path}/${fileName}` : fileName
+    const result = await fileService.uploadFile(relativePath, file.data)
+    if (!result.success) {
+      res.status(500).json({ error: { code: 500, message: result.message } })
+      return
+    }
     res.json({ success: true })
   }
 }

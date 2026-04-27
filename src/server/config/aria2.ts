@@ -53,7 +53,7 @@ function loadConfigFile(): Partial<Aria2Config> {
 }
 
 // 配置优先级逻辑：只从config.json文件读取配置，不使用环境变量
-function getFinalConfig(): Aria2Config {
+export function getFinalConfig(): Aria2Config {
   const configFile = loadConfigFile()
   return {
     aria2RpcUrl: configFile.aria2RpcUrl || defaultConfig.aria2RpcUrl,
@@ -93,29 +93,6 @@ class Aria2Client {
       }
     }
     return processed
-  }
-
-  // 解析文件路径：处理 aria2 下载目录与项目目录的映射
-  private async resolveFilePath(filePath: string): Promise<string> {
-    let fullPath = filePath
-    const globalOptions = await this.getGlobalOptions()
-    if (globalOptions && globalOptions.dir) {
-      const aria2DownloadDir = globalOptions.dir
-      if (!path.isAbsolute(filePath) || filePath.startsWith(aria2DownloadDir)) {
-        let relativePath = filePath
-        if (filePath.startsWith(aria2DownloadDir)) {
-          relativePath = filePath.substring(aria2DownloadDir.length)
-          if (relativePath.startsWith('/')) {
-            relativePath = relativePath.substring(1)
-          }
-        }
-        fullPath = path.join(this.downloadDir, relativePath)
-      }
-    } else {
-      fullPath = path.isAbsolute(filePath) ? filePath : path.join(this.downloadDir, filePath)
-    }
-    console.log(`[Aria2] resolveFilePath: "${filePath}" -> "${fullPath}" (aria2 dir resolved: ${!!(globalOptions && globalOptions.dir)})`)
-    return fullPath
   }
 
   // 使用getter方法动态获取配置值
@@ -228,6 +205,10 @@ class Aria2Client {
         },
         timeout: 10000
       })
+
+      if (response.data.error) {
+        throw new Error(`Aria2 RPC error: ${response.data.error.message || 'Unknown error'} (code: ${response.data.error.code})`)
+      }
 
       return response.data
     } catch (error) {
@@ -553,148 +534,6 @@ class Aria2Client {
     }
   }
 
-  // 获取文件列表
-  async getFiles(dirPath = ''): Promise<{ files: unknown[]; error: string | null }> {
-    const fsPromises = fs.promises
-
-    try {
-      const fullPath = path.join(this.downloadDir, dirPath)
-      const files = await fsPromises.readdir(fullPath, { withFileTypes: true })
-
-      const fileList = await Promise.all(files.map(async (file) => {
-        const filePath = path.join(fullPath, file.name)
-        const stats = await fsPromises.stat(filePath)
-        const lstats = await fsPromises.lstat(filePath)
-
-        const isSymlink = lstats.isSymbolicLink()
-
-        let isDir = file.isDirectory()
-        let targetPath: string | null = null
-        let targetExists = true
-
-        if (isSymlink) {
-          try {
-            targetPath = await fsPromises.readlink(filePath)
-            const targetFullPath = path.resolve(path.dirname(filePath), targetPath)
-            const targetStats = await fsPromises.stat(targetFullPath)
-            isDir = targetStats.isDirectory()
-          } catch {
-            targetExists = false
-          }
-        }
-
-        return {
-          name: file.name,
-          path: path.join(dirPath, file.name),
-          size: stats.size,
-          mtime: stats.mtime.toISOString(),
-          isDir: isDir,
-          isSymlink: isSymlink,
-          targetPath: targetPath,
-          targetExists: targetExists
-        }
-      }))
-
-      return { files: fileList, error: null }
-    } catch (error) {
-      const err = error as Error
-      const errorMessage = `Failed to read directory: ${this.downloadDir}. Error: ${err.message}`
-      console.error(errorMessage)
-      return { files: [], error: errorMessage }
-    }
-  }
-
-  // 删除文件或目录
-  async deleteFile(filePath: string): Promise<{ success: boolean; message?: string }> {
-    const fsPromises = fs.promises
-
-    try {
-      const fullPath = await this.resolveFilePath(filePath)
-
-      try {
-        await fsPromises.access(fullPath)
-      } catch (accessError) {
-        const err = accessError as NodeJS.ErrnoException
-        if (err.code === 'ENOENT') {
-          console.warn(`[Aria2] File not found at resolved path: ${fullPath} (original: ${filePath})`)
-          return { success: false, message: `File not found: ${fullPath}` }
-        }
-        throw accessError
-      }
-
-      const lstats = await fsPromises.lstat(fullPath)
-      if (lstats.isSymbolicLink()) {
-        await fsPromises.unlink(fullPath)
-      } else {
-        await fsPromises.rm(fullPath, { recursive: true, force: true })
-      }
-      console.log(`[Aria2] File deleted successfully: ${fullPath}`)
-
-      return { success: true }
-    } catch (error) {
-      const err = error as Error
-      console.error('Delete file error details:', {
-        originalPath: filePath,
-        error: err.message,
-        stack: err.stack
-      })
-      throw new Error(`Failed to delete file: ${err.message}`)
-    }
-  }
-
-  // 创建目录
-  async createDirectory(dirPath: string): Promise<{ success: boolean }> {
-    const fsPromises = fs.promises
-
-    try {
-      const fullPath = path.isAbsolute(dirPath) ? dirPath : path.join(this.downloadDir, dirPath)
-      await fsPromises.mkdir(fullPath, { recursive: true })
-      return { success: true }
-    } catch (error) {
-      const err = error as Error
-      throw new Error(`Failed to create directory: ${err.message}`)
-    }
-  }
-
-  // 重命名文件或目录
-  async renameFile(oldPath: string, newPath: string): Promise<{ success: boolean }> {
-    const fsPromises = fs.promises
-
-    try {
-      const oldFullPath = path.isAbsolute(oldPath) ? oldPath : path.join(this.downloadDir, oldPath)
-      const newFullPath = path.isAbsolute(newPath) ? newPath : path.join(this.downloadDir, newPath)
-
-      try {
-        await fsPromises.access(newFullPath)
-        throw new Error('Target path already exists')
-      } catch (accessError) {
-        const err = accessError as NodeJS.ErrnoException
-        if (err.code !== 'ENOENT') {
-          throw accessError
-        }
-      }
-
-      await fsPromises.rename(oldFullPath, newFullPath)
-      return { success: true }
-    } catch (error) {
-      const err = error as Error
-      throw new Error(`Failed to rename file: ${err.message}`)
-    }
-  }
-
-  // 测试文件是否存在
-  async testFileExists(filePath: string): Promise<boolean> {
-    const fsPromises = fs.promises
-
-    try {
-      const fullPath = await this.resolveFilePath(filePath)
-      await fsPromises.access(fullPath)
-      return true
-    } catch {
-      throw new Error('File does not exist')
-    }
-  }
-
   // 自动删除元数据文件
   async autoDeleteMetadata(taskDetails: Aria2TaskDetail): Promise<void> {
     try {
@@ -861,24 +700,6 @@ class Aria2Client {
     } catch (error) {
       const err = error as Error
       console.error(`Failed to scan directory ${dirPath}:`, err.message)
-    }
-  }
-
-  // 上传文件
-  async uploadFile(filePath: string, data: Buffer): Promise<{ success: boolean }> {
-    const fsPromises = fs.promises
-
-    try {
-      const fullPath = path.isAbsolute(filePath) ? filePath : path.join(this.downloadDir, filePath)
-      const dir = path.dirname(fullPath)
-
-      await fsPromises.mkdir(dir, { recursive: true })
-      await fsPromises.writeFile(fullPath, data)
-
-      return { success: true }
-    } catch (error) {
-      const err = error as Error
-      throw new Error(`Failed to upload file: ${err.message}`)
     }
   }
 

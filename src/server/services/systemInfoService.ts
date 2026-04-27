@@ -1,6 +1,6 @@
 import * as os from 'os'
 import si from 'systeminformation'
-import aria2Client from '../config/aria2'
+import { getFinalConfig } from '../config/aria2'
 import { formatBytes } from '@shared/utils/format'
 import type { SystemInfo, NetworkSpeedInfo, DiskInfo, DiskPartitionInfo, SwapInfo, DeviceNetworkSpeedResponse } from '@shared/types'
 
@@ -80,7 +80,7 @@ export async function getSystemInfo(): Promise<SystemInfo> {
   }
 
   // 磁盘信息（多分区支持）
-  const downloadDir = aria2Client.downloadDir || process.env.DOWNLOAD_DIR || '/tmp'
+  const downloadDir = getFinalConfig().downloadDir || process.env.DOWNLOAD_DIR || '/tmp'
   let diskInfo: DiskInfo | null = null
 
   try {
