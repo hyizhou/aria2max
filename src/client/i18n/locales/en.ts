@@ -381,4 +381,12 @@ export default {
     autoDeleteAria2FilesOnRemove: { label: 'Auto Delete .aria2 Files on Task Removal', helpText: 'Automatically delete associated .aria2 files when removing download tasks to avoid leftover files' },
     autoDeleteAria2FilesOnSchedule: { label: 'Scheduled .aria2 File Cleanup', helpText: 'Automatically clean up orphaned .aria2 files every 30 minutes by scanning and removing files without associated tasks' },
   },
+  auth: {
+    subtitle: 'Enter password to access the panel',
+    passwordPlaceholder: 'Password',
+    login: 'Login',
+    logging: 'Logging in...',
+    loginFailed: 'Invalid password, please try again',
+    logout: 'Logout',
+  },
 }

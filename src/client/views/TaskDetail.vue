@@ -195,37 +195,42 @@ const getSeedersConnected = computed(() => {
   }
 })
 
+const MAX_RENDER_PIECES = 500
+
 const getPiecesInfo = computed(() => {
-  if (!taskStore.currentTask) return []
-  
-  // 从任务信息获取真实的区块数据
+  if (!taskStore.currentTask) return { pieces: [], sampled: false, totalPieces: 0 }
+
   const numPieces = parseInt(taskStore.currentTask.numPieces || '0', 10)
   const pieceLength = parseInt(taskStore.currentTask.pieceLength || '0', 10)
   const totalLength = parseInt(taskStore.currentTask.totalLength || '0', 10)
-  
-  if (numPieces === 0 || pieceLength === 0) return []
-  
-  // 根据bitfield判断每个区块的下载状态
+
+  if (numPieces === 0 || pieceLength === 0) return { pieces: [], sampled: false, totalPieces: 0 }
+
   const bitfield = taskStore.currentTask.bitfield || ''
-  const pieces = []
-  
-  // 解析bitfield获取真实的区块下载状态
   const downloadedPieces = parseBitfield(bitfield, numPieces)
-  
-  for (let i = 0; i < numPieces; i++) {
-    const isDownloaded = downloadedPieces.has(i)
-    const pieceStart = i * pieceLength
-    const pieceEnd = Math.min((i + 1) * pieceLength, totalLength)
-    const pieceSize = pieceEnd - pieceStart
-    
-    pieces.push({
-      index: i,
-      downloaded: isDownloaded,
-      size: pieceSize,
-      progressColor: isDownloaded ? '#4caf50' : '#e0e0e0'
-    })
+
+  const sampled = numPieces > MAX_RENDER_PIECES
+  const step = sampled ? numPieces / MAX_RENDER_PIECES : 1
+  const count = sampled ? MAX_RENDER_PIECES : numPieces
+  const pieces = []
+
+  for (let i = 0; i < count; i++) {
+    if (sampled) {
+      const rangeStart = Math.floor(i * step)
+      const rangeEnd = Math.floor((i + 1) * step)
+      let downloaded = 0
+      for (let j = rangeStart; j < rangeEnd; j++) {
+        if (downloadedPieces.has(j)) downloaded++
+      }
+      const ratio = downloaded / (rangeEnd - rangeStart)
+      const color = ratio === 0 ? '#e0e0e0' : ratio >= 1 ? '#4caf50' : `rgb(${Math.round(76 + (224 - 76) * (1 - ratio))}, ${Math.round(175 + (224 - 175) * (1 - ratio))}, ${Math.round(80 + (224 - 80) * (1 - ratio))})`
+      pieces.push({ index: i, downloaded: ratio >= 1, size: (rangeEnd - rangeStart) * pieceLength, progressColor: color })
+    } else {
+      const isDownloaded = downloadedPieces.has(i)
+      pieces.push({ index: i, downloaded: isDownloaded, size: Math.min(pieceLength, totalLength - i * pieceLength), progressColor: isDownloaded ? '#4caf50' : '#e0e0e0' })
+    }
   }
-  return pieces
+  return { pieces, sampled, totalPieces: numPieces }
 })
 
 // 解析bitfield获取已下载的区块索引集合
@@ -682,17 +687,17 @@ const handleAction = async (action: string) => {
         <h4>区块信息</h4>
         <div class="pieces-chart">
           <div class="pieces-display">
-            <div 
-              v-for="(piece, index) in getPiecesInfo" 
+            <div
+              v-for="(piece, index) in getPiecesInfo.pieces"
               :key="index"
               class="piece-item"
               :class="{ completed: piece.downloaded }"
-              :title="`区块 ${index + 1}: ${piece.downloaded ? '已下载' : '未下载'} - ${formatBytes(piece.size)}`"
+              :title="`区块 ${piece.downloaded ? '已下载' : '未下载'} - ${formatBytes(piece.size)}`"
               :style="{ backgroundColor: piece.progressColor }"
             ></div>
           </div>
           <div class="pieces-stats">
-            <span>{{ getPiecesInfo.filter(p => p.downloaded).length }} / {{ getPiecesInfo.length }} 区块已下载 ({{ Math.round((getPiecesInfo.filter(p => p.downloaded).length/getPiecesInfo.length) * 100) }}%)</span>
+            <span>{{ getPiecesInfo.pieces.filter(p => p.downloaded).length }} / {{ getPiecesInfo.totalPieces }} 区块已下载 ({{ Math.round((getPiecesInfo.pieces.filter(p => p.downloaded).length / getPiecesInfo.totalPieces) * 100) }}%)<template v-if="getPiecesInfo.sampled"> (采样显示 {{ getPiecesInfo.pieces.length }} 个)</template></span>
           </div>
         </div>
       </div>

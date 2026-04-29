@@ -5,11 +5,19 @@ import { getFinalConfig } from '../config/aria2'
 
 // 路径安全检查：防止路径遍历攻击
 function safePath(base: string, relative: string): string {
-  const resolved = path.join(base, relative)
-  if (!resolved.startsWith(base)) {
+  const normalizedBase = path.normalize(base)
+  const resolved = path.resolve(normalizedBase, relative)
+  if (resolved !== normalizedBase && !resolved.startsWith(normalizedBase + path.sep)) {
     throw new Error('Invalid path: path traversal detected')
   }
   return resolved
+}
+
+// 检查绝对路径是否在下载目录范围内
+function isPathAllowed(fullPath: string): boolean {
+  const normalizedBase = path.normalize(getDownloadDir())
+  const resolved = path.normalize(fullPath)
+  return resolved === normalizedBase || resolved.startsWith(normalizedBase + path.sep)
 }
 
 // 格式化文件系统错误
@@ -106,6 +114,10 @@ class FileService {
 
   // 删除文件或目录（通过绝对路径）
   async deleteByAbsolutePath(fullPath: string): Promise<FileOperationResult> {
+    if (!isPathAllowed(fullPath)) {
+      console.error(`[FileService] Delete blocked: path outside download directory: ${fullPath}`)
+      return { success: false, message: 'Path is outside the allowed directory' }
+    }
     try {
       const lstats = await fs.lstat(fullPath)
       if (lstats.isSymbolicLink()) {
@@ -207,7 +219,10 @@ class FileService {
       return safePath(getDownloadDir(), relativePath)
     }
 
-    // 绝对路径且不需要映射，直接使用
+    // 绝对路径且不需要映射，检查是否在允许范围内
+    if (!isPathAllowed(aria2Path)) {
+      throw new Error(`Invalid path: aria2 path outside download directory: ${aria2Path}`)
+    }
     return aria2Path
   }
 }

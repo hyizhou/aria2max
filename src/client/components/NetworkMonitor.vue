@@ -281,6 +281,14 @@ const hideChart = () => {
   isPositionCalculated.value = false
 }
 
+// resize 回调
+const handleResize = () => {
+  checkIsMobile()
+  if (showChart.value) {
+    setTimeout(updatePopupPosition, 0)
+  }
+}
+
 
 // 更新浮窗位置
 const updatePopupPosition = () => {
@@ -385,13 +393,7 @@ onMounted(() => {
     }
     
     // 监听窗口大小变化
-    window.addEventListener('resize', () => {
-      checkIsMobile()
-      if (showChart.value) {
-        // 窗口大小改变时重新计算浮窗位置
-        setTimeout(updatePopupPosition, 0)
-      }
-    })
+    window.addEventListener('resize', handleResize)
   })
 })
 
@@ -400,8 +402,7 @@ onUnmounted(() => {
   if (hideTimeout) {
     clearTimeout(hideTimeout)
   }
-  window.removeEventListener('resize', updatePopupPosition)
-  window.removeEventListener('resize', checkIsMobile)
+  window.removeEventListener('resize', handleResize)
   // 移除全局点击监听器
   document.removeEventListener('click', handleGlobalClick)
 })

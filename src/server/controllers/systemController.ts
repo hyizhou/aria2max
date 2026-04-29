@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from 'express'
 import * as fs from 'fs'
 import * as path from 'path'
 import aria2Client from '../config/aria2'
+import { getConfigPath } from '../config/paths'
 import { getSystemInfo, getDeviceNetworkSpeed } from '../services/systemInfoService'
 import type { SystemConfig, TestConnectionResponse } from '../../shared/types'
 
@@ -38,7 +39,7 @@ class SystemControllerImpl implements SystemController {
 
   // 获取配置信息
   async getConfig(_req: Request, res: Response): Promise<void> {
-    const configPath = path.join(__dirname, '../config.json')
+    const configPath = getConfigPath()
     let configFile: SystemConfig = { ...defaultConfig }
 
     if (fs.existsSync(configPath)) {
@@ -74,7 +75,7 @@ class SystemControllerImpl implements SystemController {
     try {
       console.log('Saving config with data:', req.body)
 
-      const configPath = path.join(__dirname, '../config.json')
+      const configPath = getConfigPath()
       let existingConfig: SystemConfig = { ...defaultConfig }
 
       if (fs.existsSync(configPath)) {
@@ -104,6 +105,9 @@ class SystemControllerImpl implements SystemController {
       }
       if (req.body.autoDeleteAria2FilesOnSchedule !== undefined) {
         configFile.autoDeleteAria2FilesOnSchedule = req.body.autoDeleteAria2FilesOnSchedule
+      }
+      if (req.body.authPassword !== undefined) {
+        configFile.authPassword = req.body.authPassword
       }
 
       console.log('Final config to save:', configFile)

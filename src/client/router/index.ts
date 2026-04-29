@@ -6,12 +6,18 @@ import FileManager from '@/views/FileManager.vue'
 import Settings from '@/views/Settings.vue'
 import SystemStatus from '@/views/SystemStatus.vue'
 import AddTask from '@/views/AddTask.vue'
+import Login from '@/views/Login.vue'
 
 
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
     redirect: '/dashboard'
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: Login
   },
   {
     path: '/dashboard',
@@ -55,6 +61,30 @@ const routes: Array<RouteRecordRaw> = [
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+router.beforeEach(async (to, _from, next) => {
+  const { useAuthStore } = await import('@/store')
+  const authStore = useAuthStore()
+
+  if (!authStore.checked) {
+    await authStore.checkStatus()
+  }
+
+  if (to.path === '/login') {
+    if (authStore.isAuthenticated || !authStore.requiresAuth) {
+      next('/dashboard')
+    } else {
+      next()
+    }
+    return
+  }
+
+  if (authStore.requiresAuth && !authStore.isAuthenticated) {
+    next('/login')
+  } else {
+    next()
+  }
 })
 
 export default router

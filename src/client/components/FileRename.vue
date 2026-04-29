@@ -53,7 +53,10 @@ const close = () => {
 
 const confirm = async () => {
   try {
-    const newPath = oldPath.value.replace(oldName.value, newName.value)
+    const lastSlash = oldPath.value.lastIndexOf('/')
+    const newPath = lastSlash >= 0
+      ? oldPath.value.substring(0, lastSlash + 1) + newName.value
+      : newName.value
     await fileStore.renameFile(oldPath.value, newPath)
     close()
     // Emit event to notify parent component

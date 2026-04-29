@@ -16,6 +16,7 @@ register({
 })
 
 import scheduler from './src/server/services/scheduler'
+import { authMiddleware, createAuthRouter, logAuthStatus } from './src/server/middleware/auth'
 import routes from './src/server/routes'
 
 const app: Express = express()
@@ -43,7 +44,9 @@ app.use(fileUpload({
   uriDecodeFileNames: true
 }))
 
-// API 路由
+// API 路由（认证路由不需要认证中间件）
+app.use('/api', createAuthRouter())
+app.use('/api', authMiddleware)
 app.use('/api', routes)
 
 // 静态文件服务
@@ -102,6 +105,7 @@ app.use((err: Error & { statusCode?: number }, req: Request, res: Response, _nex
 const server = app.listen(PORT, '0.0.0.0', () => {
   try {
     scheduler.start()
+    logAuthStatus()
     console.log(`aria-max server is running on port ${PORT}`)
   } catch (err) {
     console.error('Error starting scheduler:', err)

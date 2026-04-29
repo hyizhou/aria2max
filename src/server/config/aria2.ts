@@ -21,7 +21,8 @@ const defaultConfig = {
   aria2ConfigPath: '',
   autoDeleteMetadata: false,
   autoDeleteAria2FilesOnRemove: false,
-  autoDeleteAria2FilesOnSchedule: false
+  autoDeleteAria2FilesOnSchedule: false,
+  authPassword: ''
 }
 
 // 配置类型
@@ -33,10 +34,12 @@ interface Aria2Config {
   autoDeleteMetadata: boolean
   autoDeleteAria2FilesOnRemove: boolean
   autoDeleteAria2FilesOnSchedule: boolean
+  authPassword: string
 }
 
 // 配置文件路径
-const configPath = path.join(__dirname, '../config.json')
+import { getConfigPath } from './paths'
+const configPath = getConfigPath()
 
 // 动态加载配置文件的函数
 function loadConfigFile(): Partial<Aria2Config> {
@@ -66,7 +69,9 @@ export function getFinalConfig(): Aria2Config {
     autoDeleteAria2FilesOnRemove: configFile.autoDeleteAria2FilesOnRemove !== undefined ?
       configFile.autoDeleteAria2FilesOnRemove : defaultConfig.autoDeleteAria2FilesOnRemove,
     autoDeleteAria2FilesOnSchedule: configFile.autoDeleteAria2FilesOnSchedule !== undefined ?
-      configFile.autoDeleteAria2FilesOnSchedule : defaultConfig.autoDeleteAria2FilesOnSchedule
+      configFile.autoDeleteAria2FilesOnSchedule : defaultConfig.autoDeleteAria2FilesOnSchedule,
+    authPassword: configFile.authPassword !== undefined ?
+      configFile.authPassword : defaultConfig.authPassword
   }
 }
 

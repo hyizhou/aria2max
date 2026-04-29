@@ -11,6 +11,7 @@ export interface SystemConfig {
   autoDeleteMetadata: boolean
   autoDeleteAria2FilesOnRemove: boolean
   autoDeleteAria2FilesOnSchedule: boolean
+  authPassword?: string
 }
 
 // 系统配置更新请求（部分字段可选）

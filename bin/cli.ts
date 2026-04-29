@@ -191,4 +191,55 @@ program
     }
   })
 
+// Passwd command
+program
+  .command('passwd')
+  .description('Set or change the login password')
+  .action(() => {
+    const readline = require('readline')
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    })
+
+    // 配置文件路径
+    const configFilePath = path.resolve(__dirname, '../src/server/config.json')
+
+    rl.question('Enter new password (leave empty to remove password): ', (answer: string) => {
+      const newPassword = answer.trim()
+
+      // 读取现有配置
+      let config: Record<string, unknown> = {}
+      if (fs.existsSync(configFilePath)) {
+        try {
+          config = JSON.parse(fs.readFileSync(configFilePath, 'utf8'))
+        } catch {
+          console.error('Failed to read config file')
+          rl.close()
+          process.exit(1)
+        }
+      }
+
+      config.authPassword = newPassword
+
+      try {
+        const configDir = path.dirname(configFilePath)
+        if (!fs.existsSync(configDir)) {
+          fs.mkdirSync(configDir, { recursive: true })
+        }
+        fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2))
+        if (newPassword) {
+          console.log('Password has been set. Restart the server to apply.')
+        } else {
+          console.log('Password has been removed. Restart the server to apply.')
+        }
+      } catch (err) {
+        console.error('Failed to write config file:', err)
+        process.exit(1)
+      }
+
+      rl.close()
+    })
+  })
+
 program.parse()

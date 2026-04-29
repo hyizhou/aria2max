@@ -381,4 +381,12 @@ export default {
     autoDeleteAria2FilesOnRemove: { label: '删除任务时自动删除.aria2文件', helpText: '删除下载任务时自动删除对应的.aria2文件，避免产生残留文件' },
     autoDeleteAria2FilesOnSchedule: { label: '定时清理无任务关联的.aria2文件', helpText: '每30分钟自动清理一次无任务关联的.aria2文件，系统会扫描并删除没有对应下载任务的.aria2控制文件' },
   },
+  auth: {
+    subtitle: '请输入密码以访问管理面板',
+    passwordPlaceholder: '请输入密码',
+    login: '登录',
+    logging: '登录中...',
+    loginFailed: '密码错误，请重试',
+    logout: '退出登录',
+  },
 }

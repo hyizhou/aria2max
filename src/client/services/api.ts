@@ -30,6 +30,11 @@ apiClient.interceptors.response.use(
   },
   (error: AxiosError<ApiErrorResponse>) => {
     if (error.response) {
+      // 401 跳转登录页
+      if (error.response.status === 401 && !window.location.pathname.includes('/login')) {
+        window.location.href = '/login'
+        return Promise.reject(error.response.data)
+      }
       console.error('API Error Response:', error.response.status, error.response.data)
       return Promise.reject(error.response.data)
     } else if (error.request) {
