@@ -16,6 +16,8 @@ const gid = ref<string>(route.params.gid as string)
 const refreshInterval = ref<number | null>(null)
 const peersCollapsed = ref(true)
 const filesCollapsed = ref(true)
+const peersViewMode = ref<'card' | 'table'>('table')
+const filesViewMode = ref<'card' | 'table'>('table')
 
 const startAutoRefresh = () => {
   // 先清理之前的定时器
@@ -722,13 +724,60 @@ const handleAction = async (action: string) => {
             连接状态
             <span class="collapse-count">{{ getPeers.length }}</span>
           </h4>
-          <div class="task-speed-info">
+          <div class="header-actions" v-if="!peersCollapsed && getPeers.length > 0" @click.stop>
+            <div class="view-toggle">
+              <button :class="{ active: peersViewMode === 'card' }" @click="peersViewMode = 'card'" title="卡片视图">☰</button>
+              <button :class="{ active: peersViewMode === 'table' }" @click="peersViewMode = 'table'" title="表格视图">⊞</button>
+            </div>
+            <div class="task-speed-info">
+              <span class="speed-badge upload">↑ {{ formatSpeed(getTaskSpeed(taskStore.currentTask).upload) }}</span>
+              <span class="speed-badge download">↓ {{ formatSpeed(getTaskSpeed(taskStore.currentTask).download) }}</span>
+            </div>
+          </div>
+          <div class="task-speed-info" v-else>
             <span class="speed-badge upload">↑ {{ formatSpeed(getTaskSpeed(taskStore.currentTask).upload) }}</span>
             <span class="speed-badge download">↓ {{ formatSpeed(getTaskSpeed(taskStore.currentTask).download) }}</span>
           </div>
         </div>
         <template v-if="!peersCollapsed">
-          <div class="peer-list" v-if="getPeers.length > 0">
+          <!-- 表格视图 -->
+          <div class="table-wrap" v-if="peersViewMode === 'table' && getPeers.length > 0">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>IP:Port</th>
+                  <th>客户端</th>
+                  <th>进度</th>
+                  <th>区块</th>
+                  <th>↓ 速度</th>
+                  <th>↑ 速度</th>
+                  <th>标签</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(peer, index) in getPeers" :key="index">
+                  <td class="td-ip">{{ peer.ip }}:{{ peer.port }}</td>
+                  <td class="td-client">
+                    <span class="has-tooltip" v-if="peer.peerId && peer.peerId !== '未知ID'">{{ peer.client }}<span class="tooltip">{{ peer.peerId }}</span></span>
+                    <span v-else>{{ peer.client }}</span>
+                  </td>
+                  <td class="td-progress">{{ peer.progress }}%</td>
+                  <td class="td-pieces">
+                    <PiecesCanvas v-if="peer.pieces && peer.pieces.length > 0" :colors="getPeerPiecesColors(peer.pieces)" :height="8" />
+                  </td>
+                  <td class="td-speed">{{ formatSpeed(peer.uploadSpeed) }}</td>
+                  <td class="td-speed">{{ formatSpeed(peer.downloadSpeed) }}</td>
+                  <td class="td-tags">
+                    <span v-if="peer.seeder" class="status-tag seeder">Seeder</span>
+                    <span v-if="peer.amChoking" class="status-tag choking">AmC</span>
+                    <span v-if="peer.peerChoking" class="status-tag choked">PeerC</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- 卡片视图 -->
+          <div class="peer-list" v-else-if="peersViewMode === 'card' && getPeers.length > 0">
             <div
               v-for="(peer, index) in getPeers"
               :key="index"
@@ -738,15 +787,10 @@ const handleAction = async (action: string) => {
                 <div class="peer-ip">{{ peer.ip }}:{{ peer.port }}</div>
                 <div class="peer-client">{{ peer.client }}</div>
                 <div class="peer-id" v-if="peer.peerId && peer.peerId !== '未知ID'">{{ peer.peerId }}</div>
-                <!-- 调试信息：显示原始peerId -->
-                <div class="peer-debug" v-if="peer._originalPeerId && peer._originalPeerId !== peer.peerId" style="font-size: 0.7em; color: #999;">
-                  原始: {{ peer._originalPeerId }}<br>
-                  显示: {{ peer.peerId }}
-                </div>
                 <div class="peer-status-tags">
-                  <span v-if="peer.seeder" class="status-tag seeder" title="种子：已完整拥有所有文件数据的对等方">Seeder</span>
-                  <span v-if="peer.amChoking" class="status-tag choking" title="我方限制：我方暂时不向此对等方上传数据">AmChoking</span>
-                  <span v-if="peer.peerChoking" class="status-tag choked" title="对方限制：对方暂时不向我方上传数据">PeerChoking</span>
+                  <span v-if="peer.seeder" class="status-tag seeder">Seeder</span>
+                  <span v-if="peer.amChoking" class="status-tag choking">AmChoking</span>
+                  <span v-if="peer.peerChoking" class="status-tag choked">PeerChoking</span>
                 </div>
               </div>
               <div class="peer-pieces" v-if="peer.pieces && peer.pieces.length > 0">
@@ -760,7 +804,6 @@ const handleAction = async (action: string) => {
                   <div class="progress-percent">{{ peer.progress }}%</div>
                 </div>
               </div>
-              <!-- 移除了单独的进度显示，因为在区块信息中已经显示了 -->
               <div class="peer-speed">
                 <span class="upload-speed">↓ {{ formatSpeed(peer.uploadSpeed) }}</span>
                 <span class="download-speed">↑ {{ formatSpeed(peer.downloadSpeed) }}</span>
@@ -780,9 +823,40 @@ const handleAction = async (action: string) => {
             文件列表
             <span class="collapse-count">{{ taskStore.currentTask.files?.length || 0 }}</span>
           </h4>
+          <div class="view-toggle" v-if="!filesCollapsed && taskStore.currentTask.files?.length > 0" @click.stop>
+            <button :class="{ active: filesViewMode === 'card' }" @click="filesViewMode = 'card'" title="卡片视图">☰</button>
+            <button :class="{ active: filesViewMode === 'table' }" @click="filesViewMode = 'table'" title="表格视图">⊞</button>
+          </div>
         </div>
         <template v-if="!filesCollapsed">
-          <div class="file-list">
+          <!-- 表格视图 -->
+          <div class="table-wrap" v-if="filesViewMode === 'table' && taskStore.currentTask.files?.length > 0">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>文件名</th>
+                  <th>大小</th>
+                  <th>进度</th>
+                  <th>已下载 / 总量</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(file, index) in taskStore.currentTask.files" :key="index">
+                  <td class="td-name">{{ file.path ? file.path.split('/').pop() : file.name || '未知文件' }}</td>
+                  <td class="td-size">{{ formatBytes(file.size || 0) }}</td>
+                  <td class="td-progress">
+                    <div class="progress-bar-inline">
+                      <div class="progress-fill-inline" :style="{ width: getFileProgress(file) + '%' }"></div>
+                    </div>
+                    <span class="progress-text-inline">{{ getFileProgress(file) }}%</span>
+                  </td>
+                  <td class="td-amount">{{ formatBytes(file.completed || 0) }} / {{ formatBytes(file.size || 0) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- 卡片视图 -->
+          <div class="file-list" v-else-if="filesViewMode === 'card'">
             <div
               v-for="(file, index) in taskStore.currentTask.files"
               :key="index"
@@ -1045,6 +1119,158 @@ const handleAction = async (action: string) => {
   font-size: 0.75rem;
   font-weight: 500;
   background-color: #e0e0e0;
+  color: #666666;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.view-toggle {
+  display: inline-flex;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.view-toggle button {
+  background: transparent;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  color: #999999;
+  line-height: 1;
+}
+
+.view-toggle button:hover {
+  background-color: #f0f0f0;
+}
+
+.view-toggle button.active {
+  background-color: #e3f2fd;
+  color: #2196f3;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  text-align: left;
+}
+
+.data-table th {
+  padding: 0.5rem 0.625rem;
+  font-weight: 500;
+  color: #666666;
+  border-bottom: 1px solid #e0e0e0;
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 0.375rem 0.625rem;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle;
+}
+
+.data-table tbody tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+.data-table tbody tr:hover {
+  background-color: #f5f5f5;
+}
+
+.td-ip,
+.td-name {
+  word-break: break-all;
+  font-weight: 500;
+  color: #333333;
+}
+
+.td-client {
+  color: #666666;
+  white-space: nowrap;
+}
+
+.has-tooltip {
+  position: relative;
+  cursor: help;
+}
+
+.has-tooltip .tooltip {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.375rem 0.5rem;
+  background-color: #333333;
+  color: #ffffff;
+  font-size: 0.6875rem;
+  font-family: monospace;
+  border-radius: 4px;
+  white-space: nowrap;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 10;
+  pointer-events: none;
+  margin-bottom: 4px;
+}
+
+.has-tooltip:hover .tooltip {
+  display: block;
+}
+
+.td-progress {
+  white-space: nowrap;
+}
+
+.td-pieces {
+  min-width: 80px;
+}
+
+.td-speed {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.td-tags {
+  white-space: nowrap;
+}
+
+.td-size,
+.td-amount {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-bar-inline {
+  display: inline-block;
+  width: 60px;
+  height: 4px;
+  background-color: #e0e0e0;
+  border-radius: 2px;
+  overflow: hidden;
+  vertical-align: middle;
+  margin-right: 0.375rem;
+}
+
+.progress-fill-inline {
+  height: 100%;
+  background-color: #4caf50;
+  transition: width 0.3s ease;
+}
+
+.progress-text-inline {
+  font-size: 0.75rem;
   color: #666666;
 }
 
@@ -1615,6 +1841,65 @@ const handleAction = async (action: string) => {
 
 .dark-theme .collapse-count {
   background-color: #404040;
+  color: #b0b0b0;
+}
+
+.dark-theme .view-toggle {
+  border-color: #555555;
+}
+
+.dark-theme .view-toggle button {
+  color: #b0b0b0;
+}
+
+.dark-theme .view-toggle button:hover {
+  background-color: #3d3d3d;
+}
+
+.dark-theme .view-toggle button.active {
+  background-color: #1a2d4d;
+  color: #64b5f6;
+}
+
+.dark-theme .data-table th {
+  color: #b0b0b0;
+  border-bottom-color: #404040;
+}
+
+.dark-theme .data-table td {
+  border-bottom-color: #333333;
+}
+
+.dark-theme .data-table tbody tr:nth-child(even) {
+  background-color: #2a2a2a;
+}
+
+.dark-theme .data-table tbody tr:hover {
+  background-color: #333333;
+}
+
+.dark-theme .td-ip,
+.dark-theme .td-name {
+  color: #e0e0e0;
+}
+
+.dark-theme .td-client {
+  color: #b0b0b0;
+}
+
+.dark-theme .has-tooltip .tooltip {
+  background-color: #555555;
+}
+
+.dark-theme .progress-bar-inline {
+  background-color: #404040;
+}
+
+.dark-theme .progress-fill-inline {
+  background-color: #66bb6a;
+}
+
+.dark-theme .progress-text-inline {
   color: #b0b0b0;
 }
 
