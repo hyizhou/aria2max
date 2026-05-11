@@ -5,6 +5,7 @@ import { useTaskStore } from '@/store'
 import { useRoute } from 'vue-router'
 import { formatBytes } from '@shared/utils/format'
 import { getTaskFileName } from '@shared/utils/task'
+import PiecesCanvas from '@/components/PiecesCanvas.vue'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -234,6 +235,14 @@ const getPiecesInfo = computed(() => {
   }
   return { pieces, sampled, totalPieces: numPieces }
 })
+
+const getPiecesColors = computed(() => {
+  return getPiecesInfo.value.pieces.map(p => p.progressColor)
+})
+
+const getPeerPiecesColors = (pieces: number[]): string[] => {
+  return getSampledPieces(pieces, 100).map(p => p === 1 ? '#4caf50' : '#e0e0e0')
+}
 
 // 解析bitfield获取已下载的区块索引集合
 const parseBitfield = (bitfield: string, numPieces: number): Set<number> => {
@@ -698,16 +707,7 @@ const handleAction = async (action: string) => {
       <div class="task-pieces" v-if="parseInt(taskStore.currentTask.numPieces || '0', 10) > 0">
         <h4>区块信息</h4>
         <div class="pieces-chart">
-          <div class="pieces-display">
-            <div
-              v-for="(piece, index) in getPiecesInfo.pieces"
-              :key="index"
-              class="piece-item"
-              :class="{ completed: piece.downloaded }"
-              :title="`区块 ${piece.downloaded ? '已下载' : '未下载'} - ${formatBytes(piece.size)}`"
-              :style="{ backgroundColor: piece.progressColor }"
-            ></div>
-          </div>
+          <PiecesCanvas :colors="getPiecesColors" :height="10" />
           <div class="pieces-stats">
             <span>{{ getPiecesInfo.pieces.filter(p => p.downloaded).length }} / {{ getPiecesInfo.totalPieces }} 区块已下载 ({{ Math.round((getPiecesInfo.pieces.filter(p => p.downloaded).length / getPiecesInfo.totalPieces) * 100) }}%)<template v-if="getPiecesInfo.sampled"> (采样显示 {{ getPiecesInfo.pieces.length }} 个)</template></span>
           </div>
@@ -750,15 +750,7 @@ const handleAction = async (action: string) => {
                 </div>
               </div>
               <div class="peer-pieces" v-if="peer.pieces && peer.pieces.length > 0">
-                <div class="pieces-bar">
-                  <div
-                    v-for="(piece, pieceIndex) in getSampledPieces(peer.pieces, 100)"
-                    :key="pieceIndex"
-                    class="piece-block"
-                    :class="{ 'has-piece': piece === 1, 'missing-piece': piece === 0 }"
-                    :title="`区块 ${pieceIndex + 1}: ${piece === 1 ? '已拥有' : '未拥有'}`"
-                  ></div>
-                </div>
+                <PiecesCanvas :colors="getPeerPiecesColors(peer.pieces)" :height="12" />
                 <div class="pieces-info">
                   <div class="progress-percent">{{ peer.progress }}%</div>
                 </div>
@@ -1129,25 +1121,8 @@ const handleAction = async (action: string) => {
   margin-bottom: 1rem;
 }
 
-.pieces-display {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(10px, 1fr));
-  gap: 2px;
+.pieces-chart canvas {
   margin-bottom: 0.5rem;
-  max-width: 100%;
-  overflow-x: auto;
-}
-
-.piece-item {
-  width: 10px;
-  height: 10px;
-  background-color: #e0e0e0;
-  border-radius: 1px;
-  cursor: help;
-}
-
-.piece-item.completed {
-  background-color: #4caf50;
 }
 
 .pieces-stats {
@@ -1268,29 +1243,9 @@ const handleAction = async (action: string) => {
   min-width: 150px;
 }
 
-.pieces-bar {
-  display: flex;
-  width: 100%;
-  height: 12px;
-  background-color: #f0f0f0;
-  border-radius: 2px;
-  overflow: hidden;
+.peer-pieces canvas {
   margin-bottom: 4px;
-}
-
-.piece-block {
-  flex: 1;
-  height: 100%;
-  background-color: #e0e0e0;
-  margin: 0; /* 去除区块之间的间隙 */
-}
-
-.piece-block.has-piece {
-  background-color: #4caf50;
-}
-
-.piece-block.missing-piece {
-  background-color: #e0e0e0;
+  border-radius: 2px;
 }
 
 .pieces-info {
@@ -1368,42 +1323,30 @@ const handleAction = async (action: string) => {
     grid-area: speed;
     text-align: left;
   }
-  
-  .pieces-display {
-    grid-template-columns: repeat(20, 1fr);
-  }
 }
 
 @media (max-width: 480px) {
-  .pieces-display {
-    grid-template-columns: repeat(15, 1fr);
-  }
-  
   .peer-item {
     font-size: 0.75rem;
     padding: 0.5rem;
   }
-  
+
   .peer-ip {
     font-size: 0.75rem;
   }
-  
+
   .peer-client {
     font-size: 0.6875rem;
   }
-  
+
   .peer-id {
     font-size: 0.625rem;
   }
-  
-  .pieces-bar {
-    height: 12px;
-  }
-  
+
   .pieces-info {
     font-size: 0.6875rem;
   }
-  
+
   .upload-speed,
   .download-speed {
     font-size: 0.6875rem;
@@ -1724,10 +1667,6 @@ const handleAction = async (action: string) => {
 .dark-theme .speed-badge {
   background-color: #3d3d3d;
   color: #e0e0e0;
-}
-
-.dark-theme .pieces-bar {
-  background-color: #404040;
 }
 
 .dark-theme .pieces-info {
