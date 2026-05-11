@@ -13,6 +13,8 @@ const taskStore = useTaskStore()
 const loading = ref(false)
 const gid = ref<string>(route.params.gid as string)
 const refreshInterval = ref<number | null>(null)
+const peersCollapsed = ref(true)
+const filesCollapsed = ref(true)
 
 const startAutoRefresh = () => {
   // 先清理之前的定时器
@@ -714,90 +716,104 @@ const handleAction = async (action: string) => {
       
       <!-- 连接状态 -->
       <div class="task-peers">
-        <div class="peers-header">
-          <h4>连接状态 ({{ getPeers.length }} 个连接)</h4>
+        <div class="collapsible-header" @click="peersCollapsed = !peersCollapsed">
+          <h4>
+            <span class="collapse-icon" :class="{ 'is-collapsed': peersCollapsed }">▸</span>
+            连接状态
+            <span class="collapse-count">{{ getPeers.length }}</span>
+          </h4>
           <div class="task-speed-info">
             <span class="speed-badge upload">↑ {{ formatSpeed(getTaskSpeed(taskStore.currentTask).upload) }}</span>
             <span class="speed-badge download">↓ {{ formatSpeed(getTaskSpeed(taskStore.currentTask).download) }}</span>
           </div>
         </div>
-        <div class="peer-list" v-if="getPeers.length > 0">
-          <div 
-            v-for="(peer, index) in getPeers" 
-            :key="index"
-            class="peer-item"
-          >
-            <div class="peer-info">
-              <div class="peer-ip">{{ peer.ip }}:{{ peer.port }}</div>
-              <div class="peer-client">{{ peer.client }}</div>
-              <div class="peer-id" v-if="peer.peerId && peer.peerId !== '未知ID'">{{ peer.peerId }}</div>
-              <!-- 调试信息：显示原始peerId -->
-              <div class="peer-debug" v-if="peer._originalPeerId && peer._originalPeerId !== peer.peerId" style="font-size: 0.7em; color: #999;">
-                原始: {{ peer._originalPeerId }}<br>
-                显示: {{ peer.peerId }}
+        <template v-if="!peersCollapsed">
+          <div class="peer-list" v-if="getPeers.length > 0">
+            <div
+              v-for="(peer, index) in getPeers"
+              :key="index"
+              class="peer-item"
+            >
+              <div class="peer-info">
+                <div class="peer-ip">{{ peer.ip }}:{{ peer.port }}</div>
+                <div class="peer-client">{{ peer.client }}</div>
+                <div class="peer-id" v-if="peer.peerId && peer.peerId !== '未知ID'">{{ peer.peerId }}</div>
+                <!-- 调试信息：显示原始peerId -->
+                <div class="peer-debug" v-if="peer._originalPeerId && peer._originalPeerId !== peer.peerId" style="font-size: 0.7em; color: #999;">
+                  原始: {{ peer._originalPeerId }}<br>
+                  显示: {{ peer.peerId }}
+                </div>
+                <div class="peer-status-tags">
+                  <span v-if="peer.seeder" class="status-tag seeder" title="种子：已完整拥有所有文件数据的对等方">Seeder</span>
+                  <span v-if="peer.amChoking" class="status-tag choking" title="我方限制：我方暂时不向此对等方上传数据">AmChoking</span>
+                  <span v-if="peer.peerChoking" class="status-tag choked" title="对方限制：对方暂时不向我方上传数据">PeerChoking</span>
+                </div>
               </div>
-              <div class="peer-status-tags">
-                <span v-if="peer.seeder" class="status-tag seeder" title="种子：已完整拥有所有文件数据的对等方">Seeder</span>
-                <span v-if="peer.amChoking" class="status-tag choking" title="我方限制：我方暂时不向此对等方上传数据">AmChoking</span>
-                <span v-if="peer.peerChoking" class="status-tag choked" title="对方限制：对方暂时不向我方上传数据">PeerChoking</span>
+              <div class="peer-pieces" v-if="peer.pieces && peer.pieces.length > 0">
+                <div class="pieces-bar">
+                  <div
+                    v-for="(piece, pieceIndex) in getSampledPieces(peer.pieces, 100)"
+                    :key="pieceIndex"
+                    class="piece-block"
+                    :class="{ 'has-piece': piece === 1, 'missing-piece': piece === 0 }"
+                    :title="`区块 ${pieceIndex + 1}: ${piece === 1 ? '已拥有' : '未拥有'}`"
+                  ></div>
+                </div>
+                <div class="pieces-info">
+                  <div class="progress-percent">{{ peer.progress }}%</div>
+                </div>
               </div>
-            </div>
-            <div class="peer-pieces" v-if="peer.pieces && peer.pieces.length > 0">
-              <div class="pieces-bar">
-                <div 
-                  v-for="(piece, pieceIndex) in getSampledPieces(peer.pieces, 100)" 
-                  :key="pieceIndex"
-                  class="piece-block"
-                  :class="{ 'has-piece': piece === 1, 'missing-piece': piece === 0 }"
-                  :title="`区块 ${pieceIndex + 1}: ${piece === 1 ? '已拥有' : '未拥有'}`"
-                ></div>
+              <div class="peer-pieces-summary" v-else>
+                <div class="pieces-info">
+                  <div class="progress-percent">{{ peer.progress }}%</div>
+                </div>
               </div>
-              <div class="pieces-info">
-                <div class="progress-percent">{{ peer.progress }}%</div>
+              <!-- 移除了单独的进度显示，因为在区块信息中已经显示了 -->
+              <div class="peer-speed">
+                <span class="upload-speed">↓ {{ formatSpeed(peer.uploadSpeed) }}</span>
+                <span class="download-speed">↑ {{ formatSpeed(peer.downloadSpeed) }}</span>
               </div>
-            </div>
-            <div class="peer-pieces-summary" v-else>
-              <div class="pieces-info">
-                <div class="progress-percent">{{ peer.progress }}%</div>
-              </div>
-            </div>
-            <!-- 移除了单独的进度显示，因为在区块信息中已经显示了 -->
-            <div class="peer-speed">
-              <span class="upload-speed">↓ {{ formatSpeed(peer.uploadSpeed) }}</span>
-              <span class="download-speed">↑ {{ formatSpeed(peer.downloadSpeed) }}</span>
             </div>
           </div>
-        </div>
-        <p v-else style="text-align: center; color: #999; font-size: 0.875rem; padding: 1rem;">
-          暂无连接信息
-        </p>
+          <p v-else style="text-align: center; color: #999; font-size: 0.875rem; padding: 1rem;">
+            暂无连接信息
+          </p>
+        </template>
       </div>
       
       <div class="task-files">
-        <h4>文件列表</h4>
-        <div class="file-list">
-          <div 
-            v-for="(file, index) in taskStore.currentTask.files" 
-            :key="index"
-            class="file-item"
-          >
-            <div class="file-info">
-              <div class="file-name">{{ file.path ? file.path.split('/').pop() : file.name || '未知文件' }}</div>
-              <div class="file-size">{{ formatBytes(file.size || 0) }}</div>
-            </div>
-            <div class="file-progress">
-              <div class="progress-bar">
-                <div 
-                  class="progress-fill" 
-                  :style="{ width: getFileProgress(file) + '%' }"
-                ></div>
+        <div class="collapsible-header" @click="filesCollapsed = !filesCollapsed">
+          <h4>
+            <span class="collapse-icon" :class="{ 'is-collapsed': filesCollapsed }">▸</span>
+            文件列表
+            <span class="collapse-count">{{ taskStore.currentTask.files?.length || 0 }}</span>
+          </h4>
+        </div>
+        <template v-if="!filesCollapsed">
+          <div class="file-list">
+            <div
+              v-for="(file, index) in taskStore.currentTask.files"
+              :key="index"
+              class="file-item"
+            >
+              <div class="file-info">
+                <div class="file-name">{{ file.path ? file.path.split('/').pop() : file.name || '未知文件' }}</div>
+                <div class="file-size">{{ formatBytes(file.size || 0) }}</div>
               </div>
-              <div class="progress-text">
-                {{ getFileProgress(file) }}% - {{ formatBytes(file.completed || 0) }} / {{ formatBytes(file.size || 0) }}
+              <div class="file-progress">
+                <div class="progress-bar">
+                  <div
+                    class="progress-fill"
+                    :style="{ width: getFileProgress(file) + '%' }"
+                  ></div>
+                </div>
+                <div class="progress-text">
+                  {{ getFileProgress(file) }}% - {{ formatBytes(file.completed || 0) }} / {{ formatBytes(file.size || 0) }}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </template>
       </div>
     </div>
     
@@ -989,6 +1005,57 @@ const handleAction = async (action: string) => {
   padding: 1.5rem;
 }
 
+.collapsible-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.collapsible-header:hover {
+  opacity: 0.8;
+}
+
+.collapsible-header h4 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #333333;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.collapse-icon {
+  display: inline-block;
+  transition: transform 0.2s ease;
+  font-size: 0.875rem;
+  color: #999999;
+}
+
+.collapse-icon.is-collapsed {
+  transform: rotate(0deg);
+}
+
+.collapse-icon:not(.is-collapsed) {
+  transform: rotate(90deg);
+}
+
+.collapse-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.25rem;
+  padding: 0 0.375rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background-color: #e0e0e0;
+  color: #666666;
+}
+
 .task-files h4 {
   margin: 0 0 1rem 0;
   font-size: 1.125rem;
@@ -1022,10 +1089,7 @@ const handleAction = async (action: string) => {
   color: #333333;
 }
 
-.peers-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.task-peers .collapsible-header {
   margin-bottom: 1rem;
 }
 
@@ -1415,7 +1479,7 @@ const handleAction = async (action: string) => {
 }
 
 @media (max-width: 768px) {
-  .peers-header {
+  .task-peers .collapsible-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.75rem;
@@ -1594,6 +1658,23 @@ const handleAction = async (action: string) => {
   color: #e0e0e0;
 }
 
+.dark-theme .collapsible-header:hover {
+  opacity: 0.9;
+}
+
+.dark-theme .collapsible-header h4 {
+  color: #e0e0e0;
+}
+
+.dark-theme .collapse-icon {
+  color: #b0b0b0;
+}
+
+.dark-theme .collapse-count {
+  background-color: #404040;
+  color: #b0b0b0;
+}
+
 .dark-theme .file-item {
   background-color: #3d3d3d;
 }
@@ -1621,10 +1702,6 @@ const handleAction = async (action: string) => {
 .dark-theme .task-pieces,
 .dark-theme .task-peers {
   border-top-color: #404040;
-}
-
-.dark-theme .peers-header {
-  border-bottom-color: #404040;
 }
 
 .dark-theme .peer-item {
