@@ -27,6 +27,7 @@ export interface Aria2Uri {
 export interface Aria2Bittorrent {
   info?: {
     name: string
+    infoHash?: string
   }
   comment?: string
   creationDate?: string
@@ -68,6 +69,7 @@ export interface Aria2Task {
   connections?: string
   errorCode?: string
   errorMessage?: string
+  infoHash?: string
 }
 
 // Aria2 任务详情（包含更多连接信息）

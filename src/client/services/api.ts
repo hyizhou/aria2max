@@ -109,6 +109,11 @@ export const taskApi = {
     return await apiClient.put(`/tasks/${gid}/resume`)
   },
 
+  // 重试失败任务
+  async retryTask(gid: string): Promise<AddTaskResponse> {
+    return await apiClient.post(`/tasks/${gid}/retry`)
+  },
+
   // 删除下载任务
   async deleteTask(gid: string, deleteFile = false): Promise<{ success: boolean }> {
     const params = deleteFile ? { deleteFile: 'true' } : {}

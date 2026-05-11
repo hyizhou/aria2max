@@ -592,9 +592,14 @@ const handleAction = async (action: string) => {
       case 'resume':
         await taskStore.resumeTask(gid.value)
         break
+      case 'retry':
+        await taskStore.retryTask(gid.value)
+        router.push('/tasks')
+        return
       case 'delete':
         await taskStore.deleteTask(gid.value)
-        break
+        router.push('/tasks')
+        return
     }
     await loadTaskDetail()
   } catch (error) {
@@ -643,6 +648,11 @@ const handleAction = async (action: string) => {
           <div class="info-item" v-if="taskStore.currentTask.status === 'error' && taskStore.currentTask.errorCode">
             <label>错误代码:</label>
             <span class="error-code">{{ taskStore.currentTask.errorCode }}</span>
+          </div>
+
+          <div class="info-item" v-if="taskStore.currentTask.status === 'error'">
+            <label>&nbsp;</label>
+            <button class="btn btn-retry" @click="handleAction('retry')">{{ t('tasks.retry') }}</button>
           </div>
           
           <div class="info-item">
@@ -896,6 +906,17 @@ const handleAction = async (action: string) => {
 .btn-danger:hover {
   background-color: #d32f2f;
   border-color: #d32f2f;
+}
+
+.btn-retry {
+  background-color: #2196f3;
+  color: #ffffff;
+  border-color: #2196f3;
+}
+
+.btn-retry:hover {
+  background-color: #1976d2;
+  border-color: #1976d2;
 }
 
 .task-info-grid {
@@ -1513,6 +1534,17 @@ const handleAction = async (action: string) => {
 .dark-theme .btn-danger:hover {
   background-color: #c62828;
   border-color: #c62828;
+}
+
+.dark-theme .btn-retry {
+  background-color: #1565c0;
+  border-color: #1565c0;
+  color: #ffffff;
+}
+
+.dark-theme .btn-retry:hover {
+  background-color: #0d47a1;
+  border-color: #0d47a1;
 }
 
 .dark-theme .info-item label {

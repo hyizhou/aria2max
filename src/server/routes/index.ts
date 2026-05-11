@@ -14,6 +14,7 @@ router.post('/tasks/metalink', taskController.addMetalinkTask.bind(taskControlle
 router.get('/tasks/:gid', taskController.getTaskDetail.bind(taskController))
 router.put('/tasks/:gid/pause', taskController.pauseTask.bind(taskController))
 router.put('/tasks/:gid/resume', taskController.resumeTask.bind(taskController))
+router.post('/tasks/:gid/retry', taskController.retryTask.bind(taskController))
 router.delete('/tasks/:gid', taskController.deleteTask.bind(taskController))
 router.post('/tasks/auto-delete-metadata', taskController.autoDeleteMetadata.bind(taskController))
 router.post('/tasks/clean-metadata', taskController.cleanMetadataTasks.bind(taskController))

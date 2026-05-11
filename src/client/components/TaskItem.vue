@@ -143,6 +143,13 @@ const getFileName = (): string => {
             {{ t('tasks.resume') }}
           </button>
           <button
+            v-if="task.status === 'error'"
+            class="btn-action"
+            @click="handleAction('retry')"
+          >
+            {{ t('tasks.retry') }}
+          </button>
+          <button
             class="btn-action btn-danger"
             @click="handleAction('delete')"
           >

@@ -122,6 +122,9 @@ const handleTaskAction = async (action: string, gid: string) => {
       case 'resume':
         await taskStore.resumeTask(gid)
         break
+      case 'retry':
+        await taskStore.retryTask(gid)
+        break
       case 'delete':
         await taskStore.deleteTask(gid)
         break

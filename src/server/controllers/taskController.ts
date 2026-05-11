@@ -10,6 +10,7 @@ interface TaskController {
   getTaskDetail(req: Request, res: Response): Promise<void>
   pauseTask(req: Request, res: Response): Promise<void>
   resumeTask(req: Request, res: Response): Promise<void>
+  retryTask(req: Request, res: Response): Promise<void>
   addTorrentTask(req: Request, res: Response): Promise<void>
   addMetalinkTask(req: Request, res: Response): Promise<void>
   deleteTask(req: Request, res: Response, next: NextFunction): Promise<void>
@@ -110,6 +111,51 @@ class TaskControllerImpl implements TaskController {
 
     await aria2Client.resumeTask(gid)
     res.json({ success: true })
+  }
+
+  // 重试失败任务
+  async retryTask(req: Request, res: Response): Promise<void> {
+    const { gid } = req.params
+
+    if (!gid) {
+      res.status(400).json({ error: { code: 400, message: 'GID is required' } })
+      return
+    }
+
+    const task = await aria2Client.getTaskDetail(gid)
+
+    if (task.status !== 'error') {
+      res.status(400).json({ error: { code: 400, message: 'Only failed tasks can be retried' } })
+      return
+    }
+
+    // BT 任务（已有 bittorrent 信息，说明 METADATA 已获取）用 infoHash 构造磁力链接重试
+    // 避免使用原始磁力链接导致重新下载 METADATA
+    const infoHash = (task as any).infoHash || task.bittorrent?.info?.infoHash
+    let uris = task.bittorrent?.info?.name && infoHash
+      ? [`magnet:?xt=urn:btih:${infoHash}`]
+      : task.files?.[0]?.uris?.map(u => u.uri).filter(Boolean) || []
+
+    if (uris.length === 0 && infoHash) {
+      uris.push(`magnet:?xt=urn:btih:${infoHash}`)
+    }
+
+    if (uris.length === 0) {
+      res.status(400).json({ error: { code: 400, message: 'No downloadable URIs found for this task' } })
+      return
+    }
+
+    const dir = task.dir || undefined
+    const newGid = await aria2Client.addTask(uris, dir ? { dir } : {})
+
+    try {
+      await aria2Client.removeTask(gid)
+    } catch (e) {
+      console.error(`[Task Retry] Failed to remove old task ${gid}:`, (e as Error).message)
+    }
+
+    const response: AddTaskResponse = { gid: newGid }
+    res.status(201).json(response)
   }
 
   // 添加种子文件任务

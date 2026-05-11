@@ -108,6 +108,17 @@ export const useTaskStore = defineStore('task', {
       }
     },
 
+    async retryTask(gid: string): Promise<AddTaskResponse> {
+      try {
+        const response = await taskApi.retryTask(gid)
+        await this.fetchTasks()
+        return response
+      } catch (error) {
+        console.error('Failed to retry task:', error)
+        throw error
+      }
+    },
+
     async cleanMetadataTasks(): Promise<{ success: boolean; message: string; deletedTasks: Array<{ gid: string; name: string; status: string }> }> {
       try {
         const response = await taskApi.cleanMetadataTasks()
