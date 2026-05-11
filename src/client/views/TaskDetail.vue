@@ -768,9 +768,9 @@ const handleAction = async (action: string) => {
                   <td class="td-speed">{{ formatSpeed(peer.uploadSpeed) }}</td>
                   <td class="td-speed">{{ formatSpeed(peer.downloadSpeed) }}</td>
                   <td class="td-tags">
-                    <span v-if="peer.seeder" class="status-tag seeder">Seeder</span>
-                    <span v-if="peer.amChoking" class="status-tag choking">AmC</span>
-                    <span v-if="peer.peerChoking" class="status-tag choked">PeerC</span>
+                    <span v-if="peer.seeder" class="status-tag seeder" title="种子：已完整拥有所有文件数据">Seeder</span>
+                    <span v-if="peer.amChoking" class="status-tag choking" title="我方限制：暂不向该 peer 上传">AmC</span>
+                    <span v-if="peer.peerChoking" class="status-tag choked" title="对方限制：对方暂不向我方上传">PeerC</span>
                   </td>
                 </tr>
               </tbody>
