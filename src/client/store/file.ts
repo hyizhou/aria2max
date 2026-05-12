@@ -40,12 +40,13 @@ export const useFileStore = defineStore('file', {
       }
     },
 
-    async downloadFile(path: string): Promise<{ success: boolean }> {
+    async downloadFile(path: string, isDir = false): Promise<{ success: boolean }> {
       try {
         const downloadUrl = `/api/files/download?path=${encodeURIComponent(path)}`
         const link = document.createElement('a')
         link.href = downloadUrl
-        link.setAttribute('download', path.split('/').pop() || 'download')
+        const name = path.split('/').pop() || 'download'
+        link.setAttribute('download', isDir ? name + '.zip' : name)
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)

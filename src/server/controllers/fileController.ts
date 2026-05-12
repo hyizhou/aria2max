@@ -2,6 +2,7 @@
 import { Request, Response } from 'express'
 import * as path from 'path'
 import * as fs from 'fs/promises'
+import archiver from 'archiver'
 import fileService from '../services/fileService'
 
 class FileControllerImpl {
@@ -12,7 +13,7 @@ class FileControllerImpl {
     res.json(result)
   }
 
-  // 下载文件
+  // 下载文件或目录
   async downloadFile(req: Request, res: Response): Promise<void> {
     const { path: filePath } = req.query
 
@@ -24,18 +25,38 @@ class FileControllerImpl {
     const fullPath = fileService.getFullPath(filePath as string)
     const fileName = path.basename(fullPath)
 
+    let stat
     try {
-      await fs.access(fullPath)
+      stat = await fs.stat(fullPath)
     } catch {
       res.status(404).json({ error: { code: 404, message: 'File not found' } })
       return
     }
 
-    res.sendFile(fullPath, {
-      headers: {
-        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`
-      }
+    if (stat.isFile()) {
+      res.sendFile(fullPath, {
+        headers: {
+          'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`
+        }
+      })
+      return
+    }
+
+    // 目录：流式 zip 传输，不落盘不缓存
+    const zipName = encodeURIComponent(fileName + '.zip')
+    res.setHeader('Content-Type', 'application/zip')
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${zipName}`)
+    res.setHeader('Transfer-Encoding', 'chunked')
+    res.flushHeaders()
+
+    const archive = archiver('zip', { store: true })
+    archive.on('error', (err: Error) => {
+      console.error('Archive error:', err.message)
+      res.end()
     })
+    archive.pipe(res)
+    archive.directory(fullPath, fileName)
+    archive.finalize()
   }
 
   // 删除文件或目录

@@ -167,13 +167,13 @@ const handleNavigate = async (path: string) => {
   await loadFiles()
 }
 
-const handleFileAction = async (action: string, path: string) => {
+const handleFileAction = async (action: string, path: string, isDir?: boolean) => {
   // 添加确认删除对话框
   if (action === 'delete') {
     confirmDelete.value = { path, show: true }
     return
   }
-  
+
   try {
     switch (action) {
       case 'delete':
@@ -181,7 +181,7 @@ const handleFileAction = async (action: string, path: string) => {
         await loadFiles()
         break
       case 'download':
-        await fileStore.downloadFile(path)
+        await fileStore.downloadFile(path, !!isDir)
         break
       case 'preview':
         filePreviewRef.value?.show(path)

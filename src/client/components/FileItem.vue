@@ -18,7 +18,7 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'action', action: string, path: string): void
+  (e: 'action', action: string, path: string, isDir?: boolean): void
   (e: 'select', path: string): void
   (e: 'navigate', path: string): void
 }
@@ -87,7 +87,7 @@ const isVideoFile = computed(() => {
 })
 
 const handleAction = (action: string) => {
-  emit('action', action, props.file.path)
+  emit('action', action, props.file.path, props.file.isDir)
 }
 
 const handleSelect = () => {
@@ -137,7 +137,6 @@ const handleNavigate = () => {
         {{ t('fileItem.rename') }}
       </button>
       <button
-        v-if="!file.isDir"
         class="btn-action"
         @click="handleAction('download')"
       >
