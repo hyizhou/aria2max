@@ -203,13 +203,13 @@ const getSeedersConnected = computed(() => {
 const MAX_RENDER_PIECES = 500
 
 const getPiecesInfo = computed(() => {
-  if (!taskStore.currentTask) return { pieces: [], sampled: false, totalPieces: 0 }
+  if (!taskStore.currentTask) return { pieces: [], sampled: false, totalPieces: 0, downloadedCount: 0 }
 
   const numPieces = parseInt(taskStore.currentTask.numPieces || '0', 10)
   const pieceLength = parseInt(taskStore.currentTask.pieceLength || '0', 10)
   const totalLength = parseInt(taskStore.currentTask.totalLength || '0', 10)
 
-  if (numPieces === 0 || pieceLength === 0) return { pieces: [], sampled: false, totalPieces: 0 }
+  if (numPieces === 0 || pieceLength === 0) return { pieces: [], sampled: false, totalPieces: 0, downloadedCount: 0 }
 
   const bitfield = taskStore.currentTask.bitfield || ''
   const downloadedPieces = parseBitfield(bitfield, numPieces)
@@ -235,7 +235,8 @@ const getPiecesInfo = computed(() => {
       pieces.push({ index: i, downloaded: isDownloaded, size: Math.min(pieceLength, totalLength - i * pieceLength), progressColor: isDownloaded ? '#4caf50' : '#e0e0e0' })
     }
   }
-  return { pieces, sampled, totalPieces: numPieces }
+  const downloadedCount = downloadedPieces.size
+  return { pieces, sampled, totalPieces: numPieces, downloadedCount }
 })
 
 const getPiecesColors = computed(() => {
@@ -711,7 +712,7 @@ const handleAction = async (action: string) => {
         <div class="pieces-chart">
           <PiecesCanvas :colors="getPiecesColors" :height="10" />
           <div class="pieces-stats">
-            <span>{{ getPiecesInfo.pieces.filter(p => p.downloaded).length }} / {{ getPiecesInfo.totalPieces }} 区块已下载 ({{ Math.round((getPiecesInfo.pieces.filter(p => p.downloaded).length / getPiecesInfo.totalPieces) * 100) }}%)<template v-if="getPiecesInfo.sampled"> (采样显示 {{ getPiecesInfo.pieces.length }} 个)</template></span>
+            <span>{{ getPiecesInfo.downloadedCount }} / {{ getPiecesInfo.totalPieces }} 区块已下载 ({{ Math.round((getPiecesInfo.downloadedCount / getPiecesInfo.totalPieces) * 100) }}%)<template v-if="getPiecesInfo.sampled"> (采样显示 {{ getPiecesInfo.pieces.length }} 个)</template></span>
           </div>
         </div>
       </div>
