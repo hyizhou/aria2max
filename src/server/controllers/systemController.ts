@@ -12,6 +12,7 @@ const defaultConfig: SystemConfig = {
   aria2RpcUrl: 'http://localhost:6800/jsonrpc',
   aria2RpcSecret: '',
   downloadDir: '/tmp',
+  aria2HostDir: '',
   aria2ConfigPath: '',
   autoDeleteMetadata: false,
   autoDeleteAria2FilesOnRemove: false,
@@ -63,6 +64,7 @@ class SystemControllerImpl implements SystemController {
       aria2RpcUrl: configFile.aria2RpcUrl,
       aria2RpcSecret: '',
       downloadDir: configFile.downloadDir,
+      aria2HostDir: configFile.aria2HostDir || '',
       aria2ConfigPath: configFile.aria2ConfigPath || '',
       autoDeleteMetadata: configFile.autoDeleteMetadata,
       autoDeleteAria2FilesOnRemove: configFile.autoDeleteAria2FilesOnRemove,
@@ -93,6 +95,9 @@ class SystemControllerImpl implements SystemController {
       }
       if (req.body.downloadDir !== undefined) {
         configFile.downloadDir = req.body.downloadDir
+      }
+      if (req.body.aria2HostDir !== undefined) {
+        configFile.aria2HostDir = req.body.aria2HostDir
       }
       if (req.body.aria2ConfigPath !== undefined) {
         configFile.aria2ConfigPath = req.body.aria2ConfigPath

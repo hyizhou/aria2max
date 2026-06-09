@@ -18,6 +18,7 @@ const defaultConfig = {
   aria2RpcUrl: 'http://localhost:6800/jsonrpc',
   aria2RpcSecret: '',
   downloadDir: '/downloads',
+  aria2HostDir: '',
   aria2ConfigPath: '',
   autoDeleteMetadata: false,
   autoDeleteAria2FilesOnRemove: false,
@@ -30,6 +31,7 @@ interface Aria2Config {
   aria2RpcUrl: string
   aria2RpcSecret: string
   downloadDir: string
+  aria2HostDir: string
   aria2ConfigPath: string
   autoDeleteMetadata: boolean
   autoDeleteAria2FilesOnRemove: boolean
@@ -62,6 +64,8 @@ export function getFinalConfig(): Aria2Config {
     aria2RpcUrl: configFile.aria2RpcUrl || defaultConfig.aria2RpcUrl,
     aria2RpcSecret: configFile.aria2RpcSecret || defaultConfig.aria2RpcSecret,
     downloadDir: configFile.downloadDir || defaultConfig.downloadDir,
+    aria2HostDir: configFile.aria2HostDir !== undefined ?
+      configFile.aria2HostDir : defaultConfig.aria2HostDir,
     aria2ConfigPath: configFile.aria2ConfigPath !== undefined ?
       configFile.aria2ConfigPath : defaultConfig.aria2ConfigPath,
     autoDeleteMetadata: configFile.autoDeleteMetadata !== undefined ?
@@ -111,6 +115,11 @@ class Aria2Client {
 
   get downloadDir(): string {
     return getFinalConfig().downloadDir
+  }
+
+  // aria2 下载目录对应的宿主机路径（用于容器路径映射）
+  get aria2HostDir(): string {
+    return getFinalConfig().aria2HostDir
   }
 
   // 检查Aria2连接状态

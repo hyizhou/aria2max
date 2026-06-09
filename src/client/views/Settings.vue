@@ -44,6 +44,7 @@ const loadConfig = async () => {
     systemConfig.value.aria2RpcUrl = configStore.aria2RpcUrl
     systemConfig.value.aria2RpcSecret = configStore.aria2RpcSecret
     systemConfig.value.downloadDir = configStore.downloadDir
+    systemConfig.value.aria2HostDir = configStore.aria2HostDir || ''
     systemConfig.value.aria2ConfigPath = configStore.aria2ConfigPath || ''
     systemConfig.value.autoDeleteMetadata = configStore.autoDeleteMetadata
     systemConfig.value.autoDeleteAria2FilesOnRemove = configStore.autoDeleteAria2FilesOnRemove

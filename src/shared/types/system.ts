@@ -7,6 +7,7 @@ export interface SystemConfig {
   aria2RpcUrl: string
   aria2RpcSecret: string
   downloadDir: string
+  aria2HostDir: string
   aria2ConfigPath: string
   autoDeleteMetadata: boolean
   autoDeleteAria2FilesOnRemove: boolean

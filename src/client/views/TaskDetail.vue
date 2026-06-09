@@ -6,6 +6,7 @@ import { useRoute } from 'vue-router'
 import { formatBytes } from '@shared/utils/format'
 import { getTaskFileName } from '@shared/utils/task'
 import PiecesCanvas from '@/components/PiecesCanvas.vue'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -544,6 +545,8 @@ const getPeers = computed(() => {
   return []
 })
 
+const confirmDelete = ref(false)
+
 const handleAction = async (action: string) => {
   try {
     switch (action) {
@@ -558,13 +561,22 @@ const handleAction = async (action: string) => {
         router.push('/tasks')
         return
       case 'delete':
-        await taskStore.deleteTask(gid.value)
-        router.push('/tasks')
+        confirmDelete.value = true
         return
     }
     await loadTaskDetail()
   } catch (error) {
     console.error('Task action failed:', error)
+  }
+}
+
+const confirmDeleteTaskWithFile = async (deleteFile: boolean) => {
+  try {
+    await taskStore.deleteTask(gid.value, deleteFile)
+    router.push('/tasks')
+  } catch (error) {
+    console.error('Delete task failed:', error)
+    confirmDelete.value = false
   }
 }
 </script>
@@ -834,6 +846,17 @@ const handleAction = async (action: string) => {
     <div v-else class="empty-state">
       <p>未找到任务信息</p>
     </div>
+
+    <ConfirmDialog
+      v-if="confirmDelete"
+      :title="t('tasks.confirmDelete')"
+      :message="t('tasks.confirmDeleteMessage')"
+      :confirm-text="t('tasks.confirmDelete')"
+      :checkbox-label="t('tasks.deleteWithFile')"
+      :initial-checkbox-value="false"
+      @confirm-with-checkbox="confirmDeleteTaskWithFile"
+      @cancel="confirmDelete = false"
+    />
   </div>
 </template>
 

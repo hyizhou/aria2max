@@ -223,8 +223,9 @@ class TaskControllerImpl implements TaskController {
             aria2Client.getGlobalOptions()
           ])
           taskDetails = details
-          aria2DownloadDir = globalOptions?.dir || null
-          console.log(`[Task Delete] Got task details for ${gid}, files: ${details?.files?.length || 0}, first path: ${details?.files?.[0]?.path || 'N/A'}`)
+          // 优先使用任务自身的 dir（准确反映该任务的实际下载目录），回退到全局 dir
+          aria2DownloadDir = details?.dir || globalOptions?.dir || null
+          console.log(`[Task Delete] Got task details for ${gid}, taskDir: ${details?.dir || 'N/A'}, globalDir: ${globalOptions?.dir || 'N/A'}, files: ${details?.files?.length || 0}, first path: ${details?.files?.[0]?.path || 'N/A'}`)
         } catch (err) {
           console.error(`[Task Delete] Failed to get task details for file deletion (gid: ${gid}):`, (err as Error).message)
         }

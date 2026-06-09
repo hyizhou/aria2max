@@ -379,6 +379,7 @@ export default {
     aria2RpcUrl: { label: 'Aria2 RPC 地址', helpText: 'Aria2 RPC 服务器地址', placeholder: '例如: http://localhost:6800/jsonrpc' },
     aria2RpcSecret: { label: 'RPC 密钥', helpText: '留空表示不修改现有RPC密钥。只有在此字段输入新值时，才会更新RPC密钥配置。', placeholder: '留空表示不修改现有密钥' },
     downloadDir: { label: '文件管理目录', helpText: '注意：此路径仅用于本项目的文件管理功能，不是Aria2的下载目录。文件管理功能通过此路径访问和管理已下载的文件，但不会影响Aria2的实际下载路径设置。', placeholder: '例如: /home/user/downloads' },
+    aria2HostDir: { label: 'Aria2 宿主机下载路径', helpText: '当 Aria2 运行在容器中时，容器内的下载路径（如 /downloads）与宿主机路径不同。在此填写 Aria2 下载目录在宿主机上的实际路径，用于删除任务时正确定位并删除文件。若 Aria2 运行在本机（非容器），可留空。', placeholder: '例如: /mnt/sda1/download' },
     aria2ConfigPath: { label: 'Aria2配置文件路径', helpText: '指定aria2配置文件路径。配置后所有修改将持久化保存至该文件，aria2重启后配置保持不变。留空时配置仅保存在内存中，重启后恢复初始状态', placeholder: '/path/to/aria2.conf' },
     autoDeleteMetadata: { label: '自动删除元数据', helpText: '启用自动删除元数据文件(.torrent, .metalink等)，下载完成后自动清理这些元数据文件，节省磁盘空间' },
     autoDeleteAria2FilesOnRemove: { label: '删除任务时自动删除.aria2文件', helpText: '删除下载任务时自动删除对应的.aria2文件，避免产生残留文件' },

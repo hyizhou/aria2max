@@ -7,6 +7,7 @@ export const useConfigStore = defineStore('config', {
     aria2RpcUrl: 'http://localhost:6800/jsonrpc',
     aria2RpcSecret: '',
     downloadDir: '/tmp',
+    aria2HostDir: '',
     aria2ConfigPath: '',
     autoDeleteMetadata: false,
     autoDeleteAria2FilesOnRemove: false,
@@ -22,6 +23,7 @@ export const useConfigStore = defineStore('config', {
         this.aria2RpcUrl = response.aria2RpcUrl || 'http://localhost:6800/jsonrpc'
         this.aria2RpcSecret = response.aria2RpcSecret || ''
         this.downloadDir = response.downloadDir || '/tmp'
+        this.aria2HostDir = response.aria2HostDir || ''
         this.aria2ConfigPath = response.aria2ConfigPath || ''
         this.autoDeleteMetadata = response.autoDeleteMetadata || false
         this.autoDeleteAria2FilesOnRemove = response.autoDeleteAria2FilesOnRemove || false
@@ -34,10 +36,11 @@ export const useConfigStore = defineStore('config', {
       }
     },
     
-    async saveConfig(config: { 
-      aria2RpcUrl?: string; 
-      aria2RpcSecret?: string; 
-      downloadDir?: string; 
+    async saveConfig(config: {
+      aria2RpcUrl?: string;
+      aria2RpcSecret?: string;
+      downloadDir?: string;
+      aria2HostDir?: string;
       aria2ConfigPath?: string;
       autoDeleteMetadata?: boolean; 
       autoDeleteAria2FilesOnRemove?: boolean;

@@ -33,6 +33,13 @@ export const systemSettings: SystemSetting[] = [
     placeholderKey: 'systemConfig.downloadDir.placeholder'
   },
   {
+    key: 'aria2HostDir',
+    type: 'text',
+    labelKey: 'systemConfig.aria2HostDir.label',
+    helpTextKey: 'systemConfig.aria2HostDir.helpText',
+    placeholderKey: 'systemConfig.aria2HostDir.placeholder'
+  },
+  {
     key: 'aria2ConfigPath',
     type: 'text',
     labelKey: 'systemConfig.aria2ConfigPath.label',
@@ -64,6 +71,7 @@ export const defaultSystemConfig: Record<string, any> = {
   aria2RpcUrl: '',
   aria2RpcSecret: '',
   downloadDir: '',
+  aria2HostDir: '',
   aria2ConfigPath: '',
   autoDeleteMetadata: false,
   autoDeleteAria2FilesOnRemove: false,

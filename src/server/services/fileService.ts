@@ -54,9 +54,16 @@ export interface FileOperationResult {
   message?: string
 }
 
-// 获取下载目录根路径
+// 获取下载目录根路径（文件管理功能使用）
 function getDownloadDir(): string {
   return getFinalConfig().downloadDir
+}
+
+// 获取 aria2 下载目录对应的宿主机路径（用于任务文件路径映射）
+// 当 aria2 运行在容器中时，容器路径 ≠ 宿主机路径
+// 例如：aria2 容器 /downloads → 宿主机 /mnt/sda1/download
+function getAria2HostDir(): string {
+  return getFinalConfig().aria2HostDir || getDownloadDir()
 }
 
 class FileService {
@@ -207,16 +214,17 @@ class FileService {
   // aria2 可能运行在容器中，路径与宿主机不同，需要映射
   async resolveAria2TaskPath(aria2Path: string, aria2DownloadDir: string | null): Promise<string> {
     if (!path.isAbsolute(aria2Path)) {
-      return safePath(getDownloadDir(), aria2Path)
+      return safePath(getAria2HostDir(), aria2Path)
     }
 
     // 如果有 aria2 下载目录信息，做路径映射
+    // 将 aria2 路径前缀替换为宿主机路径（aria2HostDir）
     if (aria2DownloadDir && aria2Path.startsWith(aria2DownloadDir)) {
       let relativePath = aria2Path.substring(aria2DownloadDir.length)
       if (relativePath.startsWith('/')) {
         relativePath = relativePath.substring(1)
       }
-      return safePath(getDownloadDir(), relativePath)
+      return safePath(getAria2HostDir(), relativePath)
     }
 
     // 绝对路径且不需要映射，检查是否在允许范围内
