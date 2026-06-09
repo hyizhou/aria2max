@@ -21,10 +21,10 @@ const pathSegments = computed(() => {
 
   const segments = props.currentPath.split('/').filter(segment => segment)
   const result = [{ name: t('fileBreadcrumb.root'), path: '' }]
-  
+
   let currentPath = ''
   segments.forEach(segment => {
-    currentPath += '/' + segment
+    currentPath = currentPath ? currentPath + '/' + segment : segment
     result.push({ name: segment, path: currentPath })
   })
   
