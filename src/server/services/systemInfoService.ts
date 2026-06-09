@@ -9,13 +9,17 @@ let cachedSystemInfo: SystemInfo | null = null
 let lastCacheTime = 0
 const CACHE_DURATION = 5000
 
-// 需要过滤的虚拟接口名模式
-const EXCLUDE_INTERFACE_PATTERNS = ['docker', 'br-', 'veth', 'lo', 'virbr', 'vmnet']
+// 需要排除的虚拟/内部接口
+// 使用精确匹配（===）的短模式，避免误伤包含相同子串的真实接口（如 wlo1 包含 lo）
+const EXCLUDE_INTERFACE_EXACT = ['lo']
+// 使用子串匹配的长模式（这些前缀不会与真实网卡冲突）
+const EXCLUDE_INTERFACE_PREFIX = ['docker', 'br-', 'veth', 'virbr', 'vmnet']
 // 需要过滤的虚拟文件系统类型
 const EXCLUDE_FS_TYPES = ['tmpfs', 'devtmpfs', 'overlay', 'squashfs', 'iso9660']
 
 function isFilteredInterface(name: string): boolean {
-  return EXCLUDE_INTERFACE_PATTERNS.some(pattern => name.includes(pattern))
+  if (EXCLUDE_INTERFACE_EXACT.includes(name)) return true
+  return EXCLUDE_INTERFACE_PREFIX.some(pattern => name.includes(pattern))
 }
 
 // 辅助函数：格式化运行时间
