@@ -13,11 +13,18 @@ function safePath(base: string, relative: string): string {
   return resolved
 }
 
-// 检查绝对路径是否在下载目录范围内
+// 检查绝对路径是否在允许的目录范围内
 function isPathAllowed(fullPath: string): boolean {
-  const normalizedBase = path.normalize(getDownloadDir())
   const resolved = path.normalize(fullPath)
-  return resolved === normalizedBase || resolved.startsWith(normalizedBase + path.sep)
+  const downloadBase = path.normalize(getDownloadDir())
+  if (resolved === downloadBase || resolved.startsWith(downloadBase + path.sep)) return true
+  // 也允许 aria2 宿主机路径下的文件（当 aria2HostDir 与 downloadDir 不同时）
+  const hostDir = getAria2HostDir()
+  if (hostDir !== downloadBase) {
+    const hostBase = path.normalize(hostDir)
+    if (resolved === hostBase || resolved.startsWith(hostBase + path.sep)) return true
+  }
+  return false
 }
 
 // 格式化文件系统错误
