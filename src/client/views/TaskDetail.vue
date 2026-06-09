@@ -146,38 +146,14 @@ const getSampledPieces = (pieces: number[], sampleCount: number): number[] => {
   return sampled;
 }
 
-// 解析对等方bitfield获取区块状态数组
+// 解析对等方bitfield获取区块状态数组（复用 parseBitfield）
 const parsePeerBitfield = (bitfield: string, totalPieces: number): number[] => {
-  if (!bitfield || totalPieces <= 0) return [];
-  
-  try {
-    // 将十六进制字符串转换为字节数组
-    const byteArray = new Uint8Array(Math.ceil(totalPieces / 8))
-    for (let i = 0; i < bitfield.length && i < byteArray.length * 2; i += 2) {
-      const hexByte = bitfield.substr(i, 2)
-      const byteValue = parseInt(hexByte, 16)
-      if (!isNaN(byteValue)) {
-        byteArray[Math.floor(i / 2)] = byteValue
-      }
-    }
-    
-    // 解析字节数组获取区块状态数组
-    const pieces = []
-    for (let i = 0; i < totalPieces; i++) {
-      const byteIndex = Math.floor(i / 8)
-      const bitIndex = 7 - (i % 8) // bitfield使用大端序
-      if (byteIndex < byteArray.length && (byteArray[byteIndex] & (1 << bitIndex))) {
-        pieces.push(1) // 已拥有
-      } else {
-        pieces.push(0) // 未拥有
-      }
-    }
-    
-    return pieces
-  } catch (e) {
-    console.error('Failed to parse peer bitfield:', e)
-    return []
+  const downloaded = parseBitfield(bitfield, totalPieces)
+  const pieces: number[] = []
+  for (let i = 0; i < totalPieces; i++) {
+    pieces.push(downloaded.has(i) ? 1 : 0)
   }
+  return pieces
 }
 
 const getSeedersConnected = computed(() => {
@@ -229,14 +205,20 @@ const getPiecesInfo = computed(() => {
       }
       const ratio = downloaded / (rangeEnd - rangeStart)
       const color = ratio === 0 ? '#e0e0e0' : ratio >= 1 ? '#4caf50' : `rgb(${Math.round(76 + (224 - 76) * (1 - ratio))}, ${Math.round(175 + (224 - 175) * (1 - ratio))}, ${Math.round(80 + (224 - 80) * (1 - ratio))})`
-      pieces.push({ index: i, downloaded: ratio >= 1, size: (rangeEnd - rangeStart) * pieceLength, progressColor: color })
+      pieces.push({ index: i, size: (rangeEnd - rangeStart) * pieceLength, progressColor: color })
     } else {
       const isDownloaded = downloadedPieces.has(i)
-      pieces.push({ index: i, downloaded: isDownloaded, size: Math.min(pieceLength, totalLength - i * pieceLength), progressColor: isDownloaded ? '#4caf50' : '#e0e0e0' })
+      pieces.push({ index: i, size: Math.min(pieceLength, totalLength - i * pieceLength), progressColor: isDownloaded ? '#4caf50' : '#e0e0e0' })
     }
   }
   const downloadedCount = downloadedPieces.size
   return { pieces, sampled, totalPieces: numPieces, downloadedCount }
+})
+
+const getPiecesProgressPercent = computed(() => {
+  const { downloadedCount, totalPieces } = getPiecesInfo.value
+  if (totalPieces === 0) return 0
+  return Math.round((downloadedCount / totalPieces) * 100)
 })
 
 const getPiecesColors = computed(() => {
@@ -295,9 +277,6 @@ const getPeers = computed(() => {
     if (conn.bitfield && totalPieces > 0) {
       // 使用精确解析函数获取区块状态数组
       pieces = parsePeerBitfield(conn.bitfield, totalPieces);
-    } else if (conn.bitfield) {
-      // 兼容旧的解析方式
-      pieces = hexToBinaryArray(conn.bitfield);
     }
     
     // 基于 bitfield 计算准确的进度
@@ -511,38 +490,6 @@ const getPeers = computed(() => {
     }
   }
   
-  // 将十六进制字符串转换为二进制数组的辅助函数
-  const hexToBinaryArray = (hex: string): number[] => {
-    if (!hex) return [];
-    
-    try {
-      // 将十六进制字符串转换为字节数组
-      const byteArray = [];
-      for (let i = 0; i < hex.length; i += 2) {
-        const hexByte = hex.substr(i, 2);
-        const byteValue = parseInt(hexByte, 16);
-        if (!isNaN(byteValue)) {
-          byteArray.push(byteValue);
-        }
-      }
-      
-      // 将字节数组转换为二进制数组
-      const binaryArray = [];
-      for (let i = 0; i < byteArray.length; i++) {
-        const byte = byteArray[i];
-        // 将字节转换为8位二进制（从最高位到最低位）
-        for (let j = 7; j >= 0; j--) {
-          binaryArray.push((byte >> j) & 1);
-        }
-      }
-      
-      return binaryArray;
-    } catch (e) {
-      console.error('Failed to parse bitfield:', e);
-      return [];
-    }
-  }
-  
   // 1. 优先从 task.peers 获取连接信息（后端通过 aria2.getPeers 获取的）
   if (task.peers && Array.isArray(task.peers) && task.peers.length > 0) {
     // 检查是否是占位符数据（空对象）
@@ -712,7 +659,7 @@ const handleAction = async (action: string) => {
         <div class="pieces-chart">
           <PiecesCanvas :colors="getPiecesColors" :height="10" />
           <div class="pieces-stats">
-            <span>{{ getPiecesInfo.downloadedCount }} / {{ getPiecesInfo.totalPieces }} 区块已下载 ({{ Math.round((getPiecesInfo.downloadedCount / getPiecesInfo.totalPieces) * 100) }}%)<template v-if="getPiecesInfo.sampled"> (采样显示 {{ getPiecesInfo.pieces.length }} 个)</template></span>
+            <span>{{ getPiecesInfo.downloadedCount }} / {{ getPiecesInfo.totalPieces }} 区块已下载 ({{ getPiecesProgressPercent }}%)<template v-if="getPiecesInfo.sampled"> (采样显示 {{ getPiecesInfo.pieces.length }} 个)</template></span>
           </div>
         </div>
       </div>
