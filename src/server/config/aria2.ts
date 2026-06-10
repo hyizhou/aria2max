@@ -13,8 +13,8 @@ import type {
   Aria2File
 } from '@shared/types'
 
-// 默认配置值
-const defaultConfig = {
+// 默认配置值（单一来源，其他文件应导入此对象）
+export const defaultConfig = {
   aria2RpcUrl: 'http://localhost:6800/jsonrpc',
   aria2RpcSecret: '',
   downloadDir: '/downloads',
@@ -43,6 +43,9 @@ interface Aria2Config {
 import { getConfigPath } from './paths'
 const configPath = getConfigPath()
 
+// 配置缓存（避免每次请求都读磁盘）
+let cachedConfig: Aria2Config | null = null
+
 // 动态加载配置文件的函数
 function loadConfigFile(): Partial<Aria2Config> {
   if (fs.existsSync(configPath)) {
@@ -57,26 +60,27 @@ function loadConfigFile(): Partial<Aria2Config> {
   return {}
 }
 
+// 统一合并逻辑：configFile 中已定义的字段覆盖 defaultConfig，未定义的使用默认值
+function mergeConfig(configFile: Partial<Aria2Config>): Aria2Config {
+  const result = { ...defaultConfig } as Aria2Config
+  for (const key of Object.keys(defaultConfig) as (keyof Aria2Config)[]) {
+    if (configFile[key] !== undefined) {
+      (result as unknown as Record<string, unknown>)[key] = configFile[key]
+    }
+  }
+  return result
+}
+
 // 配置优先级逻辑：只从config.json文件读取配置，不使用环境变量
 export function getFinalConfig(): Aria2Config {
-  const configFile = loadConfigFile()
-  return {
-    aria2RpcUrl: configFile.aria2RpcUrl || defaultConfig.aria2RpcUrl,
-    aria2RpcSecret: configFile.aria2RpcSecret || defaultConfig.aria2RpcSecret,
-    downloadDir: configFile.downloadDir || defaultConfig.downloadDir,
-    aria2HostDir: configFile.aria2HostDir !== undefined ?
-      configFile.aria2HostDir : defaultConfig.aria2HostDir,
-    aria2ConfigPath: configFile.aria2ConfigPath !== undefined ?
-      configFile.aria2ConfigPath : defaultConfig.aria2ConfigPath,
-    autoDeleteMetadata: configFile.autoDeleteMetadata !== undefined ?
-      configFile.autoDeleteMetadata : defaultConfig.autoDeleteMetadata,
-    autoDeleteAria2FilesOnRemove: configFile.autoDeleteAria2FilesOnRemove !== undefined ?
-      configFile.autoDeleteAria2FilesOnRemove : defaultConfig.autoDeleteAria2FilesOnRemove,
-    autoDeleteAria2FilesOnSchedule: configFile.autoDeleteAria2FilesOnSchedule !== undefined ?
-      configFile.autoDeleteAria2FilesOnSchedule : defaultConfig.autoDeleteAria2FilesOnSchedule,
-    authPassword: configFile.authPassword !== undefined ?
-      configFile.authPassword : defaultConfig.authPassword
-  }
+  if (cachedConfig) return cachedConfig
+  cachedConfig = mergeConfig(loadConfigFile())
+  return cachedConfig
+}
+
+// 配置变更后清除缓存（由 systemController.saveConfig 调用）
+export function invalidateConfigCache(): void {
+  cachedConfig = null
 }
 
 // 如果config.json不存在，创建一个默认的
@@ -551,7 +555,7 @@ class Aria2Client {
   // 自动删除元数据文件
   async autoDeleteMetadata(taskDetails: Aria2TaskDetail): Promise<void> {
     try {
-      const autoDeleteEnabled = process.env.AUTO_DELETE_METADATA === 'true'
+      const autoDeleteEnabled = getFinalConfig().autoDeleteMetadata
       if (!autoDeleteEnabled) {
         return
       }
@@ -606,7 +610,7 @@ class Aria2Client {
   // 删除任务对应的.aria2文件
   async deleteTaskAria2File(taskDetails: Aria2TaskDetail): Promise<void> {
     try {
-      const autoDeleteEnabled = process.env.AUTO_DELETE_ARIA2_FILES_ON_REMOVE === 'true'
+      const autoDeleteEnabled = getFinalConfig().autoDeleteAria2FilesOnRemove
       if (!autoDeleteEnabled) {
         return
       }
@@ -654,7 +658,7 @@ class Aria2Client {
   // 清理无任务对应的.aria2文件
   async cleanupOrphanedAria2Files(): Promise<void> {
     try {
-      const autoDeleteEnabled = process.env.AUTO_DELETE_ARIA2_FILES_ON_SCHEDULE === 'true'
+      const autoDeleteEnabled = getFinalConfig().autoDeleteAria2FilesOnSchedule
       if (!autoDeleteEnabled) {
         return
       }
@@ -717,10 +721,6 @@ class Aria2Client {
     }
   }
 
-  // 重新加载配置
-  reloadConfig(): void {
-    console.log('[Aria2Client] Config reloaded')
-  }
 }
 
 export default new Aria2Client()

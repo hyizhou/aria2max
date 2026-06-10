@@ -1,6 +1,4 @@
 // 系统配置设置数据结构
-import { defineStore } from 'pinia'
-
 export interface SystemSetting {
   key: string
   type: 'text' | 'password' | 'boolean'
@@ -9,7 +7,7 @@ export interface SystemSetting {
   placeholderKey?: string
 }
 
-// 系统配置设置数据结构
+// 系统配置字段元数据（添加新配置字段只需在此处添加一项）
 export const systemSettings: SystemSetting[] = [
   {
     key: 'aria2RpcUrl',
@@ -66,32 +64,7 @@ export const systemSettings: SystemSetting[] = [
   }
 ]
 
-// 系统默认配置
-export const defaultSystemConfig: Record<string, any> = {
-  aria2RpcUrl: '',
-  aria2RpcSecret: '',
-  downloadDir: '',
-  aria2HostDir: '',
-  aria2ConfigPath: '',
-  autoDeleteMetadata: false,
-  autoDeleteAria2FilesOnRemove: false,
-  autoDeleteAria2FilesOnSchedule: false
-}
-
-// System Config Store
-export const useSystemConfigStore = defineStore('systemConfig', {
-  state: () => ({
-    // 这个Store主要用于存储配置元数据，不包含实际的配置状态
-    // 实际配置状态仍然在config.ts的useConfigStore中管理
-  }),
-
-  getters: {
-    // 提供对配置元数据的访问
-    getSystemSettings: () => () => systemSettings,
-    getDefaultSystemConfig: () => () => defaultSystemConfig
-  },
-
-  actions: {
-    // 可以添加与配置元数据相关的操作方法
-  }
-})
+// 系统默认配置（自动从 systemSettings 生成）
+export const defaultSystemConfig: Record<string, any> = Object.fromEntries(
+  systemSettings.map(s => [s.key, s.type === 'boolean' ? false : ''])
+)

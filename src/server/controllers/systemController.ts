@@ -2,22 +2,10 @@
 import { Request, Response, NextFunction } from 'express'
 import * as fs from 'fs'
 import * as path from 'path'
-import aria2Client from '../config/aria2'
+import aria2Client, { defaultConfig, getFinalConfig, invalidateConfigCache } from '../config/aria2'
 import { getConfigPath } from '../config/paths'
 import { getSystemInfo, getDeviceNetworkSpeed } from '../services/systemInfoService'
 import type { SystemConfig, TestConnectionResponse } from '../../shared/types'
-
-// 默认配置（与 aria2.ts 保持一致）
-const defaultConfig: SystemConfig = {
-  aria2RpcUrl: 'http://localhost:6800/jsonrpc',
-  aria2RpcSecret: '',
-  downloadDir: '/tmp',
-  aria2HostDir: '',
-  aria2ConfigPath: '',
-  autoDeleteMetadata: false,
-  autoDeleteAria2FilesOnRemove: false,
-  autoDeleteAria2FilesOnSchedule: false
-}
 
 interface SystemController {
   getSystemStatus(req: Request, res: Response): Promise<void>
@@ -40,35 +28,11 @@ class SystemControllerImpl implements SystemController {
 
   // 获取配置信息
   async getConfig(_req: Request, res: Response): Promise<void> {
-    const configPath = getConfigPath()
-    let configFile: SystemConfig = { ...defaultConfig }
-
-    if (fs.existsSync(configPath)) {
-      const configData = fs.readFileSync(configPath, 'utf8')
-      const fileConfig = JSON.parse(configData)
-
-      configFile = {
-        ...configFile,
-        ...fileConfig
-      }
-    }
-
-    process.env.ARIA2_RPC_URL = configFile.aria2RpcUrl
-    process.env.ARIA2_RPC_SECRET = configFile.aria2RpcSecret
-    process.env.DOWNLOAD_DIR = configFile.downloadDir
-    process.env.AUTO_DELETE_METADATA = configFile.autoDeleteMetadata.toString()
-    process.env.AUTO_DELETE_ARIA2_FILES_ON_REMOVE = configFile.autoDeleteAria2FilesOnRemove.toString()
-    process.env.AUTO_DELETE_ARIA2_FILES_ON_SCHEDULE = configFile.autoDeleteAria2FilesOnSchedule.toString()
-
+    const config = getFinalConfig()
+    // 返回配置，隐藏 RPC 密钥
     res.json({
-      aria2RpcUrl: configFile.aria2RpcUrl,
-      aria2RpcSecret: '',
-      downloadDir: configFile.downloadDir,
-      aria2HostDir: configFile.aria2HostDir || '',
-      aria2ConfigPath: configFile.aria2ConfigPath || '',
-      autoDeleteMetadata: configFile.autoDeleteMetadata,
-      autoDeleteAria2FilesOnRemove: configFile.autoDeleteAria2FilesOnRemove,
-      autoDeleteAria2FilesOnSchedule: configFile.autoDeleteAria2FilesOnSchedule
+      ...config,
+      aria2RpcSecret: ''
     })
   }
 
@@ -78,7 +42,7 @@ class SystemControllerImpl implements SystemController {
       console.log('Saving config with data:', req.body)
 
       const configPath = getConfigPath()
-      let existingConfig: SystemConfig = { ...defaultConfig }
+      let existingConfig: SystemConfig = { ...defaultConfig } as SystemConfig
 
       if (fs.existsSync(configPath)) {
         const configData = fs.readFileSync(configPath, 'utf8')
@@ -86,33 +50,14 @@ class SystemControllerImpl implements SystemController {
       }
 
       const configFile: SystemConfig = { ...existingConfig }
+      // 需要特殊处理的字段：空字符串时不覆盖
+      const nonEmptyFields = new Set(['aria2RpcSecret', 'authPassword'])
 
-      if (req.body.aria2RpcUrl !== undefined) {
-        configFile.aria2RpcUrl = req.body.aria2RpcUrl
-      }
-      if (req.body.aria2RpcSecret !== undefined && req.body.aria2RpcSecret !== '') {
-        configFile.aria2RpcSecret = req.body.aria2RpcSecret
-      }
-      if (req.body.downloadDir !== undefined) {
-        configFile.downloadDir = req.body.downloadDir
-      }
-      if (req.body.aria2HostDir !== undefined) {
-        configFile.aria2HostDir = req.body.aria2HostDir
-      }
-      if (req.body.aria2ConfigPath !== undefined) {
-        configFile.aria2ConfigPath = req.body.aria2ConfigPath
-      }
-      if (req.body.autoDeleteMetadata !== undefined) {
-        configFile.autoDeleteMetadata = req.body.autoDeleteMetadata
-      }
-      if (req.body.autoDeleteAria2FilesOnRemove !== undefined) {
-        configFile.autoDeleteAria2FilesOnRemove = req.body.autoDeleteAria2FilesOnRemove
-      }
-      if (req.body.autoDeleteAria2FilesOnSchedule !== undefined) {
-        configFile.autoDeleteAria2FilesOnSchedule = req.body.autoDeleteAria2FilesOnSchedule
-      }
-      if (req.body.authPassword !== undefined) {
-        configFile.authPassword = req.body.authPassword
+      for (const key of Object.keys(defaultConfig) as (keyof SystemConfig)[]) {
+        if (req.body[key] !== undefined) {
+          if (nonEmptyFields.has(key) && req.body[key] === '') continue
+          ;(configFile as unknown as Record<string, unknown>)[key] = req.body[key]
+        }
       }
 
       console.log('Final config to save:', configFile)
@@ -123,6 +68,9 @@ class SystemControllerImpl implements SystemController {
       }
 
       fs.writeFileSync(configPath, JSON.stringify(configFile, null, 2))
+
+      // 配置文件已写入，清除缓存使下次请求读取新配置
+      invalidateConfigCache()
 
       res.json({ success: true })
     } catch (error) {

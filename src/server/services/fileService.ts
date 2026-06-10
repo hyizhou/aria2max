@@ -13,18 +13,21 @@ function safePath(base: string, relative: string): string {
   return resolved
 }
 
+// 获取所有允许的根目录列表（统一路径权限检查的基础）
+function getAllowedRoots(): string[] {
+  const config = getFinalConfig()
+  const roots = [path.normalize(config.downloadDir)]
+  const hostDir = path.normalize(config.aria2HostDir || config.downloadDir)
+  if (!roots.includes(hostDir)) roots.push(hostDir)
+  return roots
+}
+
 // 检查绝对路径是否在允许的目录范围内
 function isPathAllowed(fullPath: string): boolean {
   const resolved = path.normalize(fullPath)
-  const downloadBase = path.normalize(getDownloadDir())
-  if (resolved === downloadBase || resolved.startsWith(downloadBase + path.sep)) return true
-  // 也允许 aria2 宿主机路径下的文件（当 aria2HostDir 与 downloadDir 不同时）
-  const hostDir = getAria2HostDir()
-  if (hostDir !== downloadBase) {
-    const hostBase = path.normalize(hostDir)
-    if (resolved === hostBase || resolved.startsWith(hostBase + path.sep)) return true
-  }
-  return false
+  return getAllowedRoots().some(root =>
+    resolved === root || resolved.startsWith(root + path.sep)
+  )
 }
 
 // 格式化文件系统错误
@@ -70,7 +73,8 @@ function getDownloadDir(): string {
 // 当 aria2 运行在容器中时，容器路径 ≠ 宿主机路径
 // 例如：aria2 容器 /downloads → 宿主机 /mnt/sda1/download
 function getAria2HostDir(): string {
-  return getFinalConfig().aria2HostDir || getDownloadDir()
+  const config = getFinalConfig()
+  return config.aria2HostDir || config.downloadDir
 }
 
 class FileService {

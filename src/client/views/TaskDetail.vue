@@ -12,6 +12,38 @@ const { t } = useI18n()
 const route = useRoute()
 const taskStore = useTaskStore()
 
+// BT 客户端前缀映射（单一来源，解码后的 peerId 统一匹配）
+const CLIENT_PREFIX_MAP: Record<string, string> = {
+  XL: '迅雷 (Xunlei)', XF: 'Xfplay', BC: 'BitComet',
+  FD: 'Free Download Manager', BT: 'BitTorrent',
+  UT: 'uTorrent', TR: 'Transmission', QT: 'qBittorrent',
+  AZ: 'Vuze', DE: 'Deluge', LT: 'libTorrent'
+}
+
+// BT 客户端关键词匹配（用于非标准 peerId 格式）
+const CLIENT_KEYWORD_MAP: [string, string][] = [
+  ['aria2/', 'Aria2'], ['BT/', '迅雷在线 (Xunlei)'], ['Xunlei/', '迅雷 (Xunlei)'],
+  ['XL/', '迅雷 (Xunlei)'], ['BitTorrent', 'BitTorrent'], ['uTorrent', 'uTorrent'],
+  ['Transmission', 'Transmission'], ['qBittorrent', 'qBittorrent'],
+  ['libtorrent', 'libTorrent'], ['Deluge', 'Deluge'], ['Vuze', 'Vuze'],
+  ['BitComet', 'BitComet'], ['FDM', 'Free Download Manager']
+]
+
+// 从 peerId 检测客户端名称
+function detectClientName(peerId: string): string {
+  // 标准 BitTorrent peerId 格式：-XX0...
+  if (peerId.startsWith('-')) {
+    for (const [prefix, name] of Object.entries(CLIENT_PREFIX_MAP)) {
+      if (peerId.substring(1, 1 + prefix.length) === prefix) return name
+    }
+  }
+  // 非标准格式：按关键词匹配
+  for (const [keyword, name] of CLIENT_KEYWORD_MAP) {
+    if (peerId.includes(keyword)) return name
+  }
+  return '未知客户端'
+}
+
 const loading = ref(false)
 const gid = ref<string>(route.params.gid as string)
 const refreshInterval = ref<number | null>(null)
@@ -296,180 +328,41 @@ const getPeers = computed(() => {
     // 处理 peerId - 先URL解码，再解析客户端
     let decodedPeerId = t('taskDetail.unknownID');
     const originalPeerId = conn.peerId || conn.id || '';
-    
+
     if (originalPeerId) {
-      // 特殊测试
-      if (originalPeerId === '%2DXL0019%2Da%1A%3A%D6%86%60%F2%EE%AB4%04%98') {
-        console.log('Special test peerId found!');
-      }
-      // console.log('Processing peerId:', originalPeerId, 'conn.peerId:', conn.peerId, 'conn.id:', conn.id);
-      
       // 强行解码，即使格式不完美
-    if (originalPeerId && originalPeerId.startsWith('%')) {
-      try {
-        decodedPeerId = decodeURIComponent(originalPeerId);
-      } catch (e) {
-        // 强行解码：逐个字符解码，失败的保持原样
-        let result = '';
-        for (let i = 0; i < originalPeerId.length; i++) {
-          if (originalPeerId[i] === '%' && i + 2 < originalPeerId.length) {
-            const nextChar = originalPeerId[i + 1];
-            const nextNextChar = originalPeerId[i + 2];
-            // 检查是否是有效的十六进制字符
-            if (/[0-9A-Fa-f]/.test(nextChar) && /[0-9A-Fa-f]/.test(nextNextChar)) {
-              try {
-                const hex = originalPeerId.substring(i, i + 3);
-                result += decodeURIComponent(hex);
-                i += 2; // 跳过已处理的两个字符
-              } catch (subE) {
-                // 解码失败，保持原样
+      if (originalPeerId.startsWith('%')) {
+        try {
+          decodedPeerId = decodeURIComponent(originalPeerId);
+        } catch (e) {
+          // 逐个字符解码，失败的保持原样
+          let result = '';
+          for (let i = 0; i < originalPeerId.length; i++) {
+            if (originalPeerId[i] === '%' && i + 2 < originalPeerId.length) {
+              const nextChar = originalPeerId[i + 1];
+              const nextNextChar = originalPeerId[i + 2];
+              if (/[0-9A-Fa-f]/.test(nextChar) && /[0-9A-Fa-f]/.test(nextNextChar)) {
+                try {
+                  result += decodeURIComponent(originalPeerId.substring(i, i + 3));
+                  i += 2;
+                } catch (subE) {
+                  result += originalPeerId[i];
+                }
+              } else {
                 result += originalPeerId[i];
               }
             } else {
-              // 不是有效的十六进制，保持原样
               result += originalPeerId[i];
             }
-          } else {
-            result += originalPeerId[i];
           }
+          decodedPeerId = result;
         }
-        decodedPeerId = result;
-      }
-    } else {
-      decodedPeerId = originalPeerId;
-    }
-    }
-    
-    // 提取客户端名称 - 简化映射关系
-    let clientName = '未知客户端';
-    
-    // 首先尝试解码后的值
-    if (decodedPeerId && decodedPeerId.startsWith('-')) {
-      const prefix = decodedPeerId.substring(0, 4); // 前4个字符（包括-）
-      
-      switch (prefix) {
-        case '-XL0':
-          clientName = '迅雷 (Xunlei)';
-          break;
-        case '-XF9':
-        case '-XF1':
-        case '-XF':
-          clientName = 'Xfplay';
-          break;
-        case '-BC0':
-        case '-BC1':
-        case '-BC2':
-        case '-BC':
-          clientName = 'BitComet';
-          break;
-        case '-FD':
-          clientName = 'Free Download Manager';
-          break;
-        case '-BT':
-          clientName = 'BitTorrent';
-          break;
-        case '-UT3':
-        case '-UT2':
-        case '-UT':
-          clientName = 'uTorrent';
-          break;
-        case '-TR':
-          clientName = 'Transmission';
-          break;
-        case '-QT':
-          clientName = 'qBittorrent';
-          break;
-        case '-AZ':
-          clientName = 'Vuze';
-          break;
-        case '-DE':
-          clientName = 'Deluge';
-          break;
-        case '-LT':
-          clientName = 'libTorrent';
-          break;
-        case '-XL':
-          clientName = '迅雷 (Xunlei)';
-          break;
+      } else {
+        decodedPeerId = originalPeerId;
       }
     }
-    // 如果解码失败，尝试原始值
-    else if (originalPeerId && originalPeerId.startsWith('%2D')) {
-      const prefix = originalPeerId.substring(0, 6); // 前6个字符（包括%2D）
-      switch (prefix) {
-        case '%2DXL0':
-          clientName = '迅雷 (Xunlei)';
-          break;
-        case '%2DXF9':
-        case '%2DXF1':
-        case '%2DXF':
-          clientName = 'Xfplay';
-          break;
-        case '%2DBC0':
-        case '%2DBC1':
-        case '%2DBC2':
-        case '%2DBC':
-          clientName = 'BitComet';
-          break;
-        case '%2DFD':
-          clientName = 'Free Download Manager';
-          break;
-        case '%2DBT':
-          clientName = 'BitTorrent';
-          break;
-        case '%2DUT3':
-        case '%2DUT2':
-        case '%2DUT':
-          clientName = 'uTorrent';
-          break;
-        case '%2DTR':
-          clientName = 'Transmission';
-          break;
-        case '%2DQT':
-          clientName = 'qBittorrent';
-          break;
-        case '%2DAZ':
-          clientName = 'Vuze';
-          break;
-        case '%2DDE':
-          clientName = 'Deluge';
-          break;
-        case '%2DLT':
-          clientName = 'libTorrent';
-          break;
-        case '%2DXL':
-          clientName = '迅雷 (Xunlei)';
-          break;
-      }
-    }
-    // 其他简单匹配
-    else if (decodedPeerId.startsWith('aria2/')) {
-      clientName = 'Aria2';
-    } else if (decodedPeerId.startsWith('BT/')) {
-      clientName = '迅雷在线 (Xunlei)';
-    } else if (decodedPeerId.startsWith('Xunlei/')) {
-      clientName = '迅雷 (Xunlei)';
-    } else if (decodedPeerId.startsWith('XL/')) {
-      clientName = '迅雷 (Xunlei)';
-    } else if (decodedPeerId.includes('BitTorrent')) {
-      clientName = 'BitTorrent';
-    } else if (decodedPeerId.includes('uTorrent')) {
-      clientName = 'uTorrent';
-    } else if (decodedPeerId.includes('Transmission')) {
-      clientName = 'Transmission';
-    } else if (decodedPeerId.includes('qBittorrent')) {
-      clientName = 'qBittorrent';
-    } else if (decodedPeerId.includes('libtorrent')) {
-      clientName = 'libTorrent';
-    } else if (decodedPeerId.includes('Deluge')) {
-      clientName = 'Deluge';
-    } else if (decodedPeerId.includes('Vuze')) {
-      clientName = 'Vuze';
-    } else if (decodedPeerId.includes('BitComet')) {
-      clientName = 'BitComet';
-    } else if (decodedPeerId.includes('FDM')) {
-      clientName = 'Free Download Manager';
-    }
+
+    const clientName = detectClientName(decodedPeerId);
     
     // 显示解码后的peerId（如果有的话）
     let displayPeerId = decodedPeerId !== '未知ID' ? decodedPeerId : (conn.peerId || conn.id || '未知ID');

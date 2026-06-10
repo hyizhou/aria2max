@@ -84,7 +84,7 @@ export async function getSystemInfo(): Promise<SystemInfo> {
   }
 
   // 磁盘信息（多分区支持）
-  const downloadDir = getFinalConfig().downloadDir || process.env.DOWNLOAD_DIR || '/tmp'
+  const downloadDir = getFinalConfig().downloadDir || '/tmp'
   let diskInfo: DiskInfo | null = null
 
   try {

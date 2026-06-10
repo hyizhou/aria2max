@@ -1,33 +1,32 @@
 import { defineStore } from 'pinia'
 import { systemApi } from '@/services/api'
+import { systemSettings, defaultSystemConfig } from './systemConfig'
+
+// 从 systemSettings 自动推导默认值（boolean → false, 其他 → 空字符串或 API 默认值）
+const storeDefaults: Record<string, any> = {
+  aria2RpcUrl: 'http://localhost:6800/jsonrpc',
+  downloadDir: '/tmp',
+  ...defaultSystemConfig
+}
 
 // Config store
 export const useConfigStore = defineStore('config', {
   state: () => ({
-    aria2RpcUrl: 'http://localhost:6800/jsonrpc',
-    aria2RpcSecret: '',
-    downloadDir: '/tmp',
-    aria2HostDir: '',
-    aria2ConfigPath: '',
-    autoDeleteMetadata: false,
-    autoDeleteAria2FilesOnRemove: false,
-    autoDeleteAria2FilesOnSchedule: false,
+    ...storeDefaults,
     loading: false
   }),
-  
+
   actions: {
     async fetchConfig() {
       this.loading = true
       try {
         const response = await systemApi.getConfig()
-        this.aria2RpcUrl = response.aria2RpcUrl || 'http://localhost:6800/jsonrpc'
-        this.aria2RpcSecret = response.aria2RpcSecret || ''
-        this.downloadDir = response.downloadDir || '/tmp'
-        this.aria2HostDir = response.aria2HostDir || ''
-        this.aria2ConfigPath = response.aria2ConfigPath || ''
-        this.autoDeleteMetadata = response.autoDeleteMetadata || false
-        this.autoDeleteAria2FilesOnRemove = response.autoDeleteAria2FilesOnRemove || false
-        this.autoDeleteAria2FilesOnSchedule = response.autoDeleteAria2FilesOnSchedule || false
+        // 从 API 响应自动填充所有配置字段
+        for (const setting of systemSettings) {
+          if (response[setting.key] !== undefined) {
+            (this as any)[setting.key] = response[setting.key]
+          }
+        }
       } catch (error) {
         console.error('Failed to fetch config:', error)
         throw error
@@ -35,35 +34,24 @@ export const useConfigStore = defineStore('config', {
         this.loading = false
       }
     },
-    
-    async saveConfig(config: {
-      aria2RpcUrl?: string;
-      aria2RpcSecret?: string;
-      downloadDir?: string;
-      aria2HostDir?: string;
-      aria2ConfigPath?: string;
-      autoDeleteMetadata?: boolean; 
-      autoDeleteAria2FilesOnRemove?: boolean;
-      autoDeleteAria2FilesOnSchedule?: boolean;
-    }) {
+
+    async saveConfig(config: Record<string, any>) {
       try {
         const response = await systemApi.saveConfig(config)
-        
-        // 检查后端响应
+
         if (!response || (response.success === false)) {
           throw new Error('Failed to save config')
         }
-        
-        // 保存成功后，立即从后端重新加载最新配置
+
         await this.fetchConfig()
-        
+
         return response
       } catch (error) {
         console.error('Failed to save config:', error)
         throw error
       }
     },
-    
+
     async testConnection(config?: { aria2RpcUrl: string; aria2RpcSecret: string }) {
       try {
         const response = await systemApi.testConnection(config || {})

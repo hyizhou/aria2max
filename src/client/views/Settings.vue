@@ -1,21 +1,21 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useConfigStore, useSystemConfigStore } from '@/store'
+import { useConfigStore } from '@/store'
+import { systemSettings, defaultSystemConfig } from '@/store/systemConfig'
 import SettingItem from '@/components/SettingItem.vue'
 import { aria2Settings, aria2SettingCategories } from '@/config/aria2Config'
 import { systemApi } from '@/services/api'
 
 const { t } = useI18n()
 const configStore = useConfigStore()
-const systemConfigStore = useSystemConfigStore()
 
 const loading = ref(false)
 const saving = ref(false)
 const testing = ref(false)
 const testResult = ref<{ success: boolean; message: string } | null>(null)
 
-const systemConfig = ref<Record<string, any>>(systemConfigStore.getDefaultSystemConfig())
+const systemConfig = ref<Record<string, any>>({ ...defaultSystemConfig })
 const originalSystemConfig = ref<Record<string, any>>({})
 
 const aria2Config = ref<Record<string, any>>({})
@@ -40,16 +40,12 @@ const loadConfig = async () => {
   loading.value = true
   try {
     await configStore.fetchConfig()
-    
-    systemConfig.value.aria2RpcUrl = configStore.aria2RpcUrl
-    systemConfig.value.aria2RpcSecret = configStore.aria2RpcSecret
-    systemConfig.value.downloadDir = configStore.downloadDir
-    systemConfig.value.aria2HostDir = configStore.aria2HostDir || ''
-    systemConfig.value.aria2ConfigPath = configStore.aria2ConfigPath || ''
-    systemConfig.value.autoDeleteMetadata = configStore.autoDeleteMetadata
-    systemConfig.value.autoDeleteAria2FilesOnRemove = configStore.autoDeleteAria2FilesOnRemove
-    systemConfig.value.autoDeleteAria2FilesOnSchedule = configStore.autoDeleteAria2FilesOnSchedule
-    
+
+    // 从 configStore 按字段映射到本地配置（自动跟随 systemSettings 变化）
+    for (const setting of systemSettings) {
+      systemConfig.value[setting.key] = (configStore as any)[setting.key] ?? defaultSystemConfig[setting.key]
+    }
+
     // 保存原始配置用于比较
     originalSystemConfig.value = { ...systemConfig.value }
   } catch (error) {
@@ -278,7 +274,7 @@ const testConnection = async () => {
             <form v-else @submit.prevent="saveConfig">
               <div class="settings-list">
                 <SettingItem
-                  v-for="setting in systemConfigStore.getSystemSettings()"
+                  v-for="setting in systemSettings"
                   :key="setting.key"
                   v-model="systemConfig[setting.key]"
                   :label="t(setting.labelKey)"
