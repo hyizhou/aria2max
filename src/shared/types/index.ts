@@ -8,6 +8,9 @@ export * from './aria2'
 // 任务相关类型
 export * from './task'
 
+// 任务增强元数据
+export * from './taskMeta'
+
 // 文件相关类型
 export * from './file'
 

@@ -1,5 +1,6 @@
 // 调度器服务 - 用于定时任务
 import aria2Client from '../config/aria2'
+import taskMetaService from './taskMetaService'
 
 class SchedulerService {
   private intervals: Map<string, NodeJS.Timeout> = new Map()
@@ -8,6 +9,7 @@ class SchedulerService {
   // 启动所有定时任务
   start(): void {
     this.startAria2FileCleanup()
+    this.startTaskMetaSync()
     console.log('[Scheduler] All scheduled tasks started')
   }
 
@@ -57,6 +59,34 @@ class SchedulerService {
     }
   }
 
+  // 启动任务元数据状态同步任务（每30秒执行一次）
+  // 检测任务状态翻转记录结束时间，并清理 aria2 中已不存在的孤儿元数据
+  startTaskMetaSync(): void {
+    const taskName = 'taskMetaSync'
+    const intervalMs = 30 * 1000 // 30秒
+
+    // 立即执行一次（首次见到任务时回填 createdAt）
+    this.executeTaskMetaSync().catch(err => console.error('[Scheduler] Unhandled error during initial task meta sync:', err))
+
+    const interval = setInterval(() => {
+      this.executeTaskMetaSync()
+    }, intervalMs)
+
+    this.intervals.set(taskName, interval)
+    console.log(`[Scheduler] Started ${taskName} task (runs every 30 seconds)`)
+  }
+
+  // 执行任务元数据状态同步
+  private async executeTaskMetaSync(): Promise<void> {
+    try {
+      const tasks = await aria2Client.getTasks()
+      taskMetaService.syncStates(tasks)
+    } catch (error) {
+      const err = error as Error
+      console.error('[Scheduler] Task meta sync failed:', err.message)
+    }
+  }
+
   // 重启特定任务
   restartTask(taskName: string): void {
     this.stopTask(taskName)
@@ -64,6 +94,9 @@ class SchedulerService {
     switch (taskName) {
       case 'aria2FileCleanup':
         this.startAria2FileCleanup()
+        break
+      case 'taskMetaSync':
+        this.startTaskMetaSync()
         break
       default:
         console.warn(`[Scheduler] Unknown task: ${taskName}`)

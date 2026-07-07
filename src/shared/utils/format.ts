@@ -33,3 +33,26 @@ export function parseBytes(speedStr: string): number {
 
   return value * (units[unit] || 1)
 }
+
+/**
+ * 格式化时间戳为日期时间字符串（精度到分钟），如 "2026-07-07 14:30"
+ */
+export function formatDateTime(ts: number): string {
+  const d = new Date(ts)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+/**
+ * 格式化时长（毫秒）为紧凑字符串，如 "1时23分"、"5分30秒"、"45秒"。
+ */
+export function formatDuration(ms: number): string {
+  if (!ms || ms < 0) return '0秒'
+  const totalSec = Math.floor(ms / 1000)
+  const h = Math.floor(totalSec / 3600)
+  const m = Math.floor((totalSec % 3600) / 60)
+  const s = totalSec % 60
+  if (h > 0) return `${h}时${m}分`
+  if (m > 0) return `${m}分${s}秒`
+  return `${s}秒`
+}

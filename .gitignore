@@ -108,6 +108,7 @@ CLAUDE.md
 # Configuration files
 aria2.conf
 src/server/config.json
+task-meta.json
 
 dev-dist/
 GEMINI.md

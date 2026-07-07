@@ -2,6 +2,7 @@
 import { Request, Response, NextFunction } from 'express'
 import aria2Client from '../config/aria2'
 import fileService from '../services/fileService'
+import taskMetaService from '../services/taskMetaService'
 import type { Aria2Task, Aria2TaskDetail, TaskListResponse, AddTaskResponse } from '../../shared/types'
 
 interface TaskController {
@@ -36,6 +37,14 @@ class TaskControllerImpl implements TaskController {
       }
     }
 
+    // 合并任务增强元数据（添加时间 / 结束时间等），供前端展示
+    for (const task of tasks) {
+      const meta = taskMetaService.get(task.gid)
+      if (meta) {
+        task.meta = meta
+      }
+    }
+
     const response: TaskListResponse = { tasks }
     res.json(response)
   }
@@ -55,6 +64,7 @@ class TaskControllerImpl implements TaskController {
     }
 
     const gid = await aria2Client.addTask(uri, options)
+    taskMetaService.recordCreated(gid)
     const response: AddTaskResponse = { gid }
     res.status(201).json(response)
   }
@@ -74,6 +84,11 @@ class TaskControllerImpl implements TaskController {
     }
 
     const task = await aria2Client.getTaskDetail(gid)
+    // 合并任务增强元数据
+    const meta = taskMetaService.get(gid)
+    if (meta) {
+      task.meta = meta
+    }
     res.json(task)
   }
 
@@ -148,6 +163,9 @@ class TaskControllerImpl implements TaskController {
     const dir = task.dir || undefined
     const newGid = await aria2Client.addTask(uris, dir ? { dir } : {})
 
+    // 迁移元数据：把旧 gid 的条目搬到新 gid，保留原始 createdAt
+    taskMetaService.migrateGid(gid, newGid)
+
     try {
       await aria2Client.removeTask(gid)
     } catch (e) {
@@ -176,6 +194,7 @@ class TaskControllerImpl implements TaskController {
     const torrentData = torrentFile.data.toString('base64')
 
     const gid = await aria2Client.addTorrent(torrentData, options)
+    taskMetaService.recordCreated(gid)
     res.status(201).json({ gid })
   }
 
@@ -197,6 +216,7 @@ class TaskControllerImpl implements TaskController {
     const metalinkData = metalinkFile.data.toString('base64')
 
     const gid = await aria2Client.addMetalink(metalinkData, options)
+    taskMetaService.recordCreated(gid)
     res.status(201).json({ gid })
   }
 
@@ -234,6 +254,9 @@ class TaskControllerImpl implements TaskController {
       // ---- 阶段 2：从 aria2 移除任务 ----
       await aria2Client.removeTask(gid)
       console.log(`[Task Delete] Task ${gid} removed from aria2`)
+
+      // 同步清理任务增强元数据
+      taskMetaService.remove(gid)
 
       // ---- 阶段 3：删除本地文件（独立于任务删除） ----
       let fileResult: { success: boolean; message?: string } | null = null

@@ -5,3 +5,8 @@ import * as path from 'path'
 export function getConfigPath(): string {
   return path.join(__dirname, '../../config.json')
 }
+
+// 任务增强元数据文件路径（与 config.json 同目录，运行时生成）
+export function getTaskMetaPath(): string {
+  return path.join(__dirname, '../../task-meta.json')
+}

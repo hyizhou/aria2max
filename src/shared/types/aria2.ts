@@ -1,6 +1,7 @@
 /**
  * Aria2 RPC 相关类型定义
  */
+import type { TaskMeta } from './taskMeta'
 
 // Aria2 任务状态类型
 export type Aria2TaskStatus = 'active' | 'waiting' | 'paused' | 'error' | 'complete' | 'removed'
@@ -70,6 +71,8 @@ export interface Aria2Task {
   errorCode?: string
   errorMessage?: string
   infoHash?: string
+  // 任务增强元数据（由 taskMetaService 在应用层维护并合并注入）
+  meta?: TaskMeta
 }
 
 // Aria2 任务详情（包含更多连接信息）

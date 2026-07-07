@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { formatBytes as _formatBytes } from '@shared/utils/format'
+import { formatBytes as _formatBytes, formatDateTime, formatDuration } from '@shared/utils/format'
 import { getTaskFileName } from '@shared/utils/task'
 
 const { t } = useI18n()
+
+interface TaskMeta {
+  createdAt: number
+  finishedAt: number | null
+  inferred?: boolean
+}
 
 interface Task {
   gid: string
@@ -14,6 +20,7 @@ interface Task {
   downloadSpeed: string
   uploadSpeed: string
   connections: string
+  meta?: TaskMeta
   files: Array<{
     path: string
     length: string
@@ -56,6 +63,30 @@ const statusText = computed(() => {
 
 const statusClass = computed(() => {
   return `status-${props.task.status}`
+})
+
+// 外部添加的任务（inferred）本项目无其真实时间数据，所有时间字段一律不显示
+const hasRealMeta = computed(() => !!props.task.meta && !props.task.meta.inferred)
+
+// 添加时间（精度到分钟）
+const addedAtText = computed(() => {
+  const meta = props.task.meta
+  if (!hasRealMeta.value) return ''
+  return formatDateTime(meta.createdAt)
+})
+
+// 已用时 / 总耗时：未结束用「现在 - 开始」，已结束用「结束 - 开始」
+const durationText = computed(() => {
+  const meta = props.task.meta
+  if (!hasRealMeta.value) return ''
+  const end = meta.finishedAt ?? Date.now()
+  return formatDuration(end - meta.createdAt)
+})
+
+// 结束时间（仅终态任务）
+const finishedAtText = computed(() => {
+  if (!hasRealMeta.value || !props.task.meta?.finishedAt) return ''
+  return formatDateTime(props.task.meta.finishedAt)
 })
 
 const handleAction = (action: string) => {
@@ -125,6 +156,15 @@ const getFileName = (): string => {
           </span>
           <span v-if="parseInt(task.uploadSpeed, 10) > 0">
             {{ t('tasks.uploadSpeed', { speed: formatSpeed(task.uploadSpeed) }) }}
+          </span>
+          <span v-if="addedAtText">
+            {{ t('tasks.addedAt', { time: addedAtText }) }}
+          </span>
+          <span v-if="durationText">
+            {{ t('tasks.duration', { time: durationText }) }}
+          </span>
+          <span v-if="finishedAtText">
+            {{ t('tasks.finishedAt', { time: finishedAtText }) }}
           </span>
         </div>
         <div class="task-actions">
