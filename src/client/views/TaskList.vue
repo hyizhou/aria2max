@@ -362,8 +362,17 @@ const filteredTasks = computed(() => {
   // 注意：显示所有任务状态，包括removed状态（为了兼容性）
   // 但通过我们项目操作删除的任务会直接彻底删除，不会变成removed状态
 
-  // 全局按添加时间倒序：后添加的任务显示在最上面（无 meta 的兜底排末尾）
-  return [...tasks].sort((a, b) => (b.meta?.createdAt ?? 0) - (a.meta?.createdAt ?? 0))
+  // 全局按添加时间倒序：后添加的任务显示在最上面。
+  // 无 meta 的任务（重启后 scheduler 未回填、或外部 aria2 直连添加）视为最新置顶，
+  // 彼此保持原序，避免被 ?? 0 钉在底部、回填后整体跳变。
+  return [...tasks].sort((a, b) => {
+    const ta = a.meta?.createdAt
+    const tb = b.meta?.createdAt
+    if (ta === undefined && tb === undefined) return 0
+    if (ta === undefined) return -1
+    if (tb === undefined) return 1
+    return tb - ta
+  })
 })
 </script>
 

@@ -178,7 +178,9 @@ class TaskControllerImpl implements TaskController {
           fileExists = await fileService.exists(targetPath)
         }
       } catch (err) {
-        console.error(`[Task Retry] Failed to check existing file for ${gid}:`, (err as Error).message)
+        // 路径映射/检查失败时保守视为文件存在，触发确认流程，避免静默绕过删除提示
+        console.error(`[Task Retry] Failed to check existing file for ${gid}, assuming exists:`, (err as Error).message)
+        fileExists = true
       }
     }
 
@@ -199,21 +201,26 @@ class TaskControllerImpl implements TaskController {
 
     // 确认后删除旧文件（必须在 addTask 之前，避免 aria2 命中旧文件而跳过下载）
     if (fileExists && deleteFile === 'true') {
-      try {
-        await this.deleteTaskFiles(task, aria2DownloadDir)
-      } catch (err) {
-        console.error(`[Task Retry] Failed to delete old file for ${gid}:`, (err as Error).message)
+      const fileResult = await this.deleteTaskFiles(task, aria2DownloadDir)
+      if (!fileResult.success) {
+        // 删除失败必须中断，否则 addTask 会复用旧文件，用户被误导
+        res.status(500).json({
+          error: { code: 500, message: `删除旧文件失败，已中止重试：${fileResult.message || '未知错误'}` }
+        })
+        return
       }
     }
 
     const newGid = await aria2Client.addTask(uris, dir ? { dir } : {})
 
-    // 重试视为一次新下载：新任务添加时间记为现在，已用时长等重置；清理旧任务元数据
+    // 重试视为一次新下载：新任务添加时间记为现在，已用时长等重置
     taskMetaService.recordCreated(newGid)
-    taskMetaService.remove(gid)
 
     try {
       await aria2Client.removeTask(gid)
+      // 仅在 aria2 成功移除旧任务后清理其元数据，避免 removeTask 失败时旧任务变幽灵
+      // （否则 scheduler 会把「aria2 有、meta 无」的旧 gid 当新任务回填为 inferred）
+      taskMetaService.remove(gid)
     } catch (e) {
       console.error(`[Task Retry] Failed to remove old task ${gid}:`, (e as Error).message)
     }

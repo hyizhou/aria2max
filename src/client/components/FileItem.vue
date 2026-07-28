@@ -125,7 +125,7 @@ const handleNavigate = () => {
         <div class="file-meta">
           <span class="file-size" v-if="!file.isDir && !file.isSymlink">{{ formatBytes(file.size) }}</span>
           <span class="file-type">{{ fileTypeDisplay }}</span>
-          <span class="file-date">{{ formatDate(file.mtime) }}</span>
+          <span v-if="file.mtime" class="file-date">{{ formatDate(file.mtime) }}</span>
         </div>
       </div>
     </div>

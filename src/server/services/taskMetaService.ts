@@ -8,7 +8,7 @@
  * - 内存 Map 懒加载 + 防抖落盘到 task-meta.json（原子写）。
  * - 创建/迁移/删除等离散事件立即落盘（关键数据不可丢）；
  *   状态同步（scheduler 高频调用）走防抖合并写。
- * - gid 不稳定（重试会换新 gid）：retryTask 时通过 migrateGid 迁移条目并保留 createdAt。
+ * - gid 不稳定（重试会换新 gid）：retryTask 用 recordCreated 为新 gid 重新计时（重试视为一次新下载），并 remove 旧 gid。
  * - 孤儿清理：aria2 中已彻底消失的 gid 才从元数据删除。
  */
 import { getTaskMetaPath } from '../config/paths'
@@ -54,32 +54,6 @@ class TaskMetaService {
     if (!store.tasks[gid]) {
       store.tasks[gid] = {
         gid,
-        createdAt: Date.now(),
-        finishedAt: null,
-        lastStatus: 'waiting'
-      }
-    }
-    this.flush()
-  }
-
-  // 迁移 gid（重试场景）：保留原 createdAt，把旧条目搬到新 gid
-  migrateGid(oldGid: string, newGid: string): void {
-    const store = this.ensureLoaded()
-    const existing = store.tasks[oldGid]
-    if (existing) {
-      store.tasks[newGid] = {
-        ...existing,
-        gid: newGid,
-        // 重置为未结束状态（新任务重新开始下载）
-        finishedAt: null,
-        lastStatus: 'waiting'
-      }
-      delete store.tasks[oldGid]
-      // 注意：inferred 通过 ...existing 继承——外部任务的重试仍标记为近似
-    } else {
-      // 旧条目不存在（如重启后元数据丢失），按新建处理
-      store.tasks[newGid] = {
-        gid: newGid,
         createdAt: Date.now(),
         finishedAt: null,
         lastStatus: 'waiting'

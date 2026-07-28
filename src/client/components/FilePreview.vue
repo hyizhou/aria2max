@@ -7,7 +7,7 @@
   >
     <div class="file-preview-container">
       <!-- Video Preview -->
-      <div v-if="getFileType(filePath) === 'video'">
+      <div v-if="previewKind === 'video'">
         <video
           controls
           autoplay
@@ -19,7 +19,7 @@
       </div>
 
       <!-- Audio Preview -->
-      <div v-else-if="getFileType(filePath) === 'audio'">
+      <div v-else-if="previewKind === 'audio'">
         <audio
           controls
           autoplay
@@ -31,22 +31,22 @@
       </div>
 
       <!-- Image Preview -->
-      <div v-else-if="getFileType(filePath) === 'image'">
+      <div v-else-if="previewKind === 'image'">
         <img
           :src="previewUrl"
           :alt="filePath.split('/').pop()"
           style="max-width: 100%; max-height: 60vh;"
         >
       </div>
-      
+
       <!-- Text Preview -->
-      <div v-else-if="getFileType(filePath) === 'text'" class="text-preview">
+      <div v-else-if="previewKind === 'text'" class="text-preview">
         <pre>{{ textContent }}</pre>
       </div>
-      
-      <!-- Unknown file type -->
+
+      <!-- Unknown / unsupported file type -->
       <div v-else class="unknown-file">
-        <p>{{ t('filePreview.unknownType') }}</p>
+        <p>{{ isZip ? '该类型暂不支持在线预览，请下载后查看' : t('filePreview.unknownType') }}</p>
         <p>{{ t('filePreview.fileName', { name: filePath.split('/').pop() }) }}</p>
       </div>
       
@@ -60,6 +60,7 @@ import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Modal from '@/components/Modal.vue'
 import { fileApi } from '@/services/api'
+import { isTextFile, isImageFile } from '@shared/utils/fileTypes'
 
 const { t } = useI18n()
 
@@ -76,6 +77,13 @@ const previewUrl = computed(() => {
     return fileApi.getZipEntryUrl(zipPath.value, filePath.value)
   }
   return `/api/files/download?path=${encodeURIComponent(filePath.value)}`
+})
+
+// 预览种类：zip 内仅支持文本/图片，其余类型后端 zip-entry 接口不支持，按 unsupported 处理
+const previewKind = computed(() => {
+  const kind = getFileType(filePath.value)
+  if (isZip.value && kind !== 'text' && kind !== 'image') return 'unsupported'
+  return kind
 })
 
 const show = async (path: string) => {
@@ -126,31 +134,27 @@ const fetchTextContent = async (path: string) => {
 
 const getFileType = (filePath: string) => {
   const ext = filePath.split('.').pop()?.toLowerCase()
-  
+
   // Video files
   const videoExtensions = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'wmv', 'flv']
   if (videoExtensions.includes(ext)) {
     return 'video'
   }
-  
+
   // Audio files
   const audioExtensions = ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma']
   if (audioExtensions.includes(ext)) {
     return 'audio'
   }
-  
-  // Text files
-  const textExtensions = ['txt', 'md', 'json', 'xml', 'html', 'css', 'js', 'ts', 'vue', 'py', 'java', 'cpp', 'c', 'h', 'log']
-  if (textExtensions.includes(ext)) {
+
+  // Text / image：与后端共用 shared/fileTypes 列表，避免两端漂移
+  if (isTextFile(filePath)) {
     return 'text'
   }
-  
-  // Image files
-  const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg']
-  if (imageExtensions.includes(ext)) {
+  if (isImageFile(filePath)) {
     return 'image'
   }
-  
+
   return 'unknown'
 }
 

@@ -2,6 +2,7 @@
 // 仅做"读取/预览"，不做解压整包；供 fileController 的 zip 预览接口使用
 import AdmZip from 'adm-zip'
 import { FileItem } from '../../shared/types/file'
+import { isTextFile, isImageFile } from '../../shared/utils/fileTypes'
 
 // 单个条目预览大小上限：超出则拒绝，避免一次性解压占满内存
 export const ZIP_ENTRY_MAX_SIZE = 50 * 1024 * 1024 // 50 MB
@@ -46,20 +47,11 @@ function openZip(zipPath: string): AdmZip {
   return new AdmZip(zipPath, { decoder: zipDecoder })
 }
 
-// 可预览的文本/图片扩展名
-const TEXT_EXTENSIONS = [
-  'txt', 'md', 'markdown', 'json', 'xml', 'html', 'htm', 'css', 'js', 'ts',
-  'vue', 'py', 'java', 'cpp', 'c', 'h', 'hpp', 'log', 'csv', 'yaml', 'yml',
-  'ini', 'conf', 'sh', 'bat', 'sql', 'srt', 'ass', 'go', 'rs', 'rb', 'php'
-]
-const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico']
-
-// 判定 zip 内条目的预览类型
+// 判定 zip 内条目的预览类型（与前端 FilePreview 共用 fileTypes 列表，避免漂移）
 export type ZipEntryType = 'text' | 'image' | 'unsupported'
 export function getEntryType(entryName: string): ZipEntryType {
-  const ext = entryName.split('.').pop()?.toLowerCase() || ''
-  if (TEXT_EXTENSIONS.includes(ext)) return 'text'
-  if (IMAGE_EXTENSIONS.includes(ext)) return 'image'
+  if (isTextFile(entryName)) return 'text'
+  if (isImageFile(entryName)) return 'image'
   return 'unsupported'
 }
 
