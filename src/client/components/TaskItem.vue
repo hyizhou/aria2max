@@ -183,7 +183,7 @@ const getFileName = (): string => {
             {{ t('tasks.resume') }}
           </button>
           <button
-            v-if="task.status === 'error'"
+            v-if="task.status === 'error' || task.status === 'complete'"
             class="btn-action"
             @click="handleAction('retry')"
           >

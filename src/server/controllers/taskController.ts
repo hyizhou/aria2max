@@ -128,9 +128,11 @@ class TaskControllerImpl implements TaskController {
     res.json({ success: true })
   }
 
-  // 重试失败任务
+  // 重试任务（失败或已完成）。已完成任务重试会删除旧文件重新下载，
+  // 删除前需客户端确认（deleteFile=true），避免误删。
   async retryTask(req: Request, res: Response): Promise<void> {
     const { gid } = req.params
+    const { deleteFile } = req.query
 
     if (!gid) {
       res.status(400).json({ error: { code: 400, message: 'GID is required' } })
@@ -139,8 +141,9 @@ class TaskControllerImpl implements TaskController {
 
     const task = await aria2Client.getTaskDetail(gid)
 
-    if (task.status !== 'error') {
-      res.status(400).json({ error: { code: 400, message: 'Only failed tasks can be retried' } })
+    // 仅失败(error)与已完成(complete)任务可重试；活跃/等待中的任务重试无意义
+    if (task.status !== 'error' && task.status !== 'complete') {
+      res.status(400).json({ error: { code: 400, message: 'Only failed or completed tasks can be retried' } })
       return
     }
 
@@ -160,11 +163,54 @@ class TaskControllerImpl implements TaskController {
       return
     }
 
+    // 已完成任务：检查旧下载文件是否存在（容器路径映射到宿主机）
+    const isComplete = task.status === 'complete'
+    let fileExists = false
+    const aria2DownloadDir = task.dir || null
+    if (isComplete) {
+      try {
+        const firstFilePath = task.files?.[0]?.path
+        if (firstFilePath) {
+          const isBt = !!(task.bittorrent?.info?.name)
+          const targetPath = isBt
+            ? await this.resolveBtPath(firstFilePath, task.bittorrent!.info!.name, aria2DownloadDir)
+            : await fileService.resolveAria2TaskPath(firstFilePath, aria2DownloadDir)
+          fileExists = await fileService.exists(targetPath)
+        }
+      } catch (err) {
+        console.error(`[Task Retry] Failed to check existing file for ${gid}:`, (err as Error).message)
+      }
+    }
+
+    // 旧文件存在且未确认删除 → 返回 needsConfirm，由前端弹确认
+    if (fileExists && deleteFile !== 'true') {
+      res.status(409).json({
+        error: {
+          code: 409,
+          message: '该任务已下载完成，重试将删除旧文件并重新下载',
+          needsConfirm: true,
+          fileExists: true
+        }
+      })
+      return
+    }
+
     const dir = task.dir || undefined
+
+    // 确认后删除旧文件（必须在 addTask 之前，避免 aria2 命中旧文件而跳过下载）
+    if (fileExists && deleteFile === 'true') {
+      try {
+        await this.deleteTaskFiles(task, aria2DownloadDir)
+      } catch (err) {
+        console.error(`[Task Retry] Failed to delete old file for ${gid}:`, (err as Error).message)
+      }
+    }
+
     const newGid = await aria2Client.addTask(uris, dir ? { dir } : {})
 
-    // 迁移元数据：把旧 gid 的条目搬到新 gid，保留原始 createdAt
-    taskMetaService.migrateGid(gid, newGid)
+    // 重试视为一次新下载：新任务添加时间记为现在，已用时长等重置；清理旧任务元数据
+    taskMetaService.recordCreated(newGid)
+    taskMetaService.remove(gid)
 
     try {
       await aria2Client.removeTask(gid)

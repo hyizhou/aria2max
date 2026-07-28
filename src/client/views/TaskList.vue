@@ -102,6 +102,7 @@ const getFileName = (task: any): string => {
 // 添加确认状态管理
 const confirmDelete = ref<{gid: string, show: boolean} | null>(null)
 const deleteWithFile = ref<boolean>(false)
+const confirmRetry = ref<{gid: string, show: boolean} | null>(null)
 
 const handleTaskDetail = (gid: string) => {
   router.push(`/tasks/${gid}`)
@@ -123,7 +124,16 @@ const handleTaskAction = async (action: string, gid: string) => {
         await taskStore.resumeTask(gid)
         break
       case 'retry':
-        await taskStore.retryTask(gid)
+        try {
+          await taskStore.retryTask(gid)
+        } catch (error: any) {
+          // 已完成任务重试且旧文件存在 → 后端返回 needsConfirm，弹确认
+          if (error?.error?.needsConfirm) {
+            confirmRetry.value = { gid, show: true }
+          } else {
+            throw error
+          }
+        }
         break
       case 'delete':
         await taskStore.deleteTask(gid)
@@ -135,6 +145,24 @@ const handleTaskAction = async (action: string, gid: string) => {
     const errorMessage = extractErrorMessage(error) || t('common.operationFailed')
     alert(t('tasks.taskActionFailed', { message: errorMessage }))
   }
+}
+
+// 确认重试已完成任务（删除旧文件并重新下载）
+const confirmRetryTask = async () => {
+  if (!confirmRetry.value) return
+  const gid = confirmRetry.value.gid
+  confirmRetry.value = null
+  try {
+    await taskStore.retryTask(gid, true)
+    await loadTasks()
+  } catch (error) {
+    console.error('Retry task failed:', error)
+    alert(t('tasks.taskActionFailed', { message: extractErrorMessage(error) || t('common.operationFailed') }))
+  }
+}
+
+const cancelRetryTask = () => {
+  confirmRetry.value = null
 }
 
 // 确认删除操作（不带文件）
@@ -333,8 +361,9 @@ const filteredTasks = computed(() => {
   
   // 注意：显示所有任务状态，包括removed状态（为了兼容性）
   // 但通过我们项目操作删除的任务会直接彻底删除，不会变成removed状态
-  
-  return tasks
+
+  // 全局按添加时间倒序：后添加的任务显示在最上面（无 meta 的兜底排末尾）
+  return [...tasks].sort((a, b) => (b.meta?.createdAt ?? 0) - (a.meta?.createdAt ?? 0))
 })
 </script>
 
@@ -430,6 +459,17 @@ const filteredTasks = computed(() => {
       :initial-checkbox-value="false"
       @confirm-with-checkbox="confirmBatchDeleteTaskWithFile"
       @cancel="cancelBatchDeleteTask"
+    />
+
+    <!-- 重试已完成任务确认弹窗（旧文件将被删除） -->
+    <ConfirmDialog
+      v-if="confirmRetry && confirmRetry.show"
+      title="重试任务"
+      message="该任务已下载完成，重试将删除旧文件并重新下载。是否继续？"
+      confirm-text="确认重试"
+      confirm-button-type="btn-primary"
+      @confirm="confirmRetryTask"
+      @cancel="cancelRetryTask"
     />
     
   </div>

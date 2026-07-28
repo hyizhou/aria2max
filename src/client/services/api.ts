@@ -110,8 +110,10 @@ export const taskApi = {
   },
 
   // 重试失败任务
-  async retryTask(gid: string): Promise<AddTaskResponse> {
-    return await apiClient.post(`/tasks/${gid}/retry`)
+  async retryTask(gid: string, deleteFile = false): Promise<AddTaskResponse> {
+    return await apiClient.post(`/tasks/${gid}/retry`, {}, {
+      params: deleteFile ? { deleteFile: 'true' } : undefined
+    })
   },
 
   // 删除下载任务

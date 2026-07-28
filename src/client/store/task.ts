@@ -108,9 +108,9 @@ export const useTaskStore = defineStore('task', {
       }
     },
 
-    async retryTask(gid: string): Promise<AddTaskResponse> {
+    async retryTask(gid: string, deleteFile = false): Promise<AddTaskResponse> {
       try {
-        const response = await taskApi.retryTask(gid)
+        const response = await taskApi.retryTask(gid, deleteFile)
         await this.fetchTasks()
         return response
       } catch (error) {
