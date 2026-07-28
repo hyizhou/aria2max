@@ -141,6 +141,27 @@ export const fileApi = {
     })
   },
 
+  // 列出 zip 压缩包内指定子目录的一级条目
+  async getZipList(zipPath: string, dir = ''): Promise<FileListResponse> {
+    return await apiClient.get('/files/zip-list', { params: { path: zipPath, dir } })
+  },
+
+  // 构造 zip 内单个条目的预览 URL（供 <img> 直接消费，同源自动带 cookie）
+  getZipEntryUrl(zipPath: string, entry: string): string {
+    return `/api/files/zip-entry?path=${encodeURIComponent(zipPath)}&entry=${encodeURIComponent(entry)}`
+  },
+
+  // 读取 zip 内文本条目内容
+  async getZipEntryText(zipPath: string, entry: string): Promise<string> {
+    const url = `/api/files/zip-entry?path=${encodeURIComponent(zipPath)}&entry=${encodeURIComponent(entry)}`
+    const response = await fetch(url)
+    if (!response.ok) {
+      const data = await response.json().catch(() => null)
+      throw new Error(data?.error?.message || '无法加载文件内容')
+    }
+    return await response.text()
+  },
+
   // 删除文件或目录
   async deleteFile(path: string): Promise<{ success: boolean }> {
     return await apiClient.delete('/files', { data: { path } })

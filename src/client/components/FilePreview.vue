@@ -8,32 +8,32 @@
     <div class="file-preview-container">
       <!-- Video Preview -->
       <div v-if="getFileType(filePath) === 'video'">
-        <video 
-          controls 
-          autoplay 
+        <video
+          controls
+          autoplay
           style="width: 100%; max-height: 60vh;"
         >
-          <source :src="`/api/files/download?path=${encodeURIComponent(filePath)}`" :type="getVideoType(filePath)">
+          <source :src="previewUrl" :type="getVideoType(filePath)">
           {{ t('filePreview.unsupportedVideo') }}
         </video>
       </div>
-      
+
       <!-- Audio Preview -->
       <div v-else-if="getFileType(filePath) === 'audio'">
-        <audio 
-          controls 
-          autoplay 
+        <audio
+          controls
+          autoplay
           style="width: 100%;"
         >
-          <source :src="`/api/files/download?path=${encodeURIComponent(filePath)}`" :type="getAudioType(filePath)">
+          <source :src="previewUrl" :type="getAudioType(filePath)">
           {{ t('filePreview.unsupportedAudio') }}
         </audio>
       </div>
-      
+
       <!-- Image Preview -->
       <div v-else-if="getFileType(filePath) === 'image'">
-        <img 
-          :src="`/api/files/download?path=${encodeURIComponent(filePath)}`" 
+        <img
+          :src="previewUrl"
           :alt="filePath.split('/').pop()"
           style="max-width: 100%; max-height: 60vh;"
         >
@@ -56,23 +56,49 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Modal from '@/components/Modal.vue'
+import { fileApi } from '@/services/api'
 
 const { t } = useI18n()
 
 const visible = ref(false)
 const filePath = ref('')
 const textContent = ref('')
+// zip 内文件预览：isZip=true 时走 zip-entry 接口，zipPath 为压缩包相对路径，filePath 为条目路径
+const isZip = ref(false)
+const zipPath = ref('')
+
+// 预览资源 URL：普通文件走下载接口，zip 内文件走 zip-entry 接口
+const previewUrl = computed(() => {
+  if (isZip.value) {
+    return fileApi.getZipEntryUrl(zipPath.value, filePath.value)
+  }
+  return `/api/files/download?path=${encodeURIComponent(filePath.value)}`
+})
 
 const show = async (path: string) => {
+  isZip.value = false
+  zipPath.value = ''
   filePath.value = path
   visible.value = true
-  
+
   // For text files, fetch the content
   if (getFileType(path) === 'text') {
     await fetchTextContent(path)
+  }
+}
+
+// 预览压缩包内的单个条目
+const showZipEntry = async (targetZipPath: string, entry: string) => {
+  isZip.value = true
+  zipPath.value = targetZipPath
+  filePath.value = entry
+  visible.value = true
+
+  if (getFileType(entry) === 'text') {
+    await fetchTextContent(entry)
   }
 }
 
@@ -80,15 +106,21 @@ const close = () => {
   visible.value = false
   filePath.value = ''
   textContent.value = ''
+  isZip.value = false
+  zipPath.value = ''
 }
 
 const fetchTextContent = async (path: string) => {
   try {
-    const response = await fetch(`/api/files/download?path=${encodeURIComponent(path)}`)
-    textContent.value = await response.text()
+    if (isZip.value) {
+      textContent.value = await fileApi.getZipEntryText(zipPath.value, path)
+    } else {
+      const response = await fetch(`/api/files/download?path=${encodeURIComponent(path)}`)
+      textContent.value = await response.text()
+    }
   } catch (error) {
     console.error('Failed to fetch text content:', error)
-    textContent.value = '无法加载文件内容'
+    textContent.value = error instanceof Error ? error.message : '无法加载文件内容'
   }
 }
 
@@ -190,7 +222,8 @@ const emit = defineEmits<{
 
 // Expose method to parent component
 defineExpose({
-  show
+  show,
+  showZipEntry
 })
 
 // Close modal when Escape key is pressed

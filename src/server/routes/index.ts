@@ -22,6 +22,8 @@ router.post('/tasks/clean-metadata', taskController.cleanMetadataTasks.bind(task
 // 文件管理路由
 router.get('/files', fileController.getFiles.bind(fileController))
 router.get('/files/download', fileController.downloadFile.bind(fileController))
+router.get('/files/zip-list', fileController.listZipEntries.bind(fileController))
+router.get('/files/zip-entry', fileController.readZipEntry.bind(fileController))
 router.delete('/files', fileController.deleteFile.bind(fileController))
 router.post('/files/mkdir', fileController.createDirectory.bind(fileController))
 router.put('/files/rename', fileController.renameFile.bind(fileController))

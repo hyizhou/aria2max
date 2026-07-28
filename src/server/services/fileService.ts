@@ -221,6 +221,22 @@ class FileService {
     return safePath(getDownloadDir(), relativePath)
   }
 
+  // 校验 zip 内部条目路径（相对路径，/ 分隔），防止绝对路径、盘符与 .. 穿越
+  // 与 safePath 哲学一致：只允许在压缩包内部的相对定位
+  validateZipEntryPath(p: string): string {
+    if (!p) return ''
+    const normalized = p.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')
+    if (!normalized) return ''
+    if (/^[a-zA-Z]:/.test(normalized)) {
+      throw new Error('Invalid zip entry path: absolute path not allowed')
+    }
+    const segments = normalized.split('/')
+    if (segments.includes('..')) {
+      throw new Error('Invalid zip entry path: path traversal detected')
+    }
+    return normalized
+  }
+
   // 解析 aria2 任务中的文件路径到宿主机绝对路径
   // aria2 可能运行在容器中，路径与宿主机不同，需要映射
   async resolveAria2TaskPath(aria2Path: string, aria2DownloadDir: string | null): Promise<string> {

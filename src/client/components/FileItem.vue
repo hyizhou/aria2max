@@ -15,6 +15,8 @@ interface File {
 interface Props {
   file: File
   selected: boolean
+  // 只读模式（如压缩包内浏览）：隐藏复选框与重命名/下载/删除按钮
+  readOnly?: boolean
 }
 
 interface Emits {
@@ -105,15 +107,15 @@ const handleNavigate = () => {
 </script>
 
 <template>
-  <div class="file-item" :class="{ 'selected': selected }">
-    <div class="file-select">
-      <input 
-        type="checkbox" 
+  <div class="file-item" :class="{ 'selected': selected, 'read-only': readOnly }">
+    <div v-if="!readOnly" class="file-select">
+      <input
+        type="checkbox"
         :checked="selected"
         @change="handleSelect"
       />
     </div>
-    
+
     <div class="file-info" @click="handleNavigate" :class="{ 'file-info-clickable': file.isDir }">
       <div class="file-icon">
         <i :class="fileTypeIcon"></i>
@@ -127,9 +129,9 @@ const handleNavigate = () => {
         </div>
       </div>
     </div>
-    
-    <div class="file-actions">
-      <button 
+
+    <div v-if="!readOnly" class="file-actions">
+      <button
         class="btn-action"
         @click="handleAction('rename')"
       >

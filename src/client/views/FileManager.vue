@@ -4,16 +4,32 @@
       <h2>{{ t('files.heading') }}</h2>
     </div>
     
-    <FileBreadcrumb 
-      :current-path="fileStore.currentPath" 
+    <FileBreadcrumb
+      v-if="!zipMode"
+      :current-path="fileStore.currentPath"
       @navigate="handleNavigate"
     />
-    
-    <div class="file-actions">
+
+    <!-- 压缩包浏览模式：自定义面包屑（文件系统段 / 压缩包名 / 内部段） -->
+    <div v-else class="zip-breadcrumb-bar">
+      <template v-for="(seg, idx) in zipBreadcrumbs" :key="idx">
+        <button
+          class="crumb-btn"
+          :class="{ active: idx === zipBreadcrumbs.length - 1 }"
+          @click="handleZipCrumb(seg)"
+        >
+          <i v-if="seg.isZipRoot" class="fas fa-file-archive"></i>
+          <span>{{ seg.name }}</span>
+        </button>
+        <i v-if="idx < zipBreadcrumbs.length - 1" class="fas fa-chevron-right crumb-sep"></i>
+      </template>
+    </div>
+
+    <div class="file-actions" v-if="!zipMode">
       <div class="file-actions-left">
         <label class="select-all">
-          <input 
-            type="checkbox" 
+          <input
+            type="checkbox"
             :checked="selectedFiles.length === fileStore.files.length && fileStore.files.length > 0"
             @change="handleSelectAll"
           />
@@ -31,7 +47,7 @@
         <button class="btn btn-secondary" @click="handleCreateDirectory">
           {{ t('files.createDirectory') }}
         </button>
-        <button 
+        <button
           class="btn btn-danger"
           :disabled="selectedFiles.length === 0"
           @click="handleBatchDelete"
@@ -40,28 +56,29 @@
         </button>
       </div>
     </div>
-    
+
     <div class="file-list-container">
-      <div v-if="loading" class="loading">
+      <div v-if="isLoading" class="loading">
         <p>{{ t('common.loading') }}</p>
       </div>
-      
-      <div v-else-if="fileStore.error" class="error-state">
+
+      <div v-else-if="currentError" class="error-state">
         <p>{{ t('files.loadFailed') }}</p>
-        <p class="error-message">{{ fileStore.error }}</p>
-        <button class="btn btn-secondary" @click="loadFiles">{{ t('common.refresh') }}</button>
+        <p class="error-message">{{ currentError }}</p>
+        <button v-if="!zipMode" class="btn btn-secondary" @click="loadFiles">{{ t('common.refresh') }}</button>
       </div>
-      
-      <div v-else-if="fileStore.files.length === 0" class="empty-state">
-        <p>{{ t('files.emptyDirectory') }}</p>
+
+      <div v-else-if="currentFiles.length === 0" class="empty-state">
+        <p>{{ zipMode ? '空目录' : t('files.emptyDirectory') }}</p>
       </div>
-      
+
       <div v-else class="file-items">
         <FileItem
-          v-for="file in fileStore.files"
+          v-for="file in currentFiles"
           :key="file.path"
           :file="file"
-          :selected="selectedFiles.includes(file.path)"
+          :selected="zipMode ? false : selectedFiles.includes(file.path)"
+          :read-only="zipMode"
           @action="handleFileAction"
           @select="handleSelectFile"
           @navigate="handleNavigate"
@@ -124,15 +141,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFileStore } from '@/store'
+import { fileApi } from '@/services/api'
 import FileItem from '@/components/FileItem.vue'
 import FileBreadcrumb from '@/components/FileBreadcrumb.vue'
 import FileUpload from '@/components/FileUpload.vue'
 import FileRename from '@/components/FileRename.vue'
 import FilePreview from '@/components/FilePreview.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import type { FileItem as FileItemType } from '@shared/types'
 
 const fileStore = useFileStore()
 const { t } = useI18n()
@@ -141,6 +160,42 @@ const selectedFiles = ref<string[]>([])
 const fileUploadRef = ref<typeof FileUpload | null>(null)
 const fileRenameRef = ref<typeof FileRename | null>(null)
 const filePreviewRef = ref<typeof FilePreview | null>(null)
+
+// 压缩包内浏览模式（本地状态，不污染 fileStore）
+const zipMode = ref(false)
+const zipFilePath = ref('')        // 压缩包在文件系统中的相对路径
+const zipInnerDir = ref('')        // 压缩包内当前目录
+const zipEntries = ref<FileItemType[]>([])
+const zipLoading = ref(false)
+const zipError = ref('')
+
+const zipFileName = computed(() => zipFilePath.value.split('/').pop() || '')
+
+// 压缩包浏览模式下的列表/加载/错误（统一供模板分支使用）
+const currentFiles = computed<FileItemType[]>(() => (zipMode.value ? zipEntries.value : fileStore.files))
+const isLoading = computed(() => (zipMode.value ? zipLoading.value : loading.value))
+const currentError = computed(() => (zipMode.value ? zipError.value : fileStore.error))
+
+// zip 模式面包屑：文件系统段（点击退出 zip）+ 压缩包名 + 压缩包内段
+const zipBreadcrumbs = computed(() => {
+  const segs: Array<{ name: string; path: string; isFs: boolean; isZipRoot: boolean }> = []
+  // 文件系统段（压缩包所在目录链）
+  segs.push({ name: t('fileBreadcrumb.root'), path: '', isFs: true, isZipRoot: false })
+  let acc = ''
+  fileStore.currentPath.split('/').filter(Boolean).forEach(s => {
+    acc = acc ? `${acc}/${s}` : s
+    segs.push({ name: s, path: acc, isFs: true, isZipRoot: false })
+  })
+  // 压缩包名（zip 根）
+  segs.push({ name: zipFileName.value, path: '', isFs: false, isZipRoot: true })
+  // 压缩包内段
+  let innerAcc = ''
+  zipInnerDir.value.split('/').filter(Boolean).forEach(s => {
+    innerAcc = innerAcc ? `${innerAcc}/${s}` : s
+    segs.push({ name: s, path: innerAcc, isFs: false, isZipRoot: false })
+  })
+  return segs
+})
 
 // 删除确认状态管理
 const confirmDelete = ref<{path: string, show: boolean} | null>(null)
@@ -163,8 +218,61 @@ const loadFiles = async () => {
 }
 
 const handleNavigate = async (path: string) => {
+  // zip 浏览模式下的目录导航：path 为压缩包内目录
+  if (zipMode.value) {
+    zipInnerDir.value = path
+    await loadZipEntries(path)
+    return
+  }
   fileStore.currentPath = path
   await loadFiles()
+}
+
+// 进入压缩包浏览
+const enterZip = async (path: string) => {
+  zipMode.value = true
+  zipFilePath.value = path
+  zipInnerDir.value = ''
+  zipError.value = ''
+  await loadZipEntries('')
+}
+
+// 退出压缩包浏览，回到普通文件管理
+const exitZip = () => {
+  zipMode.value = false
+  zipFilePath.value = ''
+  zipInnerDir.value = ''
+  zipEntries.value = []
+  zipError.value = ''
+}
+
+const loadZipEntries = async (dir: string) => {
+  zipLoading.value = true
+  zipError.value = ''
+  try {
+    const res = await fileApi.getZipList(zipFilePath.value, dir)
+    zipEntries.value = res.files || []
+    zipError.value = res.error || ''
+  } catch (error) {
+    zipError.value = error instanceof Error ? error.message : '加载失败'
+    zipEntries.value = []
+  } finally {
+    zipLoading.value = false
+  }
+}
+
+// zip 模式面包屑点击：文件系统段→退出zip并导航；zip根→回根；内部段→进入
+const handleZipCrumb = async (seg: { path: string; isFs: boolean; isZipRoot: boolean }) => {
+  if (seg.isFs) {
+    exitZip()
+    await handleNavigate(seg.path)
+  } else if (seg.isZipRoot) {
+    zipInnerDir.value = ''
+    await loadZipEntries('')
+  } else {
+    zipInnerDir.value = seg.path
+    await loadZipEntries(seg.path)
+  }
 }
 
 const handleFileAction = async (action: string, path: string, isDir?: boolean) => {
@@ -184,7 +292,15 @@ const handleFileAction = async (action: string, path: string, isDir?: boolean) =
         await fileStore.downloadFile(path, !!isDir)
         break
       case 'preview':
-        filePreviewRef.value?.show(path)
+        if (zipMode.value) {
+          // 压缩包内点文件 → 预览该条目（走 zip-entry 接口）
+          filePreviewRef.value?.showZipEntry(zipFilePath.value, path)
+        } else if (path.toLowerCase().endsWith('.zip')) {
+          // 普通模式点 .zip → 像进目录一样浏览压缩包内容
+          await enterZip(path)
+        } else {
+          filePreviewRef.value?.show(path)
+        }
         break
       case 'rename':
         fileRenameRef.value?.show(path)
@@ -319,6 +435,75 @@ const handlePreviewClose = () => {
   font-size: 1.5rem;
   font-weight: 600;
   color: #333333;
+}
+
+/* 压缩包浏览模式面包屑 */
+.zip-breadcrumb-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.crumb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: none;
+  border: none;
+  color: #666666;
+  cursor: pointer;
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.crumb-btn:hover {
+  background-color: #f5f5f5;
+  color: #333333;
+}
+
+.crumb-btn.active {
+  color: #1976d2;
+  font-weight: 500;
+  cursor: default;
+}
+
+.crumb-btn.active:hover {
+  background-color: transparent;
+}
+
+.crumb-sep {
+  font-size: 0.625rem;
+  color: #999999;
+}
+
+.dark-theme .zip-breadcrumb-bar {
+  background-color: #2d2d2d;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.dark-theme .crumb-btn {
+  color: #b0b0b0;
+}
+
+.dark-theme .crumb-btn:hover {
+  background-color: #3d3d3d;
+  color: #e0e0e0;
+}
+
+.dark-theme .crumb-btn.active {
+  color: #64b5f6;
+}
+
+.dark-theme .crumb-sep {
+  color: #666666;
 }
 
 .file-actions {
