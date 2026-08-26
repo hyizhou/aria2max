@@ -7,6 +7,10 @@ interface FileState {
   currentPath: string
   loading: boolean
   error: string | null
+  // 压缩包内浏览模式（存到 store，路由切换不丢失，返回时可恢复）
+  zipMode: boolean
+  zipFilePath: string
+  zipInnerDir: string
 }
 
 export const useFileStore = defineStore('file', {
@@ -14,7 +18,10 @@ export const useFileStore = defineStore('file', {
     files: [],
     currentPath: '',
     loading: false,
-    error: null
+    error: null,
+    zipMode: false,
+    zipFilePath: '',
+    zipInnerDir: ''
   }),
 
   actions: {
@@ -38,6 +45,25 @@ export const useFileStore = defineStore('file', {
       } finally {
         this.loading = false
       }
+    },
+
+    // 进入压缩包浏览模式
+    enterZip(zipPath: string): void {
+      this.zipMode = true
+      this.zipFilePath = zipPath
+      this.zipInnerDir = ''
+    },
+
+    // 压缩包内目录导航
+    navigateZip(dir: string): void {
+      this.zipInnerDir = dir
+    },
+
+    // 退出压缩包浏览模式
+    exitZip(): void {
+      this.zipMode = false
+      this.zipFilePath = ''
+      this.zipInnerDir = ''
     },
 
     async downloadFile(path: string, isDir = false): Promise<{ success: boolean }> {

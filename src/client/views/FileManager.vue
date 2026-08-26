@@ -5,7 +5,7 @@
     </div>
     
     <FileBreadcrumb
-      v-if="!zipMode"
+      v-if="!fileStore.zipMode"
       :current-path="fileStore.currentPath"
       @navigate="handleNavigate"
     />
@@ -25,7 +25,7 @@
       </template>
     </div>
 
-    <div class="file-actions" v-if="!zipMode">
+    <div class="file-actions" v-if="!fileStore.zipMode">
       <div class="file-actions-left">
         <label class="select-all">
           <input
@@ -65,11 +65,11 @@
       <div v-else-if="currentError" class="error-state">
         <p>{{ t('files.loadFailed') }}</p>
         <p class="error-message">{{ currentError }}</p>
-        <button v-if="!zipMode" class="btn btn-secondary" @click="loadFiles">{{ t('common.refresh') }}</button>
+        <button v-if="!fileStore.zipMode" class="btn btn-secondary" @click="loadFiles">{{ t('common.refresh') }}</button>
       </div>
 
       <div v-else-if="currentFiles.length === 0" class="empty-state">
-        <p>{{ zipMode ? '空目录' : t('files.emptyDirectory') }}</p>
+        <p>{{ fileStore.zipMode ? '空目录' : t('files.emptyDirectory') }}</p>
       </div>
 
       <div v-else class="file-items">
@@ -77,8 +77,8 @@
           v-for="file in currentFiles"
           :key="file.path"
           :file="file"
-          :selected="zipMode ? false : selectedFiles.includes(file.path)"
-          :read-only="zipMode"
+          :selected="fileStore.zipMode ? false : selectedFiles.includes(file.path)"
+          :read-only="fileStore.zipMode"
           @action="handleFileAction"
           @select="handleSelectFile"
           @navigate="handleNavigate"
@@ -161,20 +161,17 @@ const fileUploadRef = ref<typeof FileUpload | null>(null)
 const fileRenameRef = ref<typeof FileRename | null>(null)
 const filePreviewRef = ref<typeof FilePreview | null>(null)
 
-// 压缩包内浏览模式（本地状态，不污染 fileStore）
-const zipMode = ref(false)
-const zipFilePath = ref('')        // 压缩包在文件系统中的相对路径
-const zipInnerDir = ref('')        // 压缩包内当前目录
+// 压缩包内浏览的列表数据（zipMode/zipFilePath/zipInnerDir 持久在 fileStore，路由切换可恢复）
 const zipEntries = ref<FileItemType[]>([])
 const zipLoading = ref(false)
 const zipError = ref('')
 
-const zipFileName = computed(() => zipFilePath.value.split('/').pop() || '')
+const zipFileName = computed(() => fileStore.zipFilePath.split('/').pop() || '')
 
 // 压缩包浏览模式下的列表/加载/错误（统一供模板分支使用）
-const currentFiles = computed<FileItemType[]>(() => (zipMode.value ? zipEntries.value : fileStore.files))
-const isLoading = computed(() => (zipMode.value ? zipLoading.value : loading.value))
-const currentError = computed(() => (zipMode.value ? zipError.value : fileStore.error))
+const currentFiles = computed<FileItemType[]>(() => (fileStore.zipMode ? zipEntries.value : fileStore.files))
+const isLoading = computed(() => (fileStore.zipMode ? zipLoading.value : loading.value))
+const currentError = computed(() => (fileStore.zipMode ? zipError.value : fileStore.error))
 
 // zip 模式面包屑：文件系统段（点击退出 zip）+ 压缩包名 + 压缩包内段
 const zipBreadcrumbs = computed(() => {
@@ -190,7 +187,7 @@ const zipBreadcrumbs = computed(() => {
   segs.push({ name: zipFileName.value, path: '', isFs: false, isZipRoot: true })
   // 压缩包内段
   let innerAcc = ''
-  zipInnerDir.value.split('/').filter(Boolean).forEach(s => {
+  fileStore.zipInnerDir.split('/').filter(Boolean).forEach(s => {
     innerAcc = innerAcc ? `${innerAcc}/${s}` : s
     segs.push({ name: s, path: innerAcc, isFs: false, isZipRoot: false })
   })
@@ -205,7 +202,12 @@ const newDirectoryName = ref('')
 const directoryNameInput = ref<HTMLInputElement | null>(null)
 
 onMounted(async () => {
-  await loadFiles()
+  // 路由返回时若仍处于 zip 浏览模式，恢复压缩包内列表
+  if (fileStore.zipMode) {
+    await loadZipEntries(fileStore.zipInnerDir)
+  } else {
+    await loadFiles()
+  }
 })
 
 const loadFiles = async () => {
@@ -219,8 +221,8 @@ const loadFiles = async () => {
 
 const handleNavigate = async (path: string) => {
   // zip 浏览模式下的目录导航：path 为压缩包内目录
-  if (zipMode.value) {
-    zipInnerDir.value = path
+  if (fileStore.zipMode) {
+    fileStore.navigateZip(path)
     await loadZipEntries(path)
     return
   }
@@ -230,18 +232,14 @@ const handleNavigate = async (path: string) => {
 
 // 进入压缩包浏览
 const enterZip = async (path: string) => {
-  zipMode.value = true
-  zipFilePath.value = path
-  zipInnerDir.value = ''
+  fileStore.enterZip(path)
   zipError.value = ''
   await loadZipEntries('')
 }
 
 // 退出压缩包浏览，回到普通文件管理
 const exitZip = () => {
-  zipMode.value = false
-  zipFilePath.value = ''
-  zipInnerDir.value = ''
+  fileStore.exitZip()
   zipEntries.value = []
   zipError.value = ''
 }
@@ -250,7 +248,7 @@ const loadZipEntries = async (dir: string) => {
   zipLoading.value = true
   zipError.value = ''
   try {
-    const res = await fileApi.getZipList(zipFilePath.value, dir)
+    const res = await fileApi.getZipList(fileStore.zipFilePath, dir)
     zipEntries.value = res.files || []
     zipError.value = res.error || ''
   } catch (error) {
@@ -267,10 +265,10 @@ const handleZipCrumb = async (seg: { path: string; isFs: boolean; isZipRoot: boo
     exitZip()
     await handleNavigate(seg.path)
   } else if (seg.isZipRoot) {
-    zipInnerDir.value = ''
+    fileStore.navigateZip('')
     await loadZipEntries('')
   } else {
-    zipInnerDir.value = seg.path
+    fileStore.navigateZip(seg.path)
     await loadZipEntries(seg.path)
   }
 }
@@ -292,9 +290,9 @@ const handleFileAction = async (action: string, path: string, isDir?: boolean) =
         await fileStore.downloadFile(path, !!isDir)
         break
       case 'preview':
-        if (zipMode.value) {
+        if (fileStore.zipMode) {
           // 压缩包内点文件 → 预览该条目（走 zip-entry 接口）
-          filePreviewRef.value?.showZipEntry(zipFilePath.value, path)
+          filePreviewRef.value?.showZipEntry(fileStore.zipFilePath, path)
         } else if (path.toLowerCase().endsWith('.zip')) {
           // 普通模式点 .zip → 像进目录一样浏览压缩包内容
           await enterZip(path)
