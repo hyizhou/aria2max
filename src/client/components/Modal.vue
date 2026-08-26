@@ -5,6 +5,7 @@ interface Props {
   visible: boolean
   title?: string
   width?: string
+  locked?: boolean
 }
 
 interface Emits {
@@ -15,7 +16,8 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {
   visible: false,
   title: '',
-  width: '500px'
+  width: '500px',
+  locked: false
 })
 
 const emit = defineEmits<Emits>()
@@ -27,6 +29,7 @@ watch(() => props.visible, (newVal) => {
 })
 
 const closeModal = () => {
+  if (props.locked) return
   showModal.value = false
   emit('close')
 }

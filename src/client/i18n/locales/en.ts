@@ -153,11 +153,20 @@ export default {
     uploadSpeed: 'Speed: {speed}',
   },
   fileRename: {
-    title: 'Rename File',
-    currentName: 'Current name: {name}',
+    title: 'Rename',
+    newName: 'New name',
     placeholder: 'Enter new filename',
     cancel: 'Cancel',
     confirm: 'OK',
+    errors: {
+      empty: 'Name cannot be empty',
+      pathSeparator: 'Name cannot contain / or \\',
+      controlCharacter: 'Name cannot contain control characters',
+      relativeComponent: 'Name cannot be . or ..',
+      invalidParentPath: 'The original path is invalid. Please reopen the rename dialog',
+      differentDirectory: 'The new name cannot change the directory',
+      failed: 'Rename failed. Please check the name and try again',
+    },
   },
   fileBreadcrumb: {
     root: 'Root',

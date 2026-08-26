@@ -153,11 +153,20 @@ export default {
     uploadSpeed: '上传速度: {speed}',
   },
   fileRename: {
-    title: '重命名文件',
-    currentName: '当前文件名: {name}',
+    title: '重命名',
+    newName: '新名称',
     placeholder: '输入新文件名',
     cancel: '取消',
     confirm: '确定',
+    errors: {
+      empty: '名称不能为空',
+      pathSeparator: '名称不能包含 / 或 \\',
+      controlCharacter: '名称不能包含控制字符',
+      relativeComponent: '名称不能为 . 或 ..',
+      invalidParentPath: '原路径无效，请重新打开重命名窗口',
+      differentDirectory: '新名称不能改变所在目录',
+      failed: '重命名失败，请检查名称后重试',
+    },
   },
   fileBreadcrumb: {
     root: '根目录',

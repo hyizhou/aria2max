@@ -5,6 +5,19 @@ import * as fs from 'fs/promises'
 import archiver from 'archiver'
 import fileService from '../services/fileService'
 import zipService from '../services/zipService'
+import {
+  getRenamePathInvalidReason,
+  type RenamePathInvalidReason
+} from '@shared/utils/fileName'
+
+const invalidRenamePathMessages: Record<RenamePathInvalidReason, string> = {
+  empty: 'File name cannot be empty',
+  pathSeparator: 'File name cannot contain "/" or "\\"',
+  controlCharacter: 'File name cannot contain control characters',
+  relativeComponent: 'File name cannot be "." or ".."',
+  invalidParentPath: 'Rename paths must be relative paths without empty, ".", or ".." segments',
+  differentDirectory: 'New path must remain in the same directory as the old path'
+}
 
 class FileControllerImpl {
   // 获取文件列表
@@ -178,6 +191,12 @@ class FileControllerImpl {
 
     if (!oldPath || !newPath) {
       res.status(400).json({ error: { code: 400, message: 'Both oldPath and newPath are required' } })
+      return
+    }
+
+    const invalidReason = getRenamePathInvalidReason(oldPath, newPath)
+    if (invalidReason) {
+      res.status(400).json({ error: { code: 400, message: invalidRenamePathMessages[invalidReason] } })
       return
     }
 
