@@ -18,14 +18,37 @@ try {
   gbkDecoder = null
 }
 
-function smartDecode(buf: Buffer): string {
-  // 1. 尝试严格 UTF-8 解码：合法则直接采用
-  try {
-    return new TextDecoder('utf8', { fatal: true }).decode(buf)
-  } catch {
-    // 不是合法 UTF-8（典型如 GBK 字节）
+// 严格的 UTF-8 合法性校验（纯函数、无 decoder 状态，可安全高频调用）
+// 比「每次 new TextDecoder('utf8',{fatal:true})」更省，且避免 fatal decoder 复用的边缘风险
+function isValidUtf8(buf: Buffer): boolean {
+  const len = buf.length
+  let i = 0
+  while (i < len) {
+    const b = buf[i]
+    if (b < 0x80) {
+      i += 1
+    } else if (b < 0xC0) {
+      return false // 续字节出现在首位
+    } else if (b < 0xE0) {
+      if (i + 1 >= len || (buf[i + 1] & 0xC0) !== 0x80) return false
+      i += 2
+    } else if (b < 0xF0) {
+      if (i + 2 >= len || (buf[i + 1] & 0xc0) !== 0x80 || (buf[i + 2] & 0xc0) !== 0x80) return false
+      i += 3
+    } else if (b < 0xF8) {
+      if (i + 3 >= len || (buf[i + 1] & 0xc0) !== 0x80 || (buf[i + 2] & 0xc0) !== 0x80 || (buf[i + 3] & 0xc0) !== 0x80) return false
+      i += 4
+    } else {
+      return false
+    }
   }
-  // 2. 回退 GBK
+  return true
+}
+
+function smartDecode(buf: Buffer): string {
+  // 1. 合法 UTF-8 直接采用（兼容 UTF-8 中文 zip）
+  if (isValidUtf8(buf)) return buf.toString('utf8')
+  // 2. 回退 GBK（Windows GBK 中文 zip）
   if (gbkDecoder) {
     try {
       return gbkDecoder.decode(buf)
