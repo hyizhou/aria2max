@@ -40,14 +40,17 @@ class FileControllerImpl {
       return
     }
 
+    let listFullPath: string | null = null
+    try {
+      listFullPath = await fileService.getListFullPath(dirPath)
+    } catch {
+      listFullPath = null
+    }
+
     const result = await fileService.getFiles(dirPath)
     let diskUsage: DiskUsageInfo | null = null
-    if (!result.error) {
-      try {
-        diskUsage = await getDiskUsageForPath(await fileService.getFullPath(dirPath))
-      } catch {
-        diskUsage = { device: '', total: 0, used: 0, free: 0, percentage: 0, error: 'Unable to get disk usage' }
-      }
+    if (!result.error && listFullPath !== null) {
+      diskUsage = await getDiskUsageForPath(listFullPath)
     }
     res.json({ ...result, diskUsage })
   }

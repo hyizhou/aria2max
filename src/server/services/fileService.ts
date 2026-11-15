@@ -135,6 +135,7 @@ export interface FileListResult {
     targetExists: boolean
   }>
   error: string | null
+  currentPath?: string
   diskUsage?: import('@shared/types').DiskUsageInfo | null
 }
 
@@ -156,13 +157,53 @@ function getAria2HostDir(): string {
   return config.aria2HostDir || config.downloadDir
 }
 
+// 兼容历史挂载形式：若请求的是某个已配置允许根目录的父目录，
+// 浏览时自动落到该允许根目录，而不是暴露整个磁盘。
+async function resolveListPath(dirPath: string): Promise<string> {
+  const baseDir = getDownloadDir()
+  try {
+    return await safePath(baseDir, dirPath)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    if (message !== 'Path is outside the allowed directory') throw error
+
+    const normalizedPath = normalizeRelativePath(dirPath)
+    if (normalizedPath === null) throw error
+    const realBase = await fs.realpath(baseDir)
+    const lexicalPath = path.resolve(realBase, normalizedPath)
+    if (!isWithinBase(lexicalPath, realBase)) throw error
+
+    let realPath: string
+    try {
+      realPath = await fs.realpath(lexicalPath)
+    } catch {
+      throw error
+    }
+
+    for (const allowedRoot of getAllowedRoots()) {
+      let realAllowedRoot: string
+      try {
+        realAllowedRoot = await fs.realpath(allowedRoot)
+      } catch {
+        continue
+      }
+      if (realAllowedRoot !== realPath && isWithinBase(realAllowedRoot, realPath)) {
+        return allowedRoot
+      }
+    }
+    throw error
+  }
+}
+
 class FileService {
   // 获取文件列表
   async getFiles(dirPath = ''): Promise<FileListResult> {
     const baseDir = getDownloadDir()
 
     try {
-      const fullPath = await safePath(baseDir, dirPath)
+      const fullPath = await resolveListPath(dirPath)
+      const realBase = await fs.realpath(baseDir)
+      const effectiveDirPath = path.relative(realBase, fullPath)
       const files = await fs.readdir(fullPath, { withFileTypes: true })
 
       const fileList = await Promise.all(files.map(async (file) => {
@@ -186,7 +227,7 @@ class FileService {
 
         return {
           name: file.name,
-          path: path.join(dirPath, file.name),
+          path: path.join(effectiveDirPath, file.name),
           size: stats.size,
           mtime: stats.mtime.toISOString(),
           isDir,
@@ -196,7 +237,7 @@ class FileService {
         }
       }))
 
-      return { files: fileList, error: null }
+      return { files: fileList, error: null, currentPath: effectiveDirPath }
     } catch (error) {
       const err = error as FsErrnoException
       const message = dirPath
@@ -296,6 +337,11 @@ class FileService {
   // 获取文件绝对路径（供下载等场景使用，含安全检查）
   async getFullPath(relativePath: string): Promise<string> {
     return await safePath(getDownloadDir(), relativePath)
+  }
+
+  // 文件列表浏览专用路径：可把历史挂载父目录映射到配置允许的下载根
+  async getListFullPath(relativePath: string): Promise<string> {
+    return await resolveListPath(relativePath)
   }
 
   // 校验 zip 内部条目路径（相对路径，/ 分隔），防止绝对路径、盘符与 .. 穿越

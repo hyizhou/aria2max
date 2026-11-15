@@ -19,6 +19,7 @@ export interface FileItem {
 export interface FileListResponse {
   files: FileItem[]
   error: string | null
+  currentPath?: string
   diskUsage?: DiskUsageInfo | null
 }
 

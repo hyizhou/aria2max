@@ -318,6 +318,14 @@ const loadRouteTarget = async (target: FileRouteTarget): Promise<void> => {
   loading.value = true
   try {
     await fileStore.fetchFiles(target.path)
+    if (fileStore.currentPath !== target.path) {
+      router.replace({
+        name: 'FileManager',
+        query: {
+          path: fileStore.currentPath || undefined
+        }
+      }).catch(ignoreNavigationError)
+    }
   } finally {
     if (requestId === loadSequence) {
       loading.value = false
