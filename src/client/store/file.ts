@@ -1,12 +1,15 @@
 import { defineStore } from 'pinia'
 import { fileApi } from '@/services'
-import type { FileItem } from '@shared/types'
+import type { DiskUsageInfo, FileItem } from '@shared/types'
+
+let fileRequestSequence = 0
 
 interface FileState {
   files: FileItem[]
   currentPath: string
   loading: boolean
   error: string | null
+  diskUsage: DiskUsageInfo | null
   // 压缩包内浏览模式（存到 store，路由切换不丢失，返回时可恢复）
   zipMode: boolean
   zipFilePath: string
@@ -19,6 +22,7 @@ export const useFileStore = defineStore('file', {
     currentPath: '',
     loading: false,
     error: null,
+    diskUsage: null,
     zipMode: false,
     zipFilePath: '',
     zipInnerDir: ''
@@ -26,25 +30,37 @@ export const useFileStore = defineStore('file', {
 
   actions: {
     async fetchFiles(path = ''): Promise<void> {
+      const requestId = ++fileRequestSequence
       this.loading = true
       this.error = null
+      this.diskUsage = null
       try {
         const response = await fileApi.getFiles(path)
+        if (requestId !== fileRequestSequence) return
         if (response.error) {
           this.error = response.error
           this.files = []
+          this.diskUsage = response.diskUsage ?? null
         } else {
           this.files = response.files as FileItem[]
+          this.diskUsage = response.diskUsage ?? null
         }
         this.currentPath = path
       } catch (error) {
+        if (requestId !== fileRequestSequence) return
         const err = error as Error
         console.error('Failed to fetch files:', error)
         this.error = err.message || 'An unknown error occurred.'
         this.files = []
       } finally {
-        this.loading = false
+        if (requestId === fileRequestSequence) {
+          this.loading = false
+        }
       }
+    },
+
+    setDiskUsage(diskUsage: DiskUsageInfo | null): void {
+      this.diskUsage = diskUsage
     },
 
     // 进入压缩包浏览模式

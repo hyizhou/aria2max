@@ -1,6 +1,7 @@
 /**
  * 文件管理相关类型定义
  */
+import type { DiskUsageInfo } from './system'
 
 // 文件项信息
 export interface FileItem {
@@ -18,6 +19,7 @@ export interface FileItem {
 export interface FileListResponse {
   files: FileItem[]
   error: string | null
+  diskUsage?: DiskUsageInfo | null
 }
 
 // 创建目录请求

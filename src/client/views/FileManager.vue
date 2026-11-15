@@ -25,6 +25,11 @@
       </template>
     </div>
 
+    <DiskUsageBar
+      :usage="fileStore.diskUsage"
+      :loading="isLoading"
+    />
+
     <div class="file-actions" v-if="!fileStore.zipMode">
       <div class="file-actions-left">
         <label class="select-all">
@@ -141,10 +146,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
+import type { LocationQuery, LocationQueryValue } from 'vue-router'
 import { useFileStore } from '@/store'
 import { fileApi } from '@/services/api'
+import DiskUsageBar from '@/components/DiskUsageBar.vue'
 import FileItem from '@/components/FileItem.vue'
 import FileBreadcrumb from '@/components/FileBreadcrumb.vue'
 import FileUpload from '@/components/FileUpload.vue'
@@ -152,6 +160,7 @@ import FileRename from '@/components/FileRename.vue'
 import FilePreview from '@/components/FilePreview.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import type { FileItem as FileItemType } from '@shared/types'
+import { normalizeRelativePath } from '@shared/utils/relativePath'
 
 const fileStore = useFileStore()
 const { t } = useI18n()
@@ -161,7 +170,7 @@ const fileUploadRef = ref<typeof FileUpload | null>(null)
 const fileRenameRef = ref<typeof FileRename | null>(null)
 const filePreviewRef = ref<typeof FilePreview | null>(null)
 
-// 压缩包内浏览的列表数据（zipMode/zipFilePath/zipInnerDir 持久在 fileStore，路由切换可恢复）
+// 压缩包内浏览的列表数据；浏览位置由路由 query 驱动，模式元数据保存在 fileStore
 const zipEntries = ref<FileItemType[]>([])
 const zipLoading = ref(false)
 const zipError = ref('')
@@ -201,77 +210,184 @@ const showCreateDirectory = ref(false)
 const newDirectoryName = ref('')
 const directoryNameInput = ref<HTMLInputElement | null>(null)
 
-onMounted(async () => {
-  // 路由返回时若仍处于 zip 浏览模式，恢复压缩包内列表
-  if (fileStore.zipMode) {
-    await loadZipEntries(fileStore.zipInnerDir)
-  } else {
-    await loadFiles()
-  }
-})
+interface FileRouteTarget {
+  path: string
+  zip: boolean
+  dir: string
+}
 
-const loadFiles = async () => {
+const route = useRoute()
+const router = useRouter()
+let loadSequence = 0
+
+function readFirstQuery(value: LocationQueryValue | LocationQueryValue[]): string {
+  if (Array.isArray(value)) {
+    return typeof value[0] === 'string' ? value[0] : ''
+  }
+  return value ?? ''
+}
+
+function parseFileRoute(query: LocationQuery): FileRouteTarget | null {
+  const path = normalizeRelativePath(readFirstQuery(query.path ?? ''))
+  if (path === null) return null
+
+  const zip = readFirstQuery(query.zip ?? '') === '1'
+  if (zip && !path) return null
+
+  const dir = zip ? normalizeRelativePath(readFirstQuery(query.dir ?? '')) : ''
+  if (dir === null) return null
+
+  return { path, zip, dir }
+}
+
+function isSameFileRoute(left: FileRouteTarget, right: FileRouteTarget): boolean {
+  return left.path === right.path && left.zip === right.zip && left.dir === right.dir
+}
+
+function isCanonicalFileRoute(target: FileRouteTarget, query: LocationQuery): boolean {
+  if (Array.isArray(query.path) || Array.isArray(query.zip) || Array.isArray(query.dir)) return false
+  if (target.path === '' && query.path !== undefined) return false
+  if (readFirstQuery(query.path ?? '') !== target.path) return false
+
+  if (target.zip) {
+    if (query.zip !== '1') return false
+    if (target.dir === '' && query.dir !== undefined) return false
+    return readFirstQuery(query.dir ?? '') === target.dir
+  }
+
+  return query.zip === undefined && query.dir === undefined
+}
+
+function buildFileRoute(target: FileRouteTarget) {
+  const query: Record<string, string> = {}
+  if (target.path) query.path = target.path
+  if (target.zip) {
+    query.zip = '1'
+    if (target.dir) query.dir = target.dir
+  }
+  return { name: 'FileManager', query }
+}
+
+function ignoreNavigationError(error: unknown): void {
+  void error
+}
+
+function pushFileRoute(target: FileRouteTarget): void {
+  const current = parseFileRoute(route.query)
+  if (current && isSameFileRoute(current, target)) return
+  router.push(buildFileRoute(target)).catch(ignoreNavigationError)
+}
+
+const loadRouteTarget = async (target: FileRouteTarget): Promise<void> => {
+  const requestId = ++loadSequence
+  selectedFiles.value = []
+  zipEntries.value = []
+  zipError.value = ''
+
+  if (target.zip) {
+    const zipParent = target.path.includes('/')
+      ? target.path.slice(0, target.path.lastIndexOf('/'))
+      : ''
+    fileStore.currentPath = zipParent
+    fileStore.enterZip(target.path)
+    fileStore.navigateZip(target.dir)
+    fileStore.setDiskUsage(null)
+    zipLoading.value = true
+
+    try {
+      const response = await fileApi.getZipList(target.path, target.dir)
+      if (requestId !== loadSequence) return
+      zipEntries.value = response.files || []
+      zipError.value = response.error || ''
+      fileStore.setDiskUsage(response.diskUsage ?? null)
+    } catch (error) {
+      if (requestId !== loadSequence) return
+      zipError.value = error instanceof Error ? error.message : '加载失败'
+      zipEntries.value = []
+      fileStore.setDiskUsage(null)
+    } finally {
+      if (requestId === loadSequence) {
+        zipLoading.value = false
+      }
+    }
+    return
+  }
+
+  if (fileStore.zipMode) fileStore.exitZip()
+  fileStore.currentPath = target.path
   loading.value = true
   try {
-    await fileStore.fetchFiles(fileStore.currentPath)
+    await fileStore.fetchFiles(target.path)
   } finally {
-    loading.value = false
+    if (requestId === loadSequence) {
+      loading.value = false
+    }
   }
 }
 
-const handleNavigate = async (path: string) => {
-  // zip 浏览模式下的目录导航：path 为压缩包内目录
-  if (fileStore.zipMode) {
-    fileStore.navigateZip(path)
-    await loadZipEntries(path)
-    return
-  }
-  fileStore.currentPath = path
-  await loadFiles()
+const loadFiles = async (): Promise<void> => {
+  const target = parseFileRoute(route.query)
+  if (!target) return
+  await loadRouteTarget(target)
+}
+
+const handleNavigate = (path: string): void => {
+  const current = parseFileRoute(route.query)
+  if (!current) return
+  const targetPath = normalizeRelativePath(path)
+  if (targetPath === null) return
+
+  pushFileRoute(
+    current.zip
+      ? { path: current.path, zip: true, dir: targetPath }
+      : { path: targetPath, zip: false, dir: '' }
+  )
 }
 
 // 进入压缩包浏览
-const enterZip = async (path: string) => {
-  fileStore.enterZip(path)
-  zipError.value = ''
-  await loadZipEntries('')
-}
-
-// 退出压缩包浏览，回到普通文件管理
-const exitZip = () => {
-  fileStore.exitZip()
-  zipEntries.value = []
-  zipError.value = ''
-}
-
-const loadZipEntries = async (dir: string) => {
-  zipLoading.value = true
-  zipError.value = ''
-  try {
-    const res = await fileApi.getZipList(fileStore.zipFilePath, dir)
-    zipEntries.value = res.files || []
-    zipError.value = res.error || ''
-  } catch (error) {
-    zipError.value = error instanceof Error ? error.message : '加载失败'
-    zipEntries.value = []
-  } finally {
-    zipLoading.value = false
-  }
+const enterZip = (path: string): void => {
+  const targetPath = normalizeRelativePath(path)
+  if (targetPath === null) return
+  pushFileRoute({ path: targetPath, zip: true, dir: '' })
 }
 
 // zip 模式面包屑点击：文件系统段→退出zip并导航；zip根→回根；内部段→进入
-const handleZipCrumb = async (seg: { path: string; isFs: boolean; isZipRoot: boolean }) => {
+const handleZipCrumb = (seg: { path: string; isFs: boolean; isZipRoot: boolean }): void => {
   if (seg.isFs) {
-    exitZip()
-    await handleNavigate(seg.path)
-  } else if (seg.isZipRoot) {
-    fileStore.navigateZip('')
-    await loadZipEntries('')
-  } else {
-    fileStore.navigateZip(seg.path)
-    await loadZipEntries(seg.path)
+    const targetPath = normalizeRelativePath(seg.path)
+    if (targetPath !== null) {
+      pushFileRoute({ path: targetPath, zip: false, dir: '' })
+    }
+    return
+  }
+
+  const current = parseFileRoute(route.query)
+  if (!current?.zip) return
+  if (seg.isZipRoot) {
+    pushFileRoute({ path: current.path, zip: true, dir: '' })
+    return
+  }
+
+  const targetDir = normalizeRelativePath(seg.path)
+  if (targetDir !== null) {
+    pushFileRoute({ path: current.path, zip: true, dir: targetDir })
   }
 }
+
+watch(
+  () => route.fullPath,
+  async () => {
+    if (route.name !== 'FileManager') return
+    const target = parseFileRoute(route.query)
+    if (!target || !isCanonicalFileRoute(target, route.query)) {
+      router.replace(target ? buildFileRoute(target) : { name: 'FileManager' })
+        .catch(ignoreNavigationError)
+      return
+    }
+    await loadRouteTarget(target)
+  },
+  { immediate: true }
+)
 
 const handleFileAction = async (action: string, path: string, isDir?: boolean) => {
   // 添加确认删除对话框

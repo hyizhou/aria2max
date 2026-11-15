@@ -5,10 +5,13 @@ import * as fs from 'fs/promises'
 import archiver from 'archiver'
 import fileService from '../services/fileService'
 import zipService from '../services/zipService'
+import { getDiskUsageForPath } from '../services/diskInfoService'
+import type { DiskUsageInfo } from '@shared/types'
 import {
   getRenamePathInvalidReason,
   type RenamePathInvalidReason
 } from '@shared/utils/fileName'
+import { normalizeRelativePath } from '@shared/utils/relativePath'
 
 const invalidRenamePathMessages: Record<RenamePathInvalidReason, string> = {
   empty: 'File name cannot be empty',
@@ -19,24 +22,51 @@ const invalidRenamePathMessages: Record<RenamePathInvalidReason, string> = {
   differentDirectory: 'New path must remain in the same directory as the old path'
 }
 
+function getRequiredStringValue(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null
+}
+
+function getOptionalStringValue(value: unknown): string | null {
+  if (value === undefined) return ''
+  return getRequiredStringValue(value)
+}
+
 class FileControllerImpl {
   // 获取文件列表
   async getFiles(req: Request, res: Response): Promise<void> {
-    const { path: dirPath = '' } = req.query
-    const result = await fileService.getFiles(dirPath as string)
-    res.json(result)
+    const dirPath = getOptionalStringValue(req.query.path)
+    if (dirPath === null) {
+      res.status(400).json({ error: { code: 400, message: 'Path must be a single string' } })
+      return
+    }
+
+    const result = await fileService.getFiles(dirPath)
+    let diskUsage: DiskUsageInfo | null = null
+    if (!result.error) {
+      try {
+        diskUsage = await getDiskUsageForPath(await fileService.getFullPath(dirPath))
+      } catch {
+        diskUsage = { device: '', total: 0, used: 0, free: 0, percentage: 0, error: 'Unable to get disk usage' }
+      }
+    }
+    res.json({ ...result, diskUsage })
   }
 
   // 下载文件或目录
   async downloadFile(req: Request, res: Response): Promise<void> {
-    const { path: filePath } = req.query
-
-    if (!filePath) {
+    const filePath = getRequiredStringValue(req.query.path)
+    if (filePath === null) {
       res.status(400).json({ error: { code: 400, message: 'File path is required' } })
       return
     }
 
-    const fullPath = fileService.getFullPath(filePath as string)
+    let fullPath: string
+    try {
+      fullPath = await fileService.getFullPath(filePath)
+    } catch {
+      res.status(400).json({ error: { code: 400, message: 'Invalid file path' } })
+      return
+    }
     const fileName = path.basename(fullPath)
 
     let stat
@@ -75,14 +105,18 @@ class FileControllerImpl {
 
   // 列出 zip 压缩包内指定子目录下的一级条目
   async listZipEntries(req: Request, res: Response): Promise<void> {
-    const { path: zipPath, dir = '' } = req.query
-
-    if (!zipPath) {
+    const zipPath = getRequiredStringValue(req.query.path)
+    const dir = getOptionalStringValue(req.query.dir)
+    if (zipPath === null) {
       res.status(400).json({ error: { code: 400, message: 'File path is required' } })
       return
     }
+    if (dir === null) {
+      res.status(400).json({ error: { code: 400, message: 'Zip directory must be a single string' } })
+      return
+    }
 
-    if (path.extname(zipPath as string).toLowerCase() !== '.zip') {
+    if (path.extname(zipPath).toLowerCase() !== '.zip') {
       res.json({ files: [], error: '仅支持预览 .zip 格式压缩包' })
       return
     }
@@ -90,8 +124,8 @@ class FileControllerImpl {
     let zipFullPath: string
     let subDir: string
     try {
-      zipFullPath = fileService.getFullPath(zipPath as string)
-      subDir = fileService.validateZipEntryPath(dir as string)
+      zipFullPath = await fileService.getFullPath(zipPath)
+      subDir = fileService.validateZipEntryPath(dir)
     } catch (error) {
       res.status(400).json({ error: { code: 400, message: error instanceof Error ? error.message : 'Invalid path' } })
       return
@@ -104,20 +138,23 @@ class FileControllerImpl {
       return
     }
 
-    const result = zipService.listEntries(zipFullPath, subDir)
-    res.json(result)
+    const [result, diskUsage] = await Promise.all([
+      Promise.resolve(zipService.listEntries(zipFullPath, subDir)),
+      getDiskUsageForPath(path.dirname(zipFullPath))
+    ])
+    res.json({ ...result, diskUsage })
   }
 
   // 读取 zip 内单个条目内容用于预览（文本/图片），inline 返回
   async readZipEntry(req: Request, res: Response): Promise<void> {
-    const { path: zipPath, entry } = req.query
-
-    if (!zipPath || !entry) {
+    const zipPath = getRequiredStringValue(req.query.path)
+    const entry = getRequiredStringValue(req.query.entry)
+    if (zipPath === null || entry === null) {
       res.status(400).json({ error: { code: 400, message: 'Both path and entry are required' } })
       return
     }
 
-    if (path.extname(zipPath as string).toLowerCase() !== '.zip') {
+    if (path.extname(zipPath).toLowerCase() !== '.zip') {
       res.status(400).json({ error: { code: 400, message: '仅支持预览 .zip 格式压缩包' } })
       return
     }
@@ -125,8 +162,8 @@ class FileControllerImpl {
     let zipFullPath: string
     let entryPath: string
     try {
-      zipFullPath = fileService.getFullPath(zipPath as string)
-      entryPath = fileService.validateZipEntryPath(entry as string)
+      zipFullPath = await fileService.getFullPath(zipPath)
+      entryPath = fileService.validateZipEntryPath(entry)
     } catch (error) {
       res.status(400).json({ error: { code: 400, message: error instanceof Error ? error.message : 'Invalid path' } })
       return
@@ -155,7 +192,7 @@ class FileControllerImpl {
   async deleteFile(req: Request, res: Response): Promise<void> {
     const { path: filePath } = req.body
 
-    if (!filePath) {
+    if (getRequiredStringValue(filePath) === null || normalizeRelativePath(filePath) === null) {
       res.status(400).json({ error: { code: 400, message: 'File path is required' } })
       return
     }
@@ -172,7 +209,7 @@ class FileControllerImpl {
   async createDirectory(req: Request, res: Response): Promise<void> {
     const { path: dirPath } = req.body
 
-    if (!dirPath) {
+    if (getRequiredStringValue(dirPath) === null || normalizeRelativePath(dirPath) === null) {
       res.status(400).json({ error: { code: 400, message: 'Directory path is required' } })
       return
     }
@@ -189,7 +226,10 @@ class FileControllerImpl {
   async renameFile(req: Request, res: Response): Promise<void> {
     const { oldPath, newPath } = req.body
 
-    if (!oldPath || !newPath) {
+    if (
+      getRequiredStringValue(oldPath) === null ||
+      getRequiredStringValue(newPath) === null
+    ) {
       res.status(400).json({ error: { code: 400, message: 'Both oldPath and newPath are required' } })
       return
     }
@@ -216,6 +256,16 @@ class FileControllerImpl {
     }
 
     const file = Array.isArray(req.files.file) ? req.files.file[0] : req.files.file
+    const uploadPath = getOptionalStringValue(req.body.path)
+    if (
+      uploadPath === null ||
+      typeof file.name !== 'string' ||
+      !file.name
+    ) {
+      res.status(400).json({ error: { code: 400, message: 'Invalid upload path or file name' } })
+      return
+    }
+
     let fileName = file.name
 
     const corruptionPatterns = ['Ã', 'æ', 'å', 'ï¿½', '??']
@@ -238,7 +288,12 @@ class FileControllerImpl {
       fileName = file.originalFilename
     }
 
-    const relativePath = req.body.path ? `${req.body.path}/${fileName}` : fileName
+    const relativePath = uploadPath ? `${uploadPath}/${fileName}` : fileName
+    if (normalizeRelativePath(relativePath) === null) {
+      res.status(400).json({ error: { code: 400, message: 'Invalid upload path or file name' } })
+      return
+    }
+
     const result = await fileService.uploadFile(relativePath, file.data)
     if (!result.success) {
       res.status(500).json({ error: { code: 500, message: result.message } })

@@ -3,9 +3,11 @@
 import AdmZip from 'adm-zip'
 import { FileItem } from '../../shared/types/file'
 import { isTextFile, isImageFile } from '../../shared/utils/fileTypes'
+import { normalizeRelativePath } from '../../shared/utils/relativePath'
 
 // 单个条目预览大小上限：超出则拒绝，避免一次性解压占满内存
 export const ZIP_ENTRY_MAX_SIZE = 50 * 1024 * 1024 // 50 MB
+export const ZIP_MAX_ENTRIES = 20000
 
 // —— 中文文件名修复 ——
 // Windows 下用资源管理器/WniRAR 等打包的中文 zip，文件名是 GBK 编码且未声明 UTF-8 标志，
@@ -110,7 +112,11 @@ function isJunkEntry(entryName: string): boolean {
 class ZipService {
   // 列出 zip 内指定子目录下的一级条目（目录 + 文件），结构同 FileListResult
   listEntries(zipPath: string, dirInput: string): { files: FileItem[]; error: string | null } {
-    const dir = dirInput.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')
+    const dir = normalizeRelativePath(dirInput)
+    if (dir === null) {
+      return { files: [], error: '压缩包内路径无效' }
+    }
+
     let zip: AdmZip
     try {
       zip = openZip(zipPath)
@@ -123,8 +129,16 @@ class ZipService {
     const dirMap = new Map<string, FileItem>()
     const fileList: FileItem[] = []
 
-    for (const entry of zip.getEntries()) {
-      let name = entry.entryName.replace(/\\/g, '/')
+    const entries = zip.getEntries()
+    if (entries.length > ZIP_MAX_ENTRIES) {
+      return { files: [], error: '压缩包条目过多，暂不支持在线浏览' }
+    }
+
+    for (const entry of entries) {
+      let name = entry.entryName
+      const normalizedName = normalizeRelativePath(name)
+      if (normalizedName === null) continue
+      name = normalizedName
       if (isJunkEntry(name)) continue
       const isDirEntry = entry.isDirectory || name.endsWith('/')
       if (name.endsWith('/')) name = name.slice(0, -1)
@@ -193,7 +207,12 @@ class ZipService {
 
   // 读取单个条目内容用于预览（文本/图片）
   readEntry(zipPath: string, entryName: string): ZipEntryContent {
-    const type = getEntryType(entryName)
+    const normalizedEntryName = normalizeRelativePath(entryName)
+    if (normalizedEntryName === null) {
+      throw new Error('压缩包内路径无效')
+    }
+
+    const type = getEntryType(normalizedEntryName)
     if (type === 'unsupported') {
       throw new Error('该类型暂不支持在线预览，请下载后查看')
     }
@@ -206,7 +225,7 @@ class ZipService {
       throw new Error('无法打开压缩包')
     }
 
-    const entry = zip.getEntry(entryName)
+    const entry = zip.getEntry(normalizedEntryName)
     if (!entry || entry.isDirectory) {
       throw new Error('压缩包内未找到该文件')
     }
@@ -228,10 +247,10 @@ class ZipService {
       throw new Error('读取压缩包内文件失败')
     }
 
-    const ext = entryName.split('.').pop()?.toLowerCase() || ''
+    const ext = normalizedEntryName.split('.').pop()?.toLowerCase() || ''
     const mime = type === 'text' ? 'text/plain; charset=utf-8' : getImageMime(ext)
 
-    return { buffer, size, type, mime, name: entryName }
+    return { buffer, size, type, mime, name: normalizedEntryName }
   }
 }
 

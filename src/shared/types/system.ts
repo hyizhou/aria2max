@@ -72,6 +72,16 @@ export interface DiskInfo {
   partitions?: DiskPartitionInfo[]
 }
 
+// 当前路径所在文件系统的占用信息
+export interface DiskUsageInfo {
+  device: string
+  total: number
+  used: number
+  free: number
+  percentage: number
+  error?: string
+}
+
 // 网络速度信息
 export interface NetworkSpeedInfo {
   address: string

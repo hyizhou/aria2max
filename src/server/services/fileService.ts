@@ -2,14 +2,58 @@
 import * as path from 'path'
 import * as fs from 'fs/promises'
 import { getFinalConfig } from '../config/aria2'
+import { normalizeRelativePath } from '@shared/utils/relativePath'
 
-// 路径安全检查：防止路径遍历攻击
-function safePath(base: string, relative: string): string {
-  const normalizedBase = path.normalize(base)
-  const resolved = path.resolve(normalizedBase, relative)
-  if (resolved !== normalizedBase && !resolved.startsWith(normalizedBase + path.sep)) {
-    throw new Error('Invalid path: path traversal detected')
+function isWithinBase(fullPath: string, base: string): boolean {
+  return fullPath === base || fullPath.startsWith(base + path.sep)
+}
+
+interface FsErrnoException extends Error {
+  code?: string
+}
+
+// 路径安全检查：词法边界和真实符号链接边界都不得离开允许根目录
+async function safePath(base: string, relative: string): Promise<string> {
+  const normalizedRelative = normalizeRelativePath(relative)
+  if (normalizedRelative === null) throw new Error('Invalid relative path')
+
+  const realBase = await fs.realpath(base)
+  const resolved = path.resolve(realBase, normalizedRelative)
+  let validatedPath = resolved
+
+  try {
+    validatedPath = await fs.realpath(resolved)
+  } catch (error) {
+    const err = error as FsErrnoException
+    if (err.code !== 'ENOENT' && err.code !== 'ENOTDIR') throw error
+
+    // 新建文件/目录时最终路径可能尚不存在；必须验证最近存在祖先，
+    // 防止其中某个符号链接把剩余路径带出允许根目录。
+    let current = resolved
+    const remainingSegments: string[] = []
+    while (path.dirname(current) !== current) {
+      remainingSegments.unshift(path.basename(current))
+      current = path.dirname(current)
+      try {
+        const realAncestor = await fs.realpath(current)
+        if (!isWithinBase(realAncestor, realBase)) {
+          throw new Error('Path is outside the allowed directory')
+        }
+        validatedPath = path.join(realAncestor, ...remainingSegments)
+        break
+      } catch (ancestorError) {
+        const ancestorErr = ancestorError as FsErrnoException
+        if (ancestorErr.code !== 'ENOENT' && ancestorErr.code !== 'ENOTDIR') throw ancestorError
+      }
+    }
   }
+
+  if (!isWithinBase(validatedPath, realBase)) {
+    throw new Error('Path is outside the allowed directory')
+  }
+
+  // 保留词法路径，删除/重命名遇到符号链接时操作链接本身；
+  // 上方 realpath 已确保该链接最终不会指向允许目录之外。
   return resolved
 }
 
@@ -23,15 +67,30 @@ function getAllowedRoots(): string[] {
 }
 
 // 检查绝对路径是否在允许的目录范围内
-function isPathAllowed(fullPath: string): boolean {
-  const resolved = path.normalize(fullPath)
-  return getAllowedRoots().some(root =>
-    resolved === root || resolved.startsWith(root + path.sep)
+async function isPathAllowed(fullPath: string): Promise<boolean> {
+  if (typeof fullPath !== 'string') return false
+
+  let resolved: string
+  try {
+    resolved = await fs.realpath(fullPath)
+  } catch {
+    return false
+  }
+
+  const roots = await Promise.all(
+    getAllowedRoots().map(async root => {
+      try {
+        return await fs.realpath(root)
+      } catch {
+        return null
+      }
+    })
   )
+  return roots.some(root => root !== null && isWithinBase(resolved, root))
 }
 
 // 格式化文件系统错误
-function formatFsError(err: NodeJS.ErrnoException): string {
+function formatFsError(err: FsErrnoException): string {
   switch (err.code) {
     case 'ENOENT': return 'File or directory not found'
     case 'EACCES': return 'Permission denied'
@@ -41,7 +100,7 @@ function formatFsError(err: NodeJS.ErrnoException): string {
     case 'ENOTDIR': return 'Expected a directory but found a file'
     case 'EBUSY': return 'File or directory is in use'
     case 'EIO': return 'I/O error'
-    default: return err.message || 'Unknown error'
+    default: return 'File operation failed'
   }
 }
 
@@ -57,6 +116,7 @@ export interface FileListResult {
     targetExists: boolean
   }>
   error: string | null
+  diskUsage?: import('@shared/types').DiskUsageInfo | null
 }
 
 export interface FileOperationResult {
@@ -83,7 +143,7 @@ class FileService {
     const baseDir = getDownloadDir()
 
     try {
-      const fullPath = safePath(baseDir, dirPath)
+      const fullPath = await safePath(baseDir, dirPath)
       const files = await fs.readdir(fullPath, { withFileTypes: true })
 
       const fileList = await Promise.all(files.map(async (file) => {
@@ -93,14 +153,12 @@ class FileService {
 
         const isSymlink = lstats.isSymbolicLink()
         let isDir = file.isDirectory()
-        let targetPath: string | null = null
+        const targetPath: string | null = null
         let targetExists = true
 
         if (isSymlink) {
           try {
-            targetPath = await fs.readlink(filePath)
-            const targetFullPath = path.resolve(path.dirname(filePath), targetPath)
-            const targetStats = await fs.stat(targetFullPath)
+            const targetStats = await fs.stat(filePath)
             isDir = targetStats.isDirectory()
           } catch {
             targetExists = false
@@ -121,7 +179,7 @@ class FileService {
 
       return { files: fileList, error: null }
     } catch (error) {
-      const err = error as NodeJS.ErrnoException
+      const err = error as FsErrnoException
       const message = dirPath
         ? `Failed to read directory: ${formatFsError(err)}`
         : `Download directory not accessible: ${formatFsError(err)}`
@@ -132,7 +190,7 @@ class FileService {
 
   // 删除文件或目录（通过绝对路径）
   async deleteByAbsolutePath(fullPath: string): Promise<FileOperationResult> {
-    if (!isPathAllowed(fullPath)) {
+    if (!(await isPathAllowed(fullPath))) {
       console.error(`[FileService] Delete blocked: path outside download directory: ${fullPath}`)
       return { success: false, message: 'Path is outside the allowed directory' }
     }
@@ -146,7 +204,7 @@ class FileService {
       console.log(`[FileService] Deleted: ${fullPath}`)
       return { success: true }
     } catch (error) {
-      const err = error as NodeJS.ErrnoException
+      const err = error as FsErrnoException
       const message = formatFsError(err)
       console.error(`[FileService] Delete failed: ${fullPath} - ${message}`)
       return { success: false, message }
@@ -155,7 +213,7 @@ class FileService {
 
   // 删除文件或目录（相对于 downloadDir 的路径）
   async deleteFile(relativePath: string): Promise<FileOperationResult> {
-    const fullPath = safePath(getDownloadDir(), relativePath)
+    const fullPath = await safePath(getDownloadDir(), relativePath)
     return this.deleteByAbsolutePath(fullPath)
   }
 
@@ -171,13 +229,13 @@ class FileService {
 
   // 创建目录
   async createDirectory(dirPath: string): Promise<FileOperationResult> {
-    const fullPath = safePath(getDownloadDir(), dirPath)
+    const fullPath = await safePath(getDownloadDir(), dirPath)
     try {
       await fs.mkdir(fullPath, { recursive: true })
       console.log(`[FileService] Created directory: ${fullPath}`)
       return { success: true }
     } catch (error) {
-      const err = error as NodeJS.ErrnoException
+      const err = error as FsErrnoException
       const message = formatFsError(err)
       console.error(`[FileService] Create directory failed: ${fullPath} - ${message}`)
       return { success: false, message }
@@ -186,14 +244,14 @@ class FileService {
 
   // 重命名
   async renameFile(oldPath: string, newPath: string): Promise<FileOperationResult> {
-    const oldFullPath = safePath(getDownloadDir(), oldPath)
-    const newFullPath = safePath(getDownloadDir(), newPath)
+    const oldFullPath = await safePath(getDownloadDir(), oldPath)
+    const newFullPath = await safePath(getDownloadDir(), newPath)
     try {
       await fs.rename(oldFullPath, newFullPath)
       console.log(`[FileService] Renamed: ${oldFullPath} -> ${newFullPath}`)
       return { success: true }
     } catch (error) {
-      const err = error as NodeJS.ErrnoException
+      const err = error as FsErrnoException
       const message = formatFsError(err)
       console.error(`[FileService] Rename failed: ${oldFullPath} -> ${newFullPath} - ${message}`)
       return { success: false, message }
@@ -202,14 +260,14 @@ class FileService {
 
   // 上传文件
   async uploadFile(relativePath: string, data: Buffer): Promise<FileOperationResult> {
-    const fullPath = safePath(getDownloadDir(), relativePath)
+    const fullPath = await safePath(getDownloadDir(), relativePath)
     try {
       await fs.mkdir(path.dirname(fullPath), { recursive: true })
       await fs.writeFile(fullPath, data)
       console.log(`[FileService] Uploaded: ${fullPath}`)
       return { success: true }
     } catch (error) {
-      const err = error as NodeJS.ErrnoException
+      const err = error as FsErrnoException
       const message = formatFsError(err)
       console.error(`[FileService] Upload failed: ${fullPath} - ${message}`)
       return { success: false, message }
@@ -217,23 +275,15 @@ class FileService {
   }
 
   // 获取文件绝对路径（供下载等场景使用，含安全检查）
-  getFullPath(relativePath: string): string {
-    return safePath(getDownloadDir(), relativePath)
+  async getFullPath(relativePath: string): Promise<string> {
+    return await safePath(getDownloadDir(), relativePath)
   }
 
   // 校验 zip 内部条目路径（相对路径，/ 分隔），防止绝对路径、盘符与 .. 穿越
   // 与 safePath 哲学一致：只允许在压缩包内部的相对定位
   validateZipEntryPath(p: string): string {
-    if (!p) return ''
-    const normalized = p.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')
-    if (!normalized) return ''
-    if (/^[a-zA-Z]:/.test(normalized)) {
-      throw new Error('Invalid zip entry path: absolute path not allowed')
-    }
-    const segments = normalized.split('/')
-    if (segments.includes('..')) {
-      throw new Error('Invalid zip entry path: path traversal detected')
-    }
+    const normalized = normalizeRelativePath(p)
+    if (normalized === null) throw new Error('Invalid zip entry path')
     return normalized
   }
 
@@ -241,7 +291,7 @@ class FileService {
   // aria2 可能运行在容器中，路径与宿主机不同，需要映射
   async resolveAria2TaskPath(aria2Path: string, aria2DownloadDir: string | null): Promise<string> {
     if (!path.isAbsolute(aria2Path)) {
-      return safePath(getAria2HostDir(), aria2Path)
+      return await safePath(getAria2HostDir(), aria2Path)
     }
 
     // 如果有 aria2 下载目录信息，做路径映射
@@ -251,11 +301,11 @@ class FileService {
       if (relativePath.startsWith('/')) {
         relativePath = relativePath.substring(1)
       }
-      return safePath(getAria2HostDir(), relativePath)
+      return await safePath(getAria2HostDir(), relativePath)
     }
 
     // 绝对路径且不需要映射，检查是否在允许范围内
-    if (!isPathAllowed(aria2Path)) {
+    if (!(await isPathAllowed(aria2Path))) {
       throw new Error(`Invalid path: aria2 path outside download directory: ${aria2Path}`)
     }
     return aria2Path

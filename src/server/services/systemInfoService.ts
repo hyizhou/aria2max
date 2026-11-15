@@ -2,6 +2,7 @@ import * as os from 'os'
 import si from 'systeminformation'
 import { getFinalConfig } from '../config/aria2'
 import { formatBytes } from '@shared/utils/format'
+import { findPartitionForPath, getRealPartitions } from './diskInfoService'
 import type { SystemInfo, NetworkSpeedInfo, DiskInfo, DiskPartitionInfo, SwapInfo, DeviceNetworkSpeedResponse } from '@shared/types'
 
 // 缓存系统信息（5秒缓存，减少 systeminformation 调用频率）
@@ -14,9 +15,6 @@ const CACHE_DURATION = 5000
 const EXCLUDE_INTERFACE_EXACT = ['lo']
 // 使用子串匹配的长模式（这些前缀不会与真实网卡冲突）
 const EXCLUDE_INTERFACE_PREFIX = ['docker', 'br-', 'veth', 'virbr', 'vmnet']
-// 需要过滤的虚拟文件系统类型
-const EXCLUDE_FS_TYPES = ['tmpfs', 'devtmpfs', 'overlay', 'squashfs', 'iso9660']
-
 function isFilteredInterface(name: string): boolean {
   if (EXCLUDE_INTERFACE_EXACT.includes(name)) return true
   return EXCLUDE_INTERFACE_PREFIX.some(pattern => name.includes(pattern))
@@ -89,14 +87,10 @@ export async function getSystemInfo(): Promise<SystemInfo> {
 
   try {
     // 过滤虚拟文件系统，只保留真实磁盘
-    const realPartitions = fsSizeData.filter(fs =>
-      !EXCLUDE_FS_TYPES.includes(fs.type) && fs.size > 0
-    )
+    const realPartitions = getRealPartitions(fsSizeData)
 
     // 查找下载目录所在的分区（最长路径匹配）
-    const matchedFs = realPartitions
-      .filter(fs => downloadDir.startsWith(fs.mount))
-      .sort((a, b) => b.mount.length - a.mount.length)[0]
+    const matchedFs = (await findPartitionForPath(realPartitions, downloadDir))
       || realPartitions.find(fs => fs.mount === '/' || fs.mount === 'C:')
       || realPartitions[0]
 
