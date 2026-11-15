@@ -12,49 +12,69 @@ interface FsErrnoException extends Error {
   code?: string
 }
 
-// 路径安全检查：词法边界和真实符号链接边界都不得离开允许根目录
+interface TrustedPathResult {
+  lexicalPath: string
+  realPath: string
+  allowedRealRoots: string[]
+}
+
+// 按路径逐段解析。配置根内出现的符号链接视为用户显式暴露的入口，
+// 其目标目录/文件也会加入本次访问的允许根集合。
+async function resolveTrustedPath(base: string, targetPath: string): Promise<TrustedPathResult> {
+  const realBase = await fs.realpath(base)
+  const lexicalPath = path.resolve(realBase, targetPath)
+  if (!isWithinBase(lexicalPath, realBase)) {
+    throw new Error('Path is outside the allowed directory')
+  }
+
+  const relativeSegments = lexicalPath === realBase
+    ? []
+    : lexicalPath.slice(realBase.length + path.sep.length).split(path.sep)
+  const allowedRealRoots = [realBase]
+  let currentPath = realBase
+
+  for (const segment of relativeSegments) {
+    const nextPath = path.join(currentPath, segment)
+    try {
+      const stats = await fs.lstat(nextPath)
+      if (stats.isSymbolicLink()) {
+        try {
+          const targetRealPath = await fs.realpath(nextPath)
+          allowedRealRoots.push(targetRealPath)
+          currentPath = targetRealPath
+        } catch {
+          // 损坏链接本身仍位于配置根内；后续读取会得到明确错误，
+          // 删除该链接本身也不应因此被拒绝。
+          currentPath = nextPath
+        }
+      } else {
+        currentPath = await fs.realpath(nextPath).catch(() => nextPath)
+      }
+    } catch (error) {
+      const err = error as FsErrnoException
+      if (err.code !== 'ENOENT' && err.code !== 'ENOTDIR') throw error
+      // 上传/新建目录时最终路径可能尚不存在；只要已存在前缀可信即可。
+      currentPath = nextPath
+    }
+  }
+
+  return { lexicalPath, realPath: currentPath, allowedRealRoots }
+}
+
+// 路径安全检查：词法路径必须落在配置根内；真实路径可以经过
+// 配置根内显式存在的符号链接入口，但不能凭空穿越到其它外部路径。
 async function safePath(base: string, relative: string): Promise<string> {
   const normalizedRelative = normalizeRelativePath(relative)
   if (normalizedRelative === null) throw new Error('Invalid relative path')
 
-  const realBase = await fs.realpath(base)
-  const resolved = path.resolve(realBase, normalizedRelative)
-  let validatedPath = resolved
-
-  try {
-    validatedPath = await fs.realpath(resolved)
-  } catch (error) {
-    const err = error as FsErrnoException
-    if (err.code !== 'ENOENT' && err.code !== 'ENOTDIR') throw error
-
-    // 新建文件/目录时最终路径可能尚不存在；必须验证最近存在祖先，
-    // 防止其中某个符号链接把剩余路径带出允许根目录。
-    let current = resolved
-    const remainingSegments: string[] = []
-    while (path.dirname(current) !== current) {
-      remainingSegments.unshift(path.basename(current))
-      current = path.dirname(current)
-      try {
-        const realAncestor = await fs.realpath(current)
-        if (!isWithinBase(realAncestor, realBase)) {
-          throw new Error('Path is outside the allowed directory')
-        }
-        validatedPath = path.join(realAncestor, ...remainingSegments)
-        break
-      } catch (ancestorError) {
-        const ancestorErr = ancestorError as FsErrnoException
-        if (ancestorErr.code !== 'ENOENT' && ancestorErr.code !== 'ENOTDIR') throw ancestorError
-      }
-    }
-  }
-
-  if (!isWithinBase(validatedPath, realBase)) {
+  const trusted = await resolveTrustedPath(base, normalizedRelative)
+  const isAllowed = trusted.allowedRealRoots.some(root => isWithinBase(trusted.realPath, root))
+  if (!isAllowed) {
     throw new Error('Path is outside the allowed directory')
   }
 
-  // 保留词法路径，删除/重命名遇到符号链接时操作链接本身；
-  // 上方 realpath 已确保该链接最终不会指向允许目录之外。
-  return resolved
+  // 保留词法路径，便于删除/重命名符号链接本身；读取操作会按入口继续解析。
+  return trusted.lexicalPath
 }
 
 // 获取所有允许的根目录列表（统一路径权限检查的基础）
@@ -66,27 +86,21 @@ function getAllowedRoots(): string[] {
   return roots
 }
 
-// 检查绝对路径是否在允许的目录范围内
+// 检查绝对路径是否在允许的目录范围内；符号链接入口按解析后的目标判断
 async function isPathAllowed(fullPath: string): Promise<boolean> {
   if (typeof fullPath !== 'string') return false
 
-  let resolved: string
-  try {
-    resolved = await fs.realpath(fullPath)
-  } catch {
-    return false
-  }
-
-  const roots = await Promise.all(
-    getAllowedRoots().map(async root => {
-      try {
-        return await fs.realpath(root)
-      } catch {
-        return null
+  for (const root of getAllowedRoots()) {
+    try {
+      const trusted = await resolveTrustedPath(root, fullPath)
+      if (trusted.allowedRealRoots.some(allowedRoot => isWithinBase(trusted.realPath, allowedRoot))) {
+        return true
       }
-    })
-  )
-  return roots.some(root => root !== null && isWithinBase(resolved, root))
+    } catch {
+      continue
+    }
+  }
+  return false
 }
 
 // 格式化文件系统错误
