@@ -46,7 +46,7 @@ export const useFileStore = defineStore('file', {
           this.files = response.files as FileItem[]
           this.diskUsage = response.diskUsage ?? null
         }
-        this.currentPath = response.currentPath ?? path
+        this.currentPath = path
       } catch (error) {
         if (requestId !== fileRequestSequence) return
         console.error('Failed to fetch files:', error)
