@@ -1,6 +1,8 @@
 // 系统配置设置数据结构
+import type { SystemConfig } from '../../shared/types/system'
+
 export interface SystemSetting {
-  key: string
+  key: keyof SystemConfig
   type: 'text' | 'password' | 'boolean'
   labelKey: string
   helpTextKey: string
@@ -65,6 +67,6 @@ export const systemSettings: SystemSetting[] = [
 ]
 
 // 系统默认配置（自动从 systemSettings 生成）
-export const defaultSystemConfig: Record<string, any> = Object.fromEntries(
+export const defaultSystemConfig = Object.fromEntries(
   systemSettings.map(s => [s.key, s.type === 'boolean' ? false : ''])
-)
+) as Record<string, string | boolean>

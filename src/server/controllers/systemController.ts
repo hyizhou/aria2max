@@ -7,19 +7,7 @@ import { getConfigPath } from '../config/paths'
 import { getSystemInfo, getDeviceNetworkSpeed } from '../services/systemInfoService'
 import type { SystemConfig, TestConnectionResponse } from '../../shared/types'
 
-interface SystemController {
-  getSystemStatus(req: Request, res: Response): Promise<void>
-  getConfig(req: Request, res: Response): Promise<void>
-  saveConfig(req: Request, res: Response): Promise<void>
-  testConnection(req: Request, res: Response, next: NextFunction): Promise<void>
-  getSystemInfo(req: Request, res: Response): Promise<void>
-  getRealtimeSpeed(req: Request, res: Response): Promise<void>
-  getDeviceNetworkSpeed(req: Request, res: Response): Promise<void>
-  getAria2Options(req: Request, res: Response): Promise<void>
-  setAria2Options(req: Request, res: Response): Promise<void>
-}
-
-class SystemControllerImpl implements SystemController {
+class SystemControllerImpl {
   // 获取 aria2 系统状态
   async getSystemStatus(_req: Request, res: Response): Promise<void> {
     const status = await aria2Client.getSystemStatus()
@@ -29,17 +17,18 @@ class SystemControllerImpl implements SystemController {
   // 获取配置信息
   async getConfig(_req: Request, res: Response): Promise<void> {
     const config = getFinalConfig()
-    // 返回配置，隐藏 RPC 密钥
+    // 返回配置，隐藏敏感字段
     res.json({
       ...config,
-      aria2RpcSecret: ''
+      aria2RpcSecret: '',
+      authPassword: ''
     })
   }
 
   // 保存配置信息
   async saveConfig(req: Request, res: Response): Promise<void> {
     try {
-      console.log('Saving config with data:', req.body)
+      console.log('Saving system config')
 
       const configPath = getConfigPath()
       let existingConfig: SystemConfig = { ...defaultConfig } as SystemConfig
@@ -59,8 +48,6 @@ class SystemControllerImpl implements SystemController {
           ;(configFile as unknown as Record<string, unknown>)[key] = req.body[key]
         }
       }
-
-      console.log('Final config to save:', configFile)
 
       const configDir = path.dirname(configPath)
       if (!fs.existsSync(configDir)) {
