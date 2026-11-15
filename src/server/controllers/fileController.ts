@@ -28,7 +28,7 @@ function getRequiredStringValue(value: unknown): string | null {
 
 function getOptionalStringValue(value: unknown): string | null {
   if (value === undefined) return ''
-  return getRequiredStringValue(value)
+  return typeof value === 'string' ? value : null
 }
 
 class FileControllerImpl {
