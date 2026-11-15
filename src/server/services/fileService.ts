@@ -18,8 +18,24 @@ async function safePath(base: string, relative: string): Promise<string> {
   if (normalizedRelative === null) throw new Error('Invalid relative path')
 
   const realBase = await fs.realpath(base)
+  const realAllowedBases = await Promise.all(
+    getAllowedRoots().map(async root => {
+      try {
+        return await fs.realpath(root)
+      } catch {
+        return null
+      }
+    })
+  )
+  const allowedRealBases = new Set(
+    realAllowedBases.filter((root): root is string => root !== null)
+  )
+  allowedRealBases.add(realBase)
+
   const resolved = path.resolve(realBase, normalizedRelative)
   let validatedPath = resolved
+  const isAllowedRealPath = (candidate: string): boolean =>
+    Array.from(allowedRealBases).some(root => isWithinBase(candidate, root))
 
   try {
     validatedPath = await fs.realpath(resolved)
@@ -36,7 +52,7 @@ async function safePath(base: string, relative: string): Promise<string> {
       current = path.dirname(current)
       try {
         const realAncestor = await fs.realpath(current)
-        if (!isWithinBase(realAncestor, realBase)) {
+        if (!isAllowedRealPath(realAncestor)) {
           throw new Error('Path is outside the allowed directory')
         }
         validatedPath = path.join(realAncestor, ...remainingSegments)
@@ -48,7 +64,7 @@ async function safePath(base: string, relative: string): Promise<string> {
     }
   }
 
-  if (!isWithinBase(validatedPath, realBase)) {
+  if (!isAllowedRealPath(validatedPath)) {
     throw new Error('Path is outside the allowed directory')
   }
 
@@ -91,6 +107,9 @@ async function isPathAllowed(fullPath: string): Promise<boolean> {
 
 // 格式化文件系统错误
 function formatFsError(err: FsErrnoException): string {
+  if (err.message === 'Invalid relative path' || err.message === 'Path is outside the allowed directory') {
+    return err.message
+  }
   switch (err.code) {
     case 'ENOENT': return 'File or directory not found'
     case 'EACCES': return 'Permission denied'

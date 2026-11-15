@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { fileApi } from '@/services'
 import type { DiskUsageInfo, FileItem } from '@shared/types'
+import { extractErrorMessage } from '@shared/utils/error'
 
 let fileRequestSequence = 0
 
@@ -48,9 +49,8 @@ export const useFileStore = defineStore('file', {
         this.currentPath = path
       } catch (error) {
         if (requestId !== fileRequestSequence) return
-        const err = error as Error
         console.error('Failed to fetch files:', error)
-        this.error = err.message || 'An unknown error occurred.'
+        this.error = extractErrorMessage(error) || 'An unknown error occurred.'
         this.files = []
       } finally {
         if (requestId === fileRequestSequence) {
