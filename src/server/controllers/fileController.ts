@@ -13,6 +13,8 @@ import {
 } from '@shared/utils/fileName'
 import { normalizeRelativePath } from '@shared/utils/relativePath'
 
+type ArchiverInstance = ReturnType<typeof archiver>
+
 const invalidRenamePathMessages: Record<RenamePathInvalidReason, string> = {
   empty: 'File name cannot be empty',
   pathSeparator: 'File name cannot contain "/" or "\\"',
@@ -67,7 +69,9 @@ class FileControllerImpl {
       res.status(400).json({ error: { code: 400, message: 'Invalid file path' } })
       return
     }
-    const fileName = path.basename(fullPath)
+    // IO 使用验证后的真实路径；展示文件名保持用户请求的词法入口名，
+    // 通过符号链接下载时不会意外变成目标文件名
+    const fileName = path.basename(normalizeRelativePath(filePath) ?? filePath)
 
     let stat
     try {
@@ -93,14 +97,39 @@ class FileControllerImpl {
     res.setHeader('Transfer-Encoding', 'chunked')
     res.flushHeaders()
 
-    const archive = archiver('zip', { store: true })
-    archive.on('error', (err: Error) => {
-      console.error('Archive error:', err.message)
-      res.end()
-    })
-    archive.pipe(res)
-    archive.directory(fullPath, fileName)
-    archive.finalize()
+    await this.streamDirectoryArchive(
+      res,
+      archiver('zip', { store: true }),
+      fullPath,
+      fileName
+    )
+  }
+
+  // 统一处理流式归档错误；finalize rejection 不一定会伴随 error event。
+  private async streamDirectoryArchive(
+    res: Response,
+    archive: ArchiverInstance,
+    fullPath: string,
+    fileName: string
+  ): Promise<void> {
+    let failureHandled = false
+    const failArchive = (err: Error): void => {
+      if (failureHandled) return
+      failureHandled = true
+      console.error(`Archive error: ${err.message}`)
+      if (!res.writableEnded && !res.destroyed) {
+        res.destroy(err)
+      }
+    }
+
+    archive.on('error', failArchive)
+    try {
+      archive.pipe(res)
+      archive.directory(fullPath, fileName)
+      await archive.finalize()
+    } catch (error) {
+      failArchive(error as Error)
+    }
   }
 
   // 列出 zip 压缩包内指定子目录下的一级条目

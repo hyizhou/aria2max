@@ -175,7 +175,8 @@ class TaskControllerImpl implements TaskController {
           const targetPath = isBt
             ? await this.resolveBtPath(firstFilePath, task.bittorrent!.info!.name, aria2DownloadDir)
             : await fileService.resolveAria2TaskPath(firstFilePath, aria2DownloadDir)
-          fileExists = await fileService.exists(targetPath)
+          const existence = await fileService.checkPathExists(targetPath)
+          fileExists = existence.status !== 'missing'
         }
       } catch (err) {
         // 路径映射/检查失败时保守视为文件存在，触发确认流程，避免静默绕过删除提示
@@ -385,7 +386,10 @@ class TaskControllerImpl implements TaskController {
     // 基于第一个文件路径推导候选目录
     const fileDir = firstFilePath.substring(0, firstFilePath.lastIndexOf('/'))
     if (fileDir) {
-      candidates.push(fileDir)                    // aria2Dir/torrentName
+      // 单文件 BT 的父目录是下载根，最后一段不是种子名时不能作为删除目标
+      if (fileDir.split('/').pop() === btName) {
+        candidates.push(fileDir)                  // aria2Dir/torrentName
+      }
       candidates.push(fileDir + '/' + btName)     // aria2Dir/torrentName/torrentName（嵌套情况）
     }
     candidates.push(btName)                        // 直接用种子名
@@ -401,10 +405,19 @@ class TaskControllerImpl implements TaskController {
 
     // 将所有候选路径映射到宿主机路径并检查存在性
     for (const candidate of candidates) {
-      const resolved = await fileService.resolveAria2TaskPath(candidate, aria2DownloadDir)
-      if (await fileService.exists(resolved)) {
-        console.log(`[Task Delete] Found BT directory: ${resolved}`)
-        return resolved
+      try {
+        const resolved = await fileService.resolveAria2TaskPath(candidate, aria2DownloadDir)
+        const existence = await fileService.checkPathExists(resolved)
+        if (existence.status !== 'missing') {
+          console.log(`[Task Delete] Found BT directory: ${resolved}`)
+          return resolved
+        }
+      } catch (error) {
+        console.error(
+          '[Task Delete] BT candidate failed:',
+          candidate,
+          (error as Error).message
+        )
       }
     }
 

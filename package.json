@@ -15,7 +15,7 @@
     "build": "npm run build:server && npm run build:client",
     "build:server": "tsc",
     "build:client": "vite build",
-    "test": "node --test -r ts-node/register/transpile-only -r tsconfig-paths/register tests/fileName.test.ts tests/apiErrorMessage.test.ts tests/fileRenameController.test.ts tests/systemConfigController.test.ts",
+    "test": "node --test --test-concurrency=1 -r ts-node/register/transpile-only -r tsconfig-paths/register tests/fileName.test.ts tests/apiErrorMessage.test.ts tests/fileRenameController.test.ts tests/systemConfigController.test.ts tests/fileServiceSymlink.test.ts tests/taskControllerBtPath.test.ts tests/fileDownload.test.ts",
     "typecheck:test": "tsc -p tsconfig.test.json --noEmit",
     "start": "cross-env NODE_ENV=production node dist/server.js",
     "lint": "eslint . --ext .js,.ts,.vue --fix",
